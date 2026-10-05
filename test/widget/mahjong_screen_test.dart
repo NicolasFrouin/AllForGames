@@ -3,6 +3,7 @@ import 'package:all_for_games/app_stores.dart';
 import 'package:all_for_games/games/game_catalog.dart';
 import 'package:all_for_games/games/mahjong/mahjong_controller.dart';
 import 'package:all_for_games/games/mahjong/mahjong_difficulty.dart';
+import 'package:all_for_games/games/mahjong/mahjong_moving_tile.dart';
 import 'package:all_for_games/games/mahjong/mahjong_screen.dart';
 import 'package:all_for_games/games/mahjong/mahjong_state.dart';
 import 'package:all_for_games/games/mahjong/mahjong_tile_view.dart';
@@ -87,6 +88,12 @@ Future<void> tapTile(WidgetTester tester, int id) async {
 MahjongTileView viewOf(WidgetTester tester, int id) => tester.widget(
   find.descendant(of: tile(id), matching: find.byType(MahjongTileView)),
 );
+
+/// How the board paints a tile now: its hint glow and its opacity.
+RenderMovingTile paintedTile(WidgetTester tester, int id) =>
+    tester.renderObject(
+      find.ancestor(of: tile(id), matching: find.byType(MovingTile)),
+    );
 
 bool isEnabled(WidgetTester tester, String key) =>
     tester.widget<IconButton>(byKey(key)).onPressed != null;
@@ -211,18 +218,18 @@ void main() {
     await tester.tap(byKey('hint'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 150));
-    expect(viewOf(tester, 0).glow, greaterThan(0.4), reason: 'pulsing');
+    expect(paintedTile(tester, 0).glow, greaterThan(0.4), reason: 'pulsing');
 
     await tester.pumpAndSettle();
     for (final id in [0, 3]) {
-      expect(viewOf(tester, id).glow, closeTo(0.4, 0.01), reason: '$id');
+      expect(paintedTile(tester, id).glow, closeTo(0.4, 0.01), reason: '$id');
     }
-    expect(viewOf(tester, 1).glow, 0);
+    expect(paintedTile(tester, 1).glow, 0);
     expect(savedData(stores)['counters'], {MahjongStatKeys.hints: 1});
 
     await tapTile(tester, 0);
     await tapTile(tester, 3);
-    expect(viewOf(tester, 1).glow, 0, reason: 'the hint is used');
+    expect(paintedTile(tester, 1).glow, 0, reason: 'the hint is used');
   });
 
   testWidgets('stuck, a banner offers a shuffle that makes matches', (
@@ -317,13 +324,13 @@ void main() {
     await tester.tap(byKey('new-game-deal'));
     await tester.pump(const Duration(milliseconds: 100));
 
-    // The top tile of the Turtle waits for the layers below it.
-    final top = find.byWidgetPredicate(
-      (widget) => widget is Opacity && widget.opacity == 0,
-    );
-    expect(top, findsWidgets);
+    // The top tile of the Turtle waits for the layers below it, unseen.
+    bool waiting() => tester
+        .renderObjectList<RenderMovingTile>(find.byType(MovingTile))
+        .any((tile) => tile.opacity == 0);
+    expect(waiting(), isTrue);
     await tester.pumpAndSettle();
-    expect(top, findsNothing);
+    expect(waiting(), isFalse);
   });
 
   testWidgets('leaving saves the game, and the hub continues it', (

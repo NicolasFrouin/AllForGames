@@ -25,6 +25,8 @@ const _seasonInk = Color(0xFF1565C0);
 /// only: no emoji and no CJK font, which the web does not always have.
 ///
 /// The widget is [faceSize] plus [depth] on the right and at the bottom.
+/// The board paints the glow of a hint around it ([paintHintHalo],
+/// [paintHintRim]), so a pulse does not repaint the tile.
 class MahjongTileView extends StatelessWidget {
   const MahjongTileView({
     super.key,
@@ -33,7 +35,6 @@ class MahjongTileView extends StatelessWidget {
     required this.depth,
     this.selected = false,
     this.dimmed = false,
-    this.glow = 0,
   });
 
   final TileFace face;
@@ -46,9 +47,6 @@ class MahjongTileView extends StatelessWidget {
   /// Blocked: the face is a little darker.
   final bool dimmed;
 
-  /// A hint's halo, from 0 (none) to 1.
-  final double glow;
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -60,7 +58,6 @@ class MahjongTileView extends StatelessWidget {
         depth: depth,
         selected: selected,
         dimmed: dimmed,
-        glow: glow,
         windLetter: switch (face.suit) {
           TileSuit.winds => [
             l10n.mahjongWindEastLetter,
@@ -105,6 +102,39 @@ String tileName(TileFace face, AppLocalizations l10n) => switch (face.suit) {
   ][face.rank - 1],
 };
 
+/// The rounded face of a tile at [faceRect].
+RRect _faceRRect(Rect faceRect) =>
+    RRect.fromRectAndRadius(faceRect, Radius.circular(faceRect.width * 0.12));
+
+/// A hint's halo, painted under a tile whose face is at [faceRect]: [glow]
+/// from 0 (none) to 1.
+void paintHintHalo(Canvas canvas, Rect faceRect, double depth, double glow) {
+  final w = faceRect.width;
+  canvas.drawRRect(
+    _faceRRect(faceRect.shift(Offset(depth / 2, depth / 2))).inflate(w * 0.06),
+    Paint()
+      ..color = _hintColor.withValues(alpha: 0.9 * glow)
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, w * 0.12),
+  );
+}
+
+/// A hint's tint and rim, painted over the face of a tile at [faceRect].
+void paintHintRim(Canvas canvas, Rect faceRect, double glow) {
+  final w = faceRect.width;
+  final face = _faceRRect(faceRect);
+  canvas.drawRRect(
+    face,
+    Paint()..color = _hintColor.withValues(alpha: 0.16 * glow),
+  );
+  canvas.drawRRect(
+    face.deflate(max(1.0, w * 0.03)),
+    Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = max(2.0, w * 0.06)
+      ..color = _hintColor.withValues(alpha: glow),
+  );
+}
+
 class _TilePainter extends CustomPainter {
   _TilePainter({
     required this.face,
@@ -112,7 +142,6 @@ class _TilePainter extends CustomPainter {
     required this.depth,
     required this.selected,
     required this.dimmed,
-    required this.glow,
     required this.windLetter,
   });
 
@@ -121,7 +150,6 @@ class _TilePainter extends CustomPainter {
   final double depth;
   final bool selected;
   final bool dimmed;
-  final double glow;
   final String windLetter;
 
   static const _flowerIcons = [
@@ -156,15 +184,6 @@ class _TilePainter extends CustomPainter {
     final faceRect = Offset.zero & faceSize;
     RRect at(double shift) =>
         RRect.fromRectAndRadius(faceRect.shift(Offset(shift, shift)), radius);
-
-    if (glow > 0) {
-      canvas.drawRRect(
-        at(depth / 2).inflate(w * 0.06),
-        Paint()
-          ..color = _hintColor.withValues(alpha: 0.9 * glow)
-          ..maskFilter = MaskFilter.blur(BlurStyle.normal, w * 0.12),
-      );
-    }
 
     // The shadow falls on the tiles of the layers below.
     canvas.drawRRect(
@@ -228,19 +247,6 @@ class _TilePainter extends CustomPainter {
 
     if (dimmed && !selected) {
       canvas.drawRRect(faceRRect, Paint()..color = const Color(0x1A1B2440));
-    }
-    if (glow > 0) {
-      canvas.drawRRect(
-        faceRRect,
-        Paint()..color = _hintColor.withValues(alpha: 0.16 * glow),
-      );
-      canvas.drawRRect(
-        faceRRect.deflate(max(1.0, w * 0.03)),
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = max(2.0, w * 0.06)
-          ..color = _hintColor.withValues(alpha: glow),
-      );
     }
   }
 
@@ -724,6 +730,5 @@ class _TilePainter extends CustomPainter {
       old.depth != depth ||
       old.selected != selected ||
       old.dimmed != dimmed ||
-      old.glow != glow ||
       old.windLetter != windLetter;
 }

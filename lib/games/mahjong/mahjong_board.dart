@@ -1,12 +1,15 @@
 import 'dart:math';
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/scheduler.dart' show Ticker;
 import 'package:material_ui/material_ui.dart';
 
+import '../../cards/confetti.dart';
 import '../../l10n/app_localizations.dart';
 import 'mahjong_controller.dart';
 import 'mahjong_layout.dart';
 import 'mahjong_motion.dart';
+import 'mahjong_moving_tile.dart';
 import 'mahjong_state.dart';
 import 'mahjong_tile_view.dart';
 import 'mahjong_tiles.dart';
@@ -96,24 +99,45 @@ class MahjongBoardGeometry {
 }
 
 /// Where a tile rests on the board.
-class _Target {
-  const _Target(this.id, this.face, this.rect, this.z);
+typedef _Target = ({int id, TileFace face, Rect rect, int z});
 
-  final int id;
-  final TileFace face;
-  final Rect rect;
-  final int z;
+/// Everything a tile widget shows: the board keeps the widget of a tile
+/// while its look stays the same.
+typedef _TileLook = ({
+  _Target target,
+  bool leaving,
+  bool selected,
+  bool dimmed,
+  bool hinted,
+  TileMotion? motion,
+});
 
-  /// Paint order on the table: layer by layer, then from the back (top
-  /// left) to the front (bottom right), so the thickness of a tile hides
-  /// under its neighbors.
-  (int, double) get order => (z, rect.left + rect.top);
+/// The key of a tile in the paint order, apart from the `ValueKey('tile-$id')`
+/// that tests find.
+class _TileKey extends ValueKey<int> {
+  const _TileKey(super.value);
 }
 
-/// Draws the Mahjong board in one [Stack]. One timeline moves the tiles:
-/// each action plans a [TileMotion] for the tiles it changes (a drop for a
-/// new deal, a flight for a shuffle, a vanish for a match), and a hint makes
-/// its tiles glow for a moment.
+/// The tiles in paint order. It changes when a tile takes off, lands or is
+/// gone, not at every frame.
+class _PaintOrder extends ChangeNotifier {
+  List<int> ids = const [];
+
+  void update(List<int> next) {
+    if (listEquals(ids, next)) return;
+    ids = next;
+    notifyListeners();
+  }
+}
+
+/// Draws the Mahjong board. One timeline moves the tiles: each action plans
+/// a [TileMotion] for the tiles it changes (a drop for a new deal, a flight
+/// for a shuffle, a vanish for a match), and a hint makes its tiles glow for
+/// a moment.
+///
+/// A frame only repaints the tiles that move or glow ([MovingTile]); the
+/// tile widgets are built when an action changes them, and the tile layer
+/// when the paint order changes.
 class MahjongBoard extends StatefulWidget {
   const MahjongBoard({super.key, required this.controller, this.onCelebrated});
 
@@ -134,85 +158,117 @@ class _MahjongBoardState extends State<MahjongBoard>
   static const _dropDuration = 300.0;
   static const _vanishDuration = 380.0;
   static const _flightDuration = 520.0;
-  static const _burstDuration = 1100.0;
 
-  /// The halo of a hinted tile once its pulses are over.
-  static const _hintRest = 0.4;
+  /// From the end of the winning match to the win dialog.
+  static const _celebration = 1250.0;
+
+  /// Where the confetti of a win bursts from, one after the other, as
+  /// fractions of the board size.
+  static const _bursts = [
+    (0.5, 0.45),
+    (0.2, 0.3),
+    (0.8, 0.3),
+    (0.3, 0.75),
+    (0.7, 0.75),
+  ];
 
   late final Ticker _ticker = createTicker(_onTick);
+  final _boardKey = GlobalKey();
 
-  /// Time on the timeline, in ms. A new batch of motions restarts it at 0.
-  double _now = 0;
+  /// Confetti is drawn on the page overlay, above the app bar.
+  final _confettiLayer = OverlayPortalController()..show();
+
+  /// Time on the timeline, in ms. It only goes forward: motions are planned
+  /// at times on it, and a frame only moves the tiles that listen to it.
+  final _clock = ValueNotifier<double>(0);
+  double _tickerStart = 0;
   double _end = 0;
+
+  /// The last motion of each tile. A motion that has ended leaves its tile
+  /// where it rests, so it stays until the next one.
   final _motions = <int, TileMotion>{};
 
   /// Matched tiles, drawn until they have vanished.
   final _leaving = <int, _Target>{};
 
-  /// The win celebration: when its burst starts, and when to call
-  /// `onCelebrated`.
-  double? _burstAt;
+  /// Tiles on the board (false) and leaving it (true), from the back to the
+  /// front.
+  List<(_Target, bool)> _byDepth = const [];
+  final _paintOrder = _PaintOrder();
+
+  /// The widget of each tile, with the look it was built for.
+  final _tileWidgets = <int, (_TileLook, Widget)>{};
+  AppLocalizations? _tileL10n;
+  bool? _tileAnimate;
+
+  /// The win celebration: its confetti, and when to call `onCelebrated`.
+  Confetti? _confetti;
   double? _celebratedAt;
   Map<int, _Target> _targets = const {};
+  MahjongBoardGeometry? _geometry;
   int? _seenSerial;
   int? _seenHint;
 
   MahjongController get _controller => widget.controller;
+  double get _now => _clock.value;
 
   @override
   void dispose() {
     _ticker.dispose();
+    _clock.dispose();
+    _paintOrder.dispose();
     super.dispose();
   }
 
   void _onTick(Duration elapsed) {
-    var celebrated = false;
-    setState(() {
-      _now = elapsed.inMicroseconds / 1000;
-      if (_celebratedAt case final at? when _now >= at) {
-        _celebratedAt = null;
-        celebrated = true;
-      }
-      if (_now >= _end) _stopTimeline();
-    });
-    if (celebrated) widget.onCelebrated?.call();
+    final now = _tickerStart + elapsed.inMicroseconds / 1000;
+    _clock.value = now;
+    if (now >= _end) _stopTimeline();
+    _paintOrder.update(_orderAt(now));
+    if (_celebratedAt case final at? when now >= at) {
+      _celebratedAt = null;
+      widget.onCelebrated?.call();
+    }
   }
 
   void _stopTimeline() {
     _ticker.stop();
-    _motions.clear();
-    _leaving.clear();
-    _burstAt = null;
+    _confetti = null;
+    if (_leaving.isNotEmpty) {
+      _leaving.clear();
+      _sortByDepth();
+    }
   }
 
-  /// Adds motions (and a celebration) to the timeline, with times from now.
-  /// Running motions go on from where they are.
+  /// Adds motions (and a celebration) planned from now. Running motions go
+  /// on from where they are.
   void _addMotions(
     Map<int, TileMotion> added, {
-    double? burstAt,
+    Confetti? confetti,
     double? celebratedAt,
   }) {
-    if (added.isEmpty && celebratedAt == null) return;
-    if (_ticker.isActive) {
-      _ticker.stop();
-      _motions.updateAll((_, motion) => motion.shifted(_now));
-      if (_burstAt case final at?) _burstAt = at - _now;
-      if (_celebratedAt case final at?) _celebratedAt = at - _now;
+    if (added.isEmpty && confetti == null && celebratedAt == null) return;
+    final now = _now;
+    for (final MapEntry(key: id, value: motion) in added.entries) {
+      _motions[id] = motion.shifted(-now);
     }
-    _now = 0;
-    _motions.addAll(added);
-    if (burstAt != null) _burstAt = burstAt;
-    if (celebratedAt != null) _celebratedAt = celebratedAt;
+    if (confetti != null) _confetti = confetti.shifted(-now);
+    if (celebratedAt != null) _celebratedAt = now + celebratedAt;
     _end = [
       for (final motion in _motions.values) motion.end,
+      ?_confetti?.end,
       ?_celebratedAt,
-    ].fold(0.0, max);
-    _ticker.start();
+    ].fold(now, max);
+    if (!_ticker.isActive) {
+      _tickerStart = now;
+      _ticker.start();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final animate = !MediaQuery.disableAnimationsOf(context);
+    final l10n = AppLocalizations.of(context);
     return LayoutBuilder(
       builder: (context, constraints) => ListenableBuilder(
         listenable: _controller,
@@ -222,24 +278,38 @@ class _MahjongBoardState extends State<MahjongBoard>
             constraints.biggest,
             state.layout,
           );
+          _geometry = geometry;
           _plan(state, geometry, animate: animate);
+          final tiles = _tiles(state, geometry, l10n, animate: animate);
+          // The tile layer is built below with this order.
+          _paintOrder.ids = _orderAt(_now);
           return Center(
             child: SizedBox.fromSize(
+              key: _boardKey,
               size: geometry.size,
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  ..._tiles(state, geometry, animate: animate),
-                  if (_burstAt case final at? when _now > at)
-                    Positioned.fill(
-                      child: IgnorePointer(
-                        child: CustomPaint(
-                          painter: _BurstPainter(
-                            ((_now - at) / _burstDuration).clamp(0.0, 1.0),
-                          ),
+                  // Changes of the paint order rebuild this layer only, with
+                  // the same tile widgets.
+                  Positioned.fill(
+                    child: RepaintBoundary(
+                      child: ListenableBuilder(
+                        listenable: _paintOrder,
+                        builder: (context, _) => Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            for (final id in _paintOrder.ids) tiles[id]!,
+                          ],
                         ),
                       ),
                     ),
+                  ),
+                  OverlayPortal(
+                    controller: _confettiLayer,
+                    overlayChildBuilder: (context) => _confettiOverlay(),
+                    child: const SizedBox.shrink(),
+                  ),
                 ],
               ),
             ),
@@ -259,8 +329,7 @@ class _MahjongBoardState extends State<MahjongBoard>
   }) {
     final previous = _targets;
     _targets = {
-      for (final id in state.tileIds)
-        id: _target(state, id, state.positionOf(id)!, geometry),
+      for (final id in state.tileIds) id: _target(state, id, geometry),
     };
     final serial = _controller.actionSerial;
     final action = serial == _seenSerial ? null : _controller.lastAction;
@@ -271,7 +340,9 @@ class _MahjongBoardState extends State<MahjongBoard>
     final won = action != null && _controller.result != null;
     if (!animate) {
       _stopTimeline();
+      _motions.clear();
       _celebratedAt = null;
+      _sortByDepth();
       if (won) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) widget.onCelebrated?.call();
@@ -284,6 +355,7 @@ class _MahjongBoardState extends State<MahjongBoard>
     switch (action) {
       case MahjongAction.deal:
         _stopTimeline();
+        _motions.clear();
         _celebratedAt = null;
         added.addAll(_dropMotions(state, geometry));
       case MahjongAction.match:
@@ -304,26 +376,48 @@ class _MahjongBoardState extends State<MahjongBoard>
         }
       }
     }
+    _sortByDepth();
     if (won) {
-      final landed = added.values.fold(0.0, (end, m) => max(end, m.end));
-      _addMotions(
-        added,
-        burstAt: landed,
-        celebratedAt: landed + _burstDuration + 150,
-      );
+      _celebrate(added, geometry);
     } else {
       _addMotions(added);
     }
   }
 
-  _Target _target(
-    MahjongState state,
-    int id,
-    int position,
-    MahjongBoardGeometry geometry,
-  ) {
-    final p = state.layout.positions[position];
-    return _Target(id, state.faceOf(id), geometry.faceRect(p), p.z);
+  _Target _target(MahjongState state, int id, MahjongBoardGeometry geometry) {
+    final p = state.layout.positions[state.positionOf(id)!];
+    return (id: id, face: state.faceOf(id), rect: geometry.faceRect(p), z: p.z);
+  }
+
+  /// Paint order on the table: layer by layer, then from the back (top
+  /// left) to the front (bottom right), so the thickness of a tile hides
+  /// under its neighbors.
+  void _sortByDepth() {
+    _byDepth = [
+      for (final target in _targets.values) (target, false),
+      for (final target in _leaving.values) (target, true),
+    ];
+    _byDepth.sort((a, b) {
+      final (ta, _) = a;
+      final (tb, _) = b;
+      if (ta.z != tb.z) return ta.z.compareTo(tb.z);
+      return (ta.rect.left + ta.rect.top).compareTo(tb.rect.left + tb.rect.top);
+    });
+  }
+
+  /// The tiles at rest, then the tiles in the air (flying or vanishing).
+  List<int> _orderAt(double time) {
+    bool airborne((_Target, bool) entry) {
+      final (target, leaving) = entry;
+      return leaving || (_motions[target.id]?.isAirborneAt(time) ?? false);
+    }
+
+    return [
+      for (final entry in _byDepth)
+        if (!airborne(entry)) entry.$1.id,
+      for (final entry in _byDepth)
+        if (airborne(entry)) entry.$1.id,
+    ];
   }
 
   /// A new deal falls into place layer by layer, from the table up.
@@ -406,9 +500,29 @@ class _MahjongBoardState extends State<MahjongBoard>
     return added;
   }
 
-  void _tap(int id, MahjongBoardGeometry geometry) {
+  /// After the last pair has vanished, confetti bursts from a few points of
+  /// the cleared board; the win dialog comes a moment later.
+  void _celebrate(Map<int, TileMotion> added, MahjongBoardGeometry geometry) {
+    final landed = added.values.fold(0.0, (end, m) => max(end, m.end));
+    final size = geometry.size;
+    _addMotions(
+      added,
+      confetti: Confetti(
+        origins: [
+          for (final (x, y) in _bursts) Offset(size.width * x, size.height * y),
+        ],
+        starts: [for (var i = 0; i < _bursts.length; i++) landed + i * 110],
+        scale: geometry.tileWidth / 64,
+        seed: _controller.actionSerial,
+      ),
+      celebratedAt: landed + _celebration,
+    );
+  }
+
+  void _tap(int id) {
     if (_controller.tap(id) != TileTap.blocked) return;
-    if (MediaQuery.disableAnimationsOf(context)) return;
+    final geometry = _geometry;
+    if (geometry == null || MediaQuery.disableAnimationsOf(context)) return;
     setState(() {
       _addMotions({
         id: TileMotion(
@@ -421,128 +535,140 @@ class _MahjongBoardState extends State<MahjongBoard>
     });
   }
 
-  /// Tiles on the board in paint order, then the tiles in the air.
-  List<Widget> _tiles(
+  /// The widget of each tile on the board or leaving it. A tile keeps its
+  /// widget while it looks the same, so an action only rebuilds the tiles it
+  /// changes.
+  Map<int, Widget> _tiles(
     MahjongState state,
-    MahjongBoardGeometry geometry, {
-    required bool animate,
-  }) {
-    final entries = [
-      for (final target in _targets.values) (target, false),
-      for (final target in _leaving.values) (target, true),
-    ];
-    (int, int, double) order((_Target, bool) entry) {
-      final (target, leaving) = entry;
-      final airborne =
-          leaving || (_motions[target.id]?.isAirborneAt(_now) ?? false);
-      final (z, diagonal) = target.order;
-      return (airborne ? 1 : 0, z, diagonal);
-    }
-
-    entries.sort((a, b) {
-      final (ga, za, da) = order(a);
-      final (gb, zb, db) = order(b);
-      if (ga != gb) return ga.compareTo(gb);
-      if (za != zb) return za.compareTo(zb);
-      return da.compareTo(db);
-    });
-    final l10n = AppLocalizations.of(context);
-    return [
-      for (final (target, leaving) in entries)
-        _tile(
-          state,
-          target,
-          geometry,
-          l10n,
-          leaving: leaving,
-          animate: animate,
-        ),
-    ];
-  }
-
-  Widget _tile(
-    MahjongState state,
-    _Target target,
     MahjongBoardGeometry geometry,
     AppLocalizations l10n, {
-    required bool leaving,
     required bool animate,
   }) {
+    if (l10n != _tileL10n || animate != _tileAnimate) {
+      _tileWidgets.clear();
+      _tileL10n = l10n;
+      _tileAnimate = animate;
+    }
+    final hint = _controller.hintPair;
+    final tiles = <int, Widget>{};
+    for (final (target, leaving) in _byDepth) {
+      final id = target.id;
+      final _TileLook look = (
+        target: target,
+        leaving: leaving,
+        selected: !leaving && _controller.selected == id,
+        dimmed: !leaving && !state.isFree(id),
+        // The hint pulses, then stays softly lit until the next action.
+        hinted: !leaving && hint != null && (hint.$1 == id || hint.$2 == id),
+        motion: _motions[id],
+      );
+      final kept = _tileWidgets[id];
+      if (kept != null && kept.$1 == look) {
+        tiles[id] = kept.$2;
+      } else {
+        final tile = _tile(look, geometry, l10n, animate: animate);
+        _tileWidgets[id] = (look, tile);
+        tiles[id] = tile;
+      }
+    }
+    _tileWidgets.removeWhere((id, _) => !tiles.containsKey(id));
+    return tiles;
+  }
+
+  /// Built once per change of the tile: a frame only moves it and lights it
+  /// ([MovingTile]).
+  Widget _tile(
+    _TileLook look,
+    MahjongBoardGeometry geometry,
+    AppLocalizations l10n, {
+    required bool animate,
+  }) {
+    final (:target, :leaving, :selected, :dimmed, :hinted, :motion) = look;
     final id = target.id;
-    final pose = _motions[id]?.poseAt(_now);
-    final selected = !leaving && _controller.selected == id;
-    // The hint pulses, then stays softly lit until the next action.
-    final hinted =
-        !leaving &&
-        switch (_controller.hintPair) {
-          (final a, final b) => a == id || b == id,
-          null => false,
-        };
-    final pulse = pose?.glow ?? 0;
-    final glow = hinted ? _hintRest + (1 - _hintRest) * pulse : pulse;
     final margin = geometry.margin;
     final faceSize = Size(geometry.tileWidth, geometry.tileHeight);
-
-    Widget child = Stack(
-      children: [
-        IgnorePointer(
-          child: Padding(
-            padding: EdgeInsets.all(margin),
-            child: RepaintBoundary(
-              child: MahjongTileView(
-                face: target.face,
-                faceSize: faceSize,
-                depth: geometry.depth,
-                selected: selected,
-                dimmed: !leaving && !state.isFree(id),
-                glow: glow,
+    return Positioned(
+      key: _TileKey(id),
+      left: target.rect.left - margin,
+      top: target.rect.top - margin,
+      width: faceSize.width + geometry.depth + 2 * margin,
+      height: faceSize.height + geometry.depth + 2 * margin,
+      child: _Lift(
+        lifted: selected,
+        distance: geometry.depth * 1.2,
+        animate: animate,
+        child: MovingTile(
+          clock: _clock,
+          motion: motion,
+          faceRect: Offset(margin, margin) & faceSize,
+          depth: geometry.depth,
+          hinted: hinted,
+          child: KeyedSubtree(
+            key: ValueKey('tile-$id'),
+            // A tile that vanishes lets taps through to the tiles under it.
+            child: IgnorePointer(
+              ignoring: leaving,
+              child: Stack(
+                children: [
+                  IgnorePointer(
+                    child: Padding(
+                      padding: EdgeInsets.all(margin),
+                      child: RepaintBoundary(
+                        child: MahjongTileView(
+                          face: target.face,
+                          faceSize: faceSize,
+                          depth: geometry.depth,
+                          selected: selected,
+                          dimmed: dimmed,
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Only the face takes taps: a tile's thickness lies over
+                  // the tiles around it.
+                  Positioned(
+                    left: margin,
+                    top: margin,
+                    width: faceSize.width,
+                    height: faceSize.height,
+                    child: Semantics(
+                      label: tileName(target.face, l10n),
+                      button: true,
+                      selected: selected,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => _tap(id),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
         ),
-        // Only the face takes taps: a tile's thickness lies over the tiles
-        // around it.
-        Positioned(
-          left: margin,
-          top: margin,
-          width: faceSize.width,
-          height: faceSize.height,
-          child: Semantics(
-            label: tileName(target.face, l10n),
-            button: true,
-            selected: selected,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => _tap(id, geometry),
+      ),
+    );
+  }
+
+  Widget _confettiOverlay() {
+    final confetti = _confetti;
+    final board = _boardKey.currentContext?.findRenderObject() as RenderBox?;
+    if (confetti == null || board == null || !board.hasSize) {
+      return const SizedBox.shrink();
+    }
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: RepaintBoundary(
+          child: CustomPaint(
+            willChange: true,
+            painter: ConfettiPainter(
+              confetti,
+              _clock,
+              origin: board.localToGlobal(Offset.zero),
             ),
           ),
         ),
-      ],
-    );
-    // A tile that vanishes lets taps through to the tiles under it.
-    if (leaving) child = IgnorePointer(child: child);
-    child = _Lift(
-      lifted: selected,
-      distance: geometry.depth * 1.2,
-      animate: animate,
-      child: child,
-    );
-    if (pose != null) {
-      if (pose.scale != 1) {
-        child = Transform.scale(scale: pose.scale, child: child);
-      }
-      if (pose.opacity < 1) {
-        child = Opacity(opacity: max(0, pose.opacity), child: child);
-      }
-    }
-    final offset = pose?.offset ?? Offset.zero;
-    return Positioned(
-      key: ValueKey('tile-$id'),
-      left: target.rect.left - margin + offset.dx,
-      top: target.rect.top - margin + offset.dy,
-      width: faceSize.width + geometry.depth + 2 * margin,
-      height: faceSize.height + geometry.depth + 2 * margin,
-      child: child,
+      ),
     );
   }
 }
@@ -567,62 +693,13 @@ class _Lift extends StatelessWidget {
       tween: Tween(end: lifted ? 1 : 0),
       duration: Duration(milliseconds: animate ? 140 : 0),
       curve: Curves.easeOutCubic,
-      builder: (context, t, child) => t == 0
-          ? child!
-          : Transform.translate(
-              offset: Offset(-0.5, -1) * distance * t,
-              child: child,
-            ),
+      // Always a translation (none at rest), so the tile below keeps its
+      // widgets when it rises.
+      builder: (context, t, child) => Transform.translate(
+        offset: Offset(-0.5, -1) * distance * t,
+        child: child,
+      ),
       child: child,
     );
   }
-}
-
-/// The win: golden rings and sparks burst from the middle of the board.
-class _BurstPainter extends CustomPainter {
-  _BurstPainter(this.progress);
-
-  /// From 0 to 1.
-  final double progress;
-
-  static const _sparks = 14;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = size.center(Offset.zero);
-    final reach = size.shortestSide * 0.55;
-    final fade = 1 - Curves.easeIn.transform(progress);
-    for (var ring = 0; ring < 3; ring++) {
-      final t = (progress - ring * 0.12).clamp(0.0, 1.0);
-      if (t == 0) continue;
-      canvas.drawCircle(
-        center,
-        reach * Curves.easeOutCubic.transform(t),
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = reach * 0.04 * (1 - t) + 1
-          ..color = Color.fromRGBO(255, 213, 79, 0.9 * fade),
-      );
-    }
-    final spread = Curves.easeOutCubic.transform(progress);
-    for (var i = 0; i < _sparks; i++) {
-      final angle = 2 * pi * i / _sparks + 0.3;
-      final direction = Offset(cos(angle), sin(angle));
-      final tip = center + direction * reach * (0.2 + 0.85 * spread);
-      final tail = center + direction * reach * (0.1 + 0.6 * spread);
-      canvas.drawLine(
-        tail,
-        tip,
-        Paint()
-          ..strokeWidth = reach * 0.025 + 1
-          ..strokeCap = StrokeCap.round
-          ..color =
-              (i.isEven ? const Color(0xFFFFE082) : const Color(0xFFFF8A65))
-                  .withValues(alpha: fade),
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(_BurstPainter old) => old.progress != progress;
 }
