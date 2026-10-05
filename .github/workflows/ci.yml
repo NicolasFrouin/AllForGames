@@ -40,6 +40,12 @@ jobs:
           flutter-version: 3.47.6
           channel: stable
           cache: true
+      # As root (the runner container), tar keeps the owner of the SDK archive: git then refuses the
+      # SDK checkout ("dubious ownership"), and every flutter command fails.
+      - name: Trust the Flutter SDK for git
+        run: |
+          git config --global --get-all safe.directory | grep -qxF "$FLUTTER_ROOT" ||
+            git config --global --add safe.directory "$FLUTTER_ROOT"
       - run: flutter pub get
       - run: dart format --output=none --set-exit-if-changed lib test integration_test test_driver tool
       - run: flutter analyze
