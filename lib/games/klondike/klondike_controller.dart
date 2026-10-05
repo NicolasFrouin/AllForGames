@@ -14,6 +14,9 @@ import 'klondike_state.dart';
 
 enum MoveInput { tap, drag }
 
+/// What changed the board last, so the board can animate it.
+enum KlondikeAction { none, deal, draw, recycle, move, autoComplete, undo }
+
 /// Keys of the Klondike-specific counters in [GameRecord.details].
 abstract final class KlondikeStatKeys {
   static const stockDraws = 'stockDraws';
@@ -105,6 +108,8 @@ class KlondikeController extends ChangeNotifier {
   GameRecord? _result;
   bool _finished = false;
   Set<String> _lastMovedCardIds = const {};
+  KlondikeAction _lastAction = KlondikeAction.none;
+  int _actionSerial = 0;
 
   KlondikeState get state => _state;
   int get seed => _seed;
@@ -122,8 +127,15 @@ class KlondikeController extends ChangeNotifier {
   /// The record of the won game, or null while the game runs.
   GameRecord? get result => _result;
 
-  /// Cards that changed pile in the last action, so the board can draw them on top.
+  /// Cards that changed pile in the last action, in the order they moved
+  /// (bottom card first; the foundation order for an auto-complete).
   Set<String> get lastMovedCardIds => _lastMovedCardIds;
+
+  /// The last action ([KlondikeAction.none] for a game that continues).
+  KlondikeAction get lastAction => _lastAction;
+
+  /// Changes at every action, so the board sees each one once.
+  int get actionSerial => _actionSerial;
 
   bool draw() {
     if (_finished) return false;
@@ -134,7 +146,11 @@ class KlondikeController extends ChangeNotifier {
           ? KlondikeStatKeys.stockRecycles
           : KlondikeStatKeys.stockDraws,
     );
-    _commit(result.state, result.scoreDelta);
+    _commit(
+      result.state,
+      result.scoreDelta,
+      result.recycled ? KlondikeAction.recycle : KlondikeAction.draw,
+    );
     return true;
   }
 
@@ -155,7 +171,7 @@ class KlondikeController extends ChangeNotifier {
     if (from.type == PileType.foundation) {
       _bump(KlondikeStatKeys.foundationToTableau);
     }
-    _commit(result.state, result.scoreDelta);
+    _commit(result.state, result.scoreDelta, KlondikeAction.move);
     return true;
   }
 
@@ -171,23 +187,27 @@ class KlondikeController extends ChangeNotifier {
     if (!canAutoComplete) return;
     var next = _state;
     var scoreDelta = 0;
+    final order = <String>{};
     for (
       var step = next.nextFoundationMove();
       step != null;
       step = next.nextFoundationMove()
     ) {
+      order.add(next.pile(step.from).last.id);
       final result = next.move(step.from, 1, step.to)!;
       next = result.state;
       scoreDelta += result.scoreDelta;
     }
     _bump(KlondikeStatKeys.autoCompleted);
-    _commit(next, scoreDelta);
+    _commit(next, scoreDelta, KlondikeAction.autoComplete, moved: order);
   }
 
   void undo() {
     if (!canUndo) return;
     final previous = _history.removeLast();
     _lastMovedCardIds = _movedCardIds(_state, previous.state);
+    _lastAction = KlondikeAction.undo;
+    _actionSerial++;
     _state = previous.state;
     _score = previous.score;
     _undos++;
@@ -334,6 +354,8 @@ class KlondikeController extends ChangeNotifier {
     _result = null;
     _finished = false;
     _lastMovedCardIds = const {};
+    _lastAction = KlondikeAction.deal;
+    _actionSerial++;
   }
 
   /// A winnable seed of [difficulty] not in the records of [drawCount] games
@@ -355,9 +377,16 @@ class KlondikeController extends ChangeNotifier {
 
   static String _variant(int drawCount) => 'draw$drawCount';
 
-  void _commit(KlondikeState next, int scoreDelta) {
+  void _commit(
+    KlondikeState next,
+    int scoreDelta,
+    KlondikeAction action, {
+    Set<String>? moved,
+  }) {
     _history.add((state: _state, score: _score));
-    _lastMovedCardIds = _movedCardIds(_state, next);
+    _lastMovedCardIds = moved ?? _movedCardIds(_state, next);
+    _lastAction = action;
+    _actionSerial++;
     _state = next;
     _score = max(0, _score + scoreDelta);
     _moves++;

@@ -266,6 +266,25 @@ void main() {
       expect(textOf('score-value'), '5');
     });
 
+    testWidgets('a wrong drop flies back to its pile', (tester) async {
+      await pumpGame(tester, dragBoard);
+      final nine = at(tester, 'hearts-9');
+      final gesture = await tester.startGesture(nine + const Offset(10, 6));
+      await gesture.moveBy(const Offset(0, 30));
+      await tester.pump();
+      // A red 9 cannot go on a red 10.
+      await gesture.moveTo(tester.getCenter(byKey('tableau-2')));
+      await tester.pump();
+      await gesture.up();
+      await tester.pump(const Duration(milliseconds: 60));
+
+      // On its way back, not jumped home.
+      expect(opacityOf(tester, 'hearts-9'), 1);
+      expect(at(tester, 'hearts-9'), isNot(nine));
+      await tester.pumpAndSettle();
+      expect(at(tester, 'hearts-9'), nine);
+    });
+
     testWidgets('onto an illegal pile changes nothing', (tester) async {
       await pumpGame(tester, dragBoard);
       final nine = at(tester, 'hearts-9');
@@ -289,6 +308,33 @@ void main() {
       expect(isFaceUp(tester, 'diamonds-3'), isFalse);
       expect(textOf('moves-value'), '0');
       expect(canUndo(tester), isFalse);
+    });
+  });
+
+  group('animations', () {
+    testWidgets('a drawn card flies to the waste', (tester) async {
+      await pumpGame(tester, stockBoard);
+      await tester.tapAt(tester.getCenter(byKey('stock')));
+      await tester.pump(const Duration(milliseconds: 60));
+      expect(at(tester, 'spades-2'), isNot(at(tester, 'waste')));
+
+      await tester.pumpAndSettle();
+      expect(at(tester, 'spades-2'), at(tester, 'waste'));
+      expect(isFaceUp(tester, 'spades-2'), isTrue);
+    });
+
+    testWidgets('with reduced motion, cards move at once', (tester) async {
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
+      await pumpGame(tester, stockBoard);
+      await tester.tapAt(tester.getCenter(byKey('stock')));
+      await tester.pump();
+
+      expect(at(tester, 'spades-2'), at(tester, 'waste'));
+      expect(isFaceUp(tester, 'spades-2'), isTrue);
     });
   });
 

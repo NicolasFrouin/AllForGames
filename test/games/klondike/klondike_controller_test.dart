@@ -291,6 +291,67 @@ void main() {
     expect(stats.records.single.won, isTrue);
   });
 
+  test('autoComplete lists the cards in the order they go up', () {
+    final game = controller(
+      board(
+        foundations: foundationsUpTo([10, 10, 10, 10]),
+        tableau: [
+          [card('KC'), card('QD'), card('JC')],
+          [card('KD'), card('QC'), card('JD')],
+          [card('KH'), card('QS'), card('JH')],
+          [card('KS'), card('QH'), card('JS')],
+        ],
+      ),
+    );
+    game.autoComplete();
+
+    expect(game.lastAction, KlondikeAction.autoComplete);
+    final ranks = [
+      for (final id in game.lastMovedCardIds) int.parse(id.split('-').last),
+    ];
+    // The board sends them one by one in this order: never a card before
+    // the one under it on its foundation.
+    expect(ranks, [11, 11, 11, 11, 12, 12, 12, 12, 13, 13, 13, 13]);
+  });
+
+  test('each action is seen once, with its kind', () {
+    final game = controller(
+      board(
+        stock: [card('2S', up: false)],
+        tableau: [
+          [card('3H')],
+        ],
+      ),
+    );
+    expect(game.lastAction, KlondikeAction.deal);
+    final dealt = game.actionSerial;
+
+    game.draw();
+    expect(game.lastAction, KlondikeAction.draw);
+    expect(game.actionSerial, dealt + 1);
+    game.undo();
+    expect(game.lastAction, KlondikeAction.undo);
+    expect(game.lastMovedCardIds, {'spades-2'});
+    game.draw();
+    game.move(PileRef.waste, 1, tab(0));
+    expect(game.lastAction, KlondikeAction.move);
+    expect(game.actionSerial, dealt + 4);
+
+    game.newGame(seed: 1);
+    expect(game.lastAction, KlondikeAction.deal);
+  });
+
+  test('a continued game starts with no action to animate', () {
+    final game = controller();
+    game.draw();
+    final restored = KlondikeController.restore(
+      game.toJson(),
+      stats: stats,
+      saves: saves,
+    );
+    expect(restored.lastAction, KlondikeAction.none);
+  });
+
   test('autoComplete does nothing while cards are face down', () {
     final game = controller();
     game.autoComplete();

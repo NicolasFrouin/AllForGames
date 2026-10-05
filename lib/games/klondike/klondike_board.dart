@@ -1,9 +1,11 @@
 import 'dart:math';
 
+import 'package:flutter/scheduler.dart' show Ticker;
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../skins/card_backs.dart';
+import 'card_motion.dart';
 import 'card_view.dart';
 import 'klondike_controller.dart';
 import 'klondike_state.dart';
@@ -26,8 +28,10 @@ const _allPiles = [
   PileRef.tableau(6),
 ];
 
-/// Draws the whole Klondike table in one [Stack]: every card is an
-/// [AnimatedPositioned] keyed by card id, so each move animates by itself.
+/// Draws the whole Klondike table in one [Stack]. One timeline moves the
+/// cards: each action plans a [CardMotion] for every card it changes (flights
+/// on an arc, flips, a deal from the stock, a shake), so moves look fluid and
+/// can follow each other without jumps.
 class KlondikeBoard extends StatefulWidget {
   const KlondikeBoard({
     super.key,
@@ -45,11 +49,14 @@ class KlondikeBoard extends StatefulWidget {
 }
 
 class _DragData {
-  _DragData(this.from, Iterable<PlayingCard> cards)
+  _DragData(this.from, Iterable<PlayingCard> cards, this.relativeOffsets)
     : cardIds = [for (final card in cards) card.id];
 
   final PileRef from;
   final List<String> cardIds;
+
+  /// Where each card is drawn in the drag feedback, from the first one.
+  final List<Offset> relativeOffsets;
 
   int get count => cardIds.length;
 
@@ -65,12 +72,47 @@ class _DragData {
   }
 }
 
-class _KlondikeBoardState extends State<KlondikeBoard> {
-  _DragData? _dragging;
+/// Where a card rests after the last action.
+class _Target {
+  const _Target(this.card, this.pile, this.index, this.offset);
 
-  /// Cards that the player dropped: they are already at their target, so
-  /// they must not animate from their old pile.
-  Set<String> _droppedCardIds = const {};
+  final PlayingCard card;
+  final PileRef pile;
+  final int index;
+  final Offset offset;
+
+  /// Paint order on the table: the pile, then the place in the pile.
+  int get z => _allPiles.indexOf(pile) * 100 + index;
+}
+
+class _KlondikeBoardState extends State<KlondikeBoard>
+    with SingleTickerProviderStateMixin {
+  // Durations in milliseconds.
+  static const _dealStagger = 32.0;
+  static const _dealFlight = 280.0;
+  static const _cascadeStagger = 45.0;
+  static const _cascadeFlight = 300.0;
+  static const _drawStagger = 70.0;
+  static const _stackStagger = 28.0;
+  static const _flip = 240.0;
+
+  late final Ticker _ticker = createTicker(_onTick);
+  final _stackKey = GlobalKey();
+
+  /// Time on the timeline, in ms. A new batch of motions restarts it at 0.
+  double _now = 0;
+  double _end = 0;
+  final _motions = <String, CardMotion>{};
+
+  /// Paint order of a card that waits before its motion: its old pile.
+  final _waitZ = <String, int>{};
+  Map<String, _Target> _targets = const {};
+  int? _seenSerial;
+
+  /// Top-left corners of dropped cards, so they glide from where the player
+  /// let them go.
+  Map<String, Offset>? _dropStarts;
+  _DragData? _dragging;
 
   KlondikeController get _controller => widget.controller;
 
@@ -82,22 +124,59 @@ class _KlondikeBoardState extends State<KlondikeBoard> {
   }
 
   @override
+  void dispose() {
+    _ticker.dispose();
+    super.dispose();
+  }
+
+  void _onTick(Duration elapsed) {
+    setState(() {
+      _now = elapsed.inMicroseconds / 1000;
+      if (_now >= _end) {
+        _ticker.stop();
+        _motions.clear();
+        _waitZ.clear();
+      }
+    });
+  }
+
+  /// Adds motions to the timeline. Running motions go on from where they are.
+  void _addMotions(Map<String, CardMotion> added) {
+    if (added.isEmpty) return;
+    if (_ticker.isActive) {
+      _ticker.stop();
+      _motions.updateAll((_, motion) => motion.shifted(_now));
+    }
+    _now = 0;
+    _motions.addAll(added);
+    _end = _motions.values.fold(0.0, (end, motion) => max(end, motion.end));
+    _ticker.start();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final animate = !MediaQuery.disableAnimationsOf(context);
     return LayoutBuilder(
       builder: (context, constraints) => ListenableBuilder(
         listenable: _controller,
         builder: (context, _) {
           final state = _controller.state;
           final layout = _BoardLayout(constraints.biggest, state.drawCount);
+          final pileOffsets = {
+            for (final ref in _allPiles)
+              ref: layout.offsets(ref, state.pile(ref)),
+          };
+          _plan(state, layout, pileOffsets, animate: animate);
           return Center(
             child: SizedBox(
+              key: _stackKey,
               width: layout.boardWidth,
               height: layout.height,
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
                   ..._slots(state, layout),
-                  ..._cards(state, layout),
+                  ..._cards(state, layout, pileOffsets),
                   ..._dropTargets(layout),
                 ],
               ),
@@ -106,6 +185,208 @@ class _KlondikeBoardState extends State<KlondikeBoard> {
         },
       ),
     );
+  }
+
+  /// Compares the new places of the cards with the old ones and plans the
+  /// motions of the last action. Runs on every build, so it only plans what
+  /// changed.
+  void _plan(
+    KlondikeState state,
+    _BoardLayout layout,
+    Map<PileRef, List<Offset>> pileOffsets, {
+    required bool animate,
+  }) {
+    final previous = _targets;
+    _targets = {
+      for (final ref in _allPiles)
+        for (final (index, card) in state.pile(ref).indexed)
+          card.id: _Target(card, ref, index, pileOffsets[ref]![index]),
+    };
+    final serial = _controller.actionSerial;
+    final action = serial == _seenSerial ? null : _controller.lastAction;
+    _seenSerial = serial;
+    final dropStarts = action == null ? null : _dropStarts;
+    if (action != null) _dropStarts = null;
+
+    if (!animate) {
+      _ticker.stop();
+      _motions.clear();
+      _waitZ.clear();
+      return;
+    }
+    if (action == KlondikeAction.deal) {
+      _ticker.stop();
+      _motions.clear();
+      _waitZ.clear();
+      _addMotions(_dealMotions(state, layout));
+      return;
+    }
+    // A game that continues shows up as it is.
+    if (previous.isEmpty) return;
+
+    final moved = action == null
+        ? const <String>[]
+        : _controller.lastMovedCardIds.toList();
+    final added = <String, CardMotion>{};
+    for (final MapEntry(key: id, value: target) in _targets.entries) {
+      final before = previous[id];
+      if (before == null) continue;
+      final moves = before.offset != target.offset;
+      final flips = before.card.faceUp != target.card.faceUp;
+      if (!moves && !flips) continue;
+      final pose = _motions[id]?.poseAt(_now);
+      final from = dropStarts?[id] ?? pose?.position ?? before.offset;
+      final faceFrom = pose?.faceUp ?? before.card.faceUp;
+      final order = moved.indexOf(id);
+      final motion = _motionFor(
+        action,
+        layout,
+        from: from,
+        to: target.offset,
+        faceFrom: faceFrom,
+        faceTo: target.card.faceUp,
+        order: max(0, order),
+        orderCount: moved.length,
+        dropped: dropStarts?.containsKey(id) ?? false,
+      );
+      if (motion.start > 0) _waitZ[id] = before.z;
+      added[id] = motion;
+    }
+    _addMotions(added);
+  }
+
+  CardMotion _motionFor(
+    KlondikeAction? action,
+    _BoardLayout layout, {
+    required Offset from,
+    required Offset to,
+    required bool faceFrom,
+    required bool faceTo,
+    required int order,
+    required int orderCount,
+    required bool dropped,
+  }) {
+    final distance = (to - from).distance;
+    final long = distance > layout.cardHeight * 0.6;
+    final arc = long ? min(distance * 0.14, layout.cardHeight * 0.4) : 0.0;
+    final (start, duration, curve) = switch (action) {
+      // Window resize or a pile that spreads: a quick glide.
+      null => (0.0, 220.0, Curves.easeOutCubic),
+      _ when dropped => (0.0, 160.0, Curves.easeOutCubic),
+      KlondikeAction.autoComplete => (
+        order * _cascadeStagger,
+        _cascadeFlight,
+        Curves.easeInOutCubic,
+      ),
+      KlondikeAction.draw => (order * _drawStagger, 280.0, Curves.easeOutCubic),
+      // The whole waste turns back over, like a riffle.
+      KlondikeAction.recycle => (
+        (orderCount - 1 - order) * 6.0,
+        260.0,
+        Curves.easeInOutCubic,
+      ),
+      _ => (
+        order * _stackStagger,
+        (170 + distance * 0.5).clamp(200.0, 420.0),
+        long ? Curves.easeInOutCubic : Curves.easeOutCubic,
+      ),
+    };
+    final moving = distance > 0;
+    return CardMotion(
+      kind: CardMotionKind.fly,
+      from: from,
+      to: to,
+      start: moving ? start : 0,
+      duration: moving ? duration : 0,
+      height: dropped ? 0 : arc,
+      curve: curve,
+      faceFrom: faceFrom,
+      faceTo: faceTo,
+      // A card that turns in place waits until the card above lifts off.
+      flipStart: moving ? start : 110,
+      flipDuration: moving ? max(duration, _flip) : _flip,
+    );
+  }
+
+  /// Cards fly from the stock to the columns one by one, row by row like a
+  /// real deal, and turn over when they land.
+  Map<String, CardMotion> _dealMotions(
+    KlondikeState state,
+    _BoardLayout layout,
+  ) {
+    final stock = layout.slot(PileRef.stock);
+    final motions = <String, CardMotion>{};
+    final rows = state.tableau.fold(0, (rows, pile) => max(rows, pile.length));
+    var dealt = 0;
+    for (var row = 0; row < rows; row++) {
+      for (var column = 0; column < 7; column++) {
+        final card = state.tableau[column].elementAtOrNull(row);
+        if (card == null) continue;
+        final start = dealt++ * _dealStagger;
+        final distance = (_targets[card.id]!.offset - stock).distance;
+        motions[card.id] = CardMotion(
+          kind: CardMotionKind.fly,
+          from: stock,
+          to: _targets[card.id]!.offset,
+          start: start,
+          duration: _dealFlight,
+          height: min(distance * 0.1, layout.cardHeight * 0.3),
+          faceFrom: false,
+          faceTo: card.faceUp,
+          flipStart: start + _dealFlight,
+          flipDuration: _flip,
+        );
+        // Waiting cards sit on top of the stock.
+        _waitZ[card.id] = 50 + dealt;
+      }
+    }
+    return motions;
+  }
+
+  /// A tap with no legal move: the cards shake their head.
+  void _shake(Iterable<PlayingCard> cards, _BoardLayout layout) {
+    setState(() {
+      _addMotions({
+        for (final card in cards)
+          card.id: CardMotion(
+            kind: CardMotionKind.shake,
+            from: _targets[card.id]!.offset,
+            to: _targets[card.id]!.offset,
+            start: 0,
+            duration: 380,
+            height: layout.cardWidth * 0.07,
+            faceFrom: card.faceUp,
+            faceTo: card.faceUp,
+          ),
+      });
+    });
+  }
+
+  /// Dropped where they cannot go: the cards fly back to their pile.
+  void _snapBack(_DragData data, Offset globalTopLeft) {
+    if (!data.matches(_controller.state)) return;
+    final topLeft = _toLocal(globalTopLeft);
+    setState(() {
+      _addMotions({
+        for (final (i, id) in data.cardIds.indexed)
+          if (_targets[id] case final target?)
+            id: CardMotion(
+              kind: CardMotionKind.fly,
+              from: topLeft + data.relativeOffsets[i],
+              to: target.offset,
+              start: i * 18.0,
+              duration: 320,
+              curve: Curves.easeOutBack,
+              faceFrom: target.card.faceUp,
+              faceTo: target.card.faceUp,
+            ),
+      });
+    });
+  }
+
+  Offset _toLocal(Offset global) {
+    final box = _stackKey.currentContext?.findRenderObject() as RenderBox?;
+    return box?.globalToLocal(global) ?? global;
   }
 
   Iterable<Widget> _slots(KlondikeState state, _BoardLayout layout) sync* {
@@ -155,46 +436,67 @@ class _KlondikeBoardState extends State<KlondikeBoard> {
     }
   }
 
-  List<Widget> _cards(KlondikeState state, _BoardLayout layout) {
-    final moved = _controller.lastMovedCardIds;
-    final resting = <Widget>[];
-    final moving = <Widget>[];
-    for (final ref in _allPiles) {
-      final cards = state.pile(ref);
-      final offsets = layout.offsets(ref, cards);
-      for (var i = 0; i < cards.length; i++) {
-        final widget = _card(cards, i, ref, offsets, layout);
-        (moved.contains(cards[i].id) ? moving : resting).add(widget);
+  /// Cards on the table in pile order (a card that waits keeps the place of
+  /// its old pile), then the cards in the air, the latest on top.
+  List<Widget> _cards(
+    KlondikeState state,
+    _BoardLayout layout,
+    Map<PileRef, List<Offset>> pileOffsets,
+  ) {
+    (int, double) paintOrder(_Target target) {
+      final motion = _motions[target.card.id];
+      if (motion == null) return (0, target.z.toDouble());
+      if (motion.isFlyingAt(_now)) return (1, motion.segmentAt(_now).start);
+      if (motion.isWaitingAt(_now)) {
+        return (0, (_waitZ[target.card.id] ?? target.z).toDouble());
       }
+      return (0, target.z.toDouble());
     }
-    // Cards that just moved are painted last, so they fly over the others.
-    return [...resting, ...moving];
+
+    final ordered =
+        [for (final target in _targets.values) (target, paintOrder(target))]
+          ..sort((a, b) {
+            final byGroup = a.$2.$1.compareTo(b.$2.$1);
+            return byGroup != 0 ? byGroup : a.$2.$2.compareTo(b.$2.$2);
+          });
+    return [
+      for (final (target, _) in ordered)
+        _card(state, target, layout, pileOffsets[target.pile]!),
+    ];
   }
 
   Widget _card(
-    List<PlayingCard> cards,
-    int index,
-    PileRef pile,
-    List<Offset> offsets,
+    KlondikeState state,
+    _Target target,
     _BoardLayout layout,
+    List<Offset> offsets,
   ) {
-    final card = cards[index];
+    final card = target.card;
+    final pile = target.pile;
+    final cards = state.pile(pile);
+    final index = target.index;
     final count = cards.length - index;
     final isTop = count == 1;
     final hidden = _isDragging && _dragging!.cardIds.contains(card.id);
+    final pose = _motions[card.id]?.poseAt(_now);
 
     Widget child = CardView(
-      card: card,
+      card: pose == null || pose.faceUp == card.faceUp
+          ? card
+          : card.turned(faceUp: pose.faceUp),
       width: layout.cardWidth,
       cardBack: widget.cardBack,
     );
+    if (pose != null) child = _Posed(pose: pose, layout: layout, child: child);
     if (pile.type == PileType.stock) {
       child = GestureDetector(
         onTap: () => _unlessDragging(_controller.draw),
         child: child,
       );
     } else if (card.faceUp && (isTop || pile.type == PileType.tableau)) {
-      final data = _DragData(pile, cards.skip(index));
+      final data = _DragData(pile, cards.skip(index), [
+        for (var i = index; i < cards.length; i++) offsets[i] - offsets[index],
+      ]);
       child = Draggable<_DragData>(
         data: data,
         feedback: _DragFeedback(
@@ -205,25 +507,26 @@ class _KlondikeBoardState extends State<KlondikeBoard> {
         ),
         onDragStarted: () => setState(() => _dragging = data),
         onDragEnd: (_) => setState(() => _dragging = null),
+        onDraggableCanceled: (_, offset) => _snapBack(data, offset),
         child: GestureDetector(
           // Taps on a foundation card would only move it back down.
           onTap: pile.type == PileType.foundation
               ? null
-              : () => _unlessDragging(() => _controller.tap(pile, count)),
+              : () => _unlessDragging(() {
+                  if (!_controller.tap(pile, count)) {
+                    _shake(cards.skip(index), layout);
+                  }
+                }),
           child: child,
         ),
       );
     }
 
-    final offset = offsets[index];
-    return AnimatedPositioned(
+    final position = pose?.position ?? target.offset;
+    return Positioned(
       key: ValueKey(card.id),
-      duration: _droppedCardIds.contains(card.id)
-          ? Duration.zero
-          : const Duration(milliseconds: 220),
-      curve: Curves.easeOutCubic,
-      left: offset.dx,
-      top: offset.dy,
+      left: position.dx,
+      top: position.dy,
       width: layout.cardWidth,
       height: layout.cardHeight,
       child: Opacity(opacity: hidden ? 0 : 1, child: child),
@@ -264,32 +567,80 @@ class _KlondikeBoardState extends State<KlondikeBoard> {
               details.data.count,
               target,
             ),
-        onAcceptWithDetails: (details) => _drop(details.data, target),
+        onAcceptWithDetails: (details) =>
+            _drop(details.data, target, details.offset),
         // The child never takes hits, so taps and drags reach the cards below.
         builder: (context, candidates, _) => IgnorePointer(
-          child: candidates.isEmpty
-              ? const SizedBox.expand()
-              : DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: const Color(0x22FFFFFF),
-                    border: Border.all(color: Colors.white70, width: 2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const SizedBox.expand(),
-                ),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            decoration: BoxDecoration(
+              color: candidates.isEmpty
+                  ? Colors.transparent
+                  : const Color(0x22FFFFFF),
+              border: Border.all(
+                color: candidates.isEmpty ? Colors.transparent : Colors.white70,
+                width: 2,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
         ),
       ),
     );
   }
 
-  void _drop(_DragData data, PileRef target) {
+  void _drop(_DragData data, PileRef target, Offset globalTopLeft) {
+    final topLeft = _toLocal(globalTopLeft);
     setState(() {
       _dragging = null;
-      _droppedCardIds = data.cardIds.toSet();
+      _dropStarts = {
+        for (final (i, id) in data.cardIds.indexed)
+          id: topLeft + data.relativeOffsets[i],
+      };
     });
     _controller.move(data.from, data.count, target);
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => _droppedCardIds = const {},
+  }
+}
+
+/// Draws a card in the air: lifted, turned or tilted, with a shadow that
+/// grows with the height.
+class _Posed extends StatelessWidget {
+  const _Posed({required this.pose, required this.layout, required this.child});
+
+  final CardPose pose;
+  final _BoardLayout layout;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    var card = child;
+    if (pose.elevation > 0) {
+      card = DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(layout.cardWidth * 0.1),
+          boxShadow: [
+            BoxShadow(
+              color: Color.fromRGBO(0, 0, 0, 0.35 * pose.elevation),
+              blurRadius: 4 + 14 * pose.elevation,
+              offset: Offset(0, 2 + 10 * pose.elevation),
+            ),
+          ],
+        ),
+        child: card,
+      );
+    }
+    if (pose.scale == 1 && pose.rotation == 0 && pose.flipAngle == 0) {
+      return card;
+    }
+    return Transform(
+      alignment: Alignment.center,
+      transform: Matrix4.identity()
+        // Perspective, so a flip looks like a card turning over.
+        ..setEntry(3, 2, 0.0012)
+        ..rotateY(pose.flipAngle)
+        ..rotateZ(pose.rotation)
+        ..scaleByDouble(pose.scale, pose.scale, 1, 1),
+      child: card,
     );
   }
 }
@@ -346,23 +697,46 @@ class _DragFeedback extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final top = offsets.first.dy;
+    // Picked up: a little bigger and tilted, with a deep shadow.
     return Material(
       type: MaterialType.transparency,
-      child: SizedBox(
-        width: layout.cardWidth,
-        height: offsets.last.dy - top + layout.cardHeight,
-        child: Stack(
-          children: [
-            for (var i = 0; i < cards.length; i++)
-              Positioned(
-                top: offsets[i].dy - top,
-                child: CardView(
-                  card: cards[i],
-                  width: layout.cardWidth,
-                  cardBack: cardBack,
-                ),
-              ),
-          ],
+      child: Transform.rotate(
+        angle: -0.025,
+        alignment: Alignment.topCenter,
+        child: Transform.scale(
+          scale: 1.05,
+          alignment: Alignment.topCenter,
+          child: SizedBox(
+            width: layout.cardWidth,
+            height: offsets.last.dy - top + layout.cardHeight,
+            child: Stack(
+              children: [
+                for (var i = 0; i < cards.length; i++)
+                  Positioned(
+                    top: offsets[i].dy - top,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(
+                          layout.cardWidth * 0.1,
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x66000000),
+                            blurRadius: 18,
+                            offset: Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: CardView(
+                        card: cards[i],
+                        width: layout.cardWidth,
+                        cardBack: cardBack,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );

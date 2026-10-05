@@ -110,6 +110,12 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   (`new-game`) opens with the settings (`klondikeDrawCount`, `klondikeDifficulty`); Deal saves them, and confirms
   the abandon of a game with moves (the sheet says so). A game opened from the hub without a save uses them too
   (`?draw=` overrides the draw count); Play again keeps the draw count and difficulty.
+- **Animations** (Klondike board): one timeline (a `Ticker` in `klondike_board.dart`) moves every card. On each
+  action (`controller.lastAction` / `actionSerial`, cards in `lastMovedCardIds` order) the board plans a
+  `CardMotion` per changed card (`card_motion.dart`: fly on an arc, 3D flip, hop, shake; pure and unit-tested).
+  A new batch shifts the running motions, so moves chain without jumps. Paint order: cards on the table by pile
+  (a waiting card keeps its old pile), then cards in the air. Reduced motion (`MediaQuery.disableAnimationsOf`)
+  moves cards at once. No endless animation anywhere: tests rely on `pumpAndSettle`.
 - **Card suits** are drawn with `SuitIcon` (vector). Text symbols ♥ ♦ render as color emoji on web.
   Face-down cards are drawn with `CardBackView` and the selected skin.
 - **Keys for tests**: widgets that tests drive have `ValueKey`s (`game-<id>`, `stats-<id>`, `stock`, `waste`,
