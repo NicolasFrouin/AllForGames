@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
 # Runs integration_test/app_test.dart in headless Chrome.
 # Usage: scripts/e2e_web.sh [extra flutter drive args, e.g. --no-headless]
+# CHROME_EXECUTABLE and CHROMEDRIVER, when set, give the Chrome and
+# chromedriver to use (CI sets them); otherwise the local ones are found.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
 port=4444
 mac_chrome='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-if [[ -x "$mac_chrome" ]]; then
+if [[ -n "${CHROME_EXECUTABLE:-}" ]]; then
+  chrome_version=$("$CHROME_EXECUTABLE" --version)
+elif [[ -x "$mac_chrome" ]]; then
   chrome_version=$("$mac_chrome" --version)
 else
   chrome_version=$(google-chrome --version)
@@ -24,7 +28,7 @@ install_driver() {
 
 driver=''
 # CHROMEWEBDRIVER is the chromedriver folder on GitHub-hosted runners.
-for candidate in "$(command -v chromedriver || true)" \
+for candidate in "${CHROMEDRIVER:-}" "$(command -v chromedriver || true)" \
   "${CHROMEWEBDRIVER:+$CHROMEWEBDRIVER/chromedriver}" \
   .chromedriver/chromedriver/*/*/chromedriver; do
   if [[ -x "$candidate" && "$(major_of "$candidate")" == "$chrome_major" ]]; then
@@ -62,4 +66,5 @@ flutter drive \
   --browser-name=chrome \
   --headless \
   --driver-port="$port" \
+  ${CHROME_EXECUTABLE:+--chrome-binary="$CHROME_EXECUTABLE"} \
   "$@"

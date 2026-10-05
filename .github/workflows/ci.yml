@@ -3,16 +3,38 @@ name: CI
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+# There is one runner: a newer push of the same branch replaces the run in progress.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test:
-    name: Format, analyze, unit and widget tests
-    runs-on: ubuntu-latest
+  ci:
+    name: Format, analyze, tests and web e2e
+    # Always the self-hosted runner (Coolify, Linux x64), never GitHub-hosted runners.
+    runs-on: [self-hosted, Linux, X64]
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+
+      # flutter-action needs these tools; a bare runner image may not have all of them.
+      - name: Runner tools
+        run: |
+          packages=()
+          for pair in curl:curl git:git jq:jq unzip:unzip xz:xz-utils zip:zip; do
+            command -v "${pair%%:*}" >/dev/null || packages+=("${pair#*:}")
+          done
+          if (( ${#packages[@]} )); then
+            sudo=$( (( EUID == 0 )) || echo sudo )
+            $sudo apt-get update -q
+            $sudo apt-get install -y -q --no-install-recommends "${packages[@]}"
+          fi
+
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: 3.47.6
@@ -22,22 +44,25 @@ jobs:
       - run: dart format --output=none --set-exit-if-changed lib test integration_test test_driver tool
       - run: flutter analyze
       - run: flutter test
+
+      # Chrome, a matching chromedriver and the system libraries Chrome needs.
+      - uses: browser-actions/setup-chrome@v2
+        id: chrome
+        with:
+          install-dependencies: true
+          install-chromedriver: true
+
       # Deals come from seeds: they must be the same on the VM, JavaScript and WebAssembly.
       - name: Deals are the same on the web (JS and Wasm)
+        env:
+          CHROME_EXECUTABLE: ${{ steps.chrome.outputs.chrome-path }}
         run: |
           flutter test --platform chrome test/games/klondike/klondike_state_test.dart
           flutter test --platform chrome --wasm test/games/klondike/klondike_state_test.dart
 
-  e2e:
-    name: End-to-end tests (Chrome)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: 3.47.6
-          channel: stable
-          cache: true
-      - run: flutter pub get
-      # The runner image ships Chrome and a matching chromedriver ($CHROMEWEBDRIVER).
-      - run: scripts/e2e_web.sh
+      - name: End-to-end tests (Chrome)
+        env:
+          CHROME_EXECUTABLE: ${{ steps.chrome.outputs.chrome-path }}
+          CHROMEDRIVER: ${{ steps.chrome.outputs.chromedriver-path }}
+        # A container has a small /dev/shm: Chrome must not use it.
+        run: scripts/e2e_web.sh --web-browser-flag=--disable-dev-shm-usage

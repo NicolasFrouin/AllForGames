@@ -23,7 +23,13 @@ dart run tool/generate_klondike_deals.dart    # regenerates klondike_deals.dart 
 flutter build web --release --wasm            # release web build in build/web
 ```
 
-Toolchain: Flutter 3.47.6 / Dart 3.13 (Homebrew cask). CI (`.github/workflows/ci.yml`) runs format, analyze, tests and web e2e.
+Toolchain: Flutter 3.47.6 / Dart 3.13 (Homebrew cask). CI (`.github/workflows/ci.yml`) runs format, analyze, tests,
+the deal tests in Chrome (JS and Wasm) and web e2e.
+
+**CI runs only on the self-hosted runner** (Coolify, Linux x64): every job uses `runs-on: [self-hosted, Linux, X64]`.
+Never use GitHub-hosted runners (`ubuntu-latest`, ...). The runner has no preinstalled Chrome or Flutter: the
+workflow installs them (`subosito/flutter-action`, `browser-actions/setup-chrome`) and passes `CHROME_EXECUTABLE`
+and `CHROMEDRIVER` to `scripts/e2e_web.sh`. A new tool needed by CI must be installed by the workflow too.
 
 ## Layout
 
