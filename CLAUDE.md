@@ -116,6 +116,9 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   A new batch shifts the running motions, so moves chain without jumps. Paint order: cards on the table by pile
   (a waiting card keeps its old pile), then cards in the air. Reduced motion (`MediaQuery.disableAnimationsOf`)
   moves cards at once. No endless animation anywhere: tests rely on `pumpAndSettle`.
+  A win plays on the same timeline: the auto-complete cascade (one card after the other, in foundation order),
+  then the kings hop with confetti bursts (`confetti.dart`, drawn in an `OverlayPortal` above the app bar); the
+  board then calls `onCelebrated` and the screen opens the win dialog (at once with reduced motion).
 - **Card suits** are drawn with `SuitIcon` (vector). Text symbols ♥ ♦ render as color emoji on web.
   Face-down cards are drawn with `CardBackView` and the selected skin.
 - **Keys for tests**: widgets that tests drive have `ValueKey`s (`game-<id>`, `stats-<id>`, `stock`, `waste`,

@@ -7,6 +7,7 @@ import '../../l10n/app_localizations.dart';
 import '../../skins/card_backs.dart';
 import 'card_motion.dart';
 import 'card_view.dart';
+import 'confetti.dart';
 import 'klondike_controller.dart';
 import 'klondike_state.dart';
 import 'playing_card.dart';
@@ -37,12 +38,17 @@ class KlondikeBoard extends StatefulWidget {
     super.key,
     required this.controller,
     required this.cardBack,
+    this.onCelebrated,
   });
 
   final KlondikeController controller;
 
   /// The look of the face-down cards.
   final CardBackSkin cardBack;
+
+  /// Called once after a win, when the celebration has played (at once with
+  /// reduced motion): time for the win dialog.
+  final VoidCallback? onCelebrated;
 
   @override
   State<KlondikeBoard> createState() => _KlondikeBoardState();
@@ -99,6 +105,9 @@ class _KlondikeBoardState extends State<KlondikeBoard>
   late final Ticker _ticker = createTicker(_onTick);
   final _stackKey = GlobalKey();
 
+  /// Confetti is drawn on the page overlay, above the app bar.
+  final _confettiLayer = OverlayPortalController()..show();
+
   /// Time on the timeline, in ms. A new batch of motions restarts it at 0.
   double _now = 0;
   double _end = 0;
@@ -106,6 +115,10 @@ class _KlondikeBoardState extends State<KlondikeBoard>
 
   /// Paint order of a card that waits before its motion: its old pile.
   final _waitZ = <String, int>{};
+
+  /// The win celebration: its confetti, and when to call `onCelebrated`.
+  Confetti? _confetti;
+  double? _celebratedAt;
   Map<String, _Target> _targets = const {};
   int? _seenSerial;
 
@@ -130,26 +143,48 @@ class _KlondikeBoardState extends State<KlondikeBoard>
   }
 
   void _onTick(Duration elapsed) {
+    var celebrated = false;
     setState(() {
       _now = elapsed.inMicroseconds / 1000;
-      if (_now >= _end) {
-        _ticker.stop();
-        _motions.clear();
-        _waitZ.clear();
+      if (_celebratedAt case final at? when _now >= at) {
+        _celebratedAt = null;
+        celebrated = true;
       }
+      if (_now >= _end) _stopTimeline();
     });
+    if (celebrated) widget.onCelebrated?.call();
   }
 
-  /// Adds motions to the timeline. Running motions go on from where they are.
-  void _addMotions(Map<String, CardMotion> added) {
-    if (added.isEmpty) return;
+  void _stopTimeline() {
+    _ticker.stop();
+    _motions.clear();
+    _waitZ.clear();
+    _confetti = null;
+  }
+
+  /// Adds motions (and a celebration) to the timeline, with times from now.
+  /// Running motions go on from where they are.
+  void _addMotions(
+    Map<String, CardMotion> added, {
+    Confetti? confetti,
+    double? celebratedAt,
+  }) {
+    if (added.isEmpty && confetti == null) return;
     if (_ticker.isActive) {
       _ticker.stop();
       _motions.updateAll((_, motion) => motion.shifted(_now));
+      _confetti = _confetti?.shifted(_now);
+      if (_celebratedAt case final at?) _celebratedAt = at - _now;
     }
     _now = 0;
     _motions.addAll(added);
-    _end = _motions.values.fold(0.0, (end, motion) => max(end, motion.end));
+    if (confetti != null) _confetti = confetti;
+    if (celebratedAt != null) _celebratedAt = celebratedAt;
+    _end = [
+      for (final motion in _motions.values) motion.end,
+      ?_confetti?.end,
+      ?_celebratedAt,
+    ].fold(0.0, max);
     _ticker.start();
   }
 
@@ -178,6 +213,11 @@ class _KlondikeBoardState extends State<KlondikeBoard>
                   ..._slots(state, layout),
                   ..._cards(state, layout, pileOffsets),
                   ..._dropTargets(layout),
+                  OverlayPortal(
+                    controller: _confettiLayer,
+                    overlayChildBuilder: (context) => _confettiOverlay(),
+                    child: const SizedBox.shrink(),
+                  ),
                 ],
               ),
             ),
@@ -208,16 +248,20 @@ class _KlondikeBoardState extends State<KlondikeBoard>
     final dropStarts = action == null ? null : _dropStarts;
     if (action != null) _dropStarts = null;
 
+    final won = action != null && _controller.result != null;
     if (!animate) {
-      _ticker.stop();
-      _motions.clear();
-      _waitZ.clear();
+      _stopTimeline();
+      _celebratedAt = null;
+      if (won) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) widget.onCelebrated?.call();
+        });
+      }
       return;
     }
     if (action == KlondikeAction.deal) {
-      _ticker.stop();
-      _motions.clear();
-      _waitZ.clear();
+      _stopTimeline();
+      _celebratedAt = null;
       _addMotions(_dealMotions(state, layout));
       return;
     }
@@ -252,7 +296,63 @@ class _KlondikeBoardState extends State<KlondikeBoard>
       if (motion.start > 0) _waitZ[id] = before.z;
       added[id] = motion;
     }
-    _addMotions(added);
+    if (won) {
+      _celebrate(added, layout);
+    } else {
+      _addMotions(added);
+    }
+  }
+
+  /// After the last card lands, the four kings hop one after the other, each
+  /// with a burst of confetti from its foundation.
+  void _celebrate(Map<String, CardMotion> added, _BoardLayout layout) {
+    const hop = 620.0;
+    final landed = added.values.fold(
+      0.0,
+      (end, motion) => max(end, motion.end),
+    );
+    final starts = <double>[];
+    for (var i = 0; i < 4; i++) {
+      final king = _targets[_controller.state.foundations[i].last.id]!;
+      final start = landed + 120 + i * 110;
+      starts.add(start);
+      final jump = CardMotion(
+        kind: CardMotionKind.hop,
+        from: king.offset,
+        to: king.offset,
+        start: start,
+        duration: hop,
+        // Low enough to stay below the app bar.
+        height: layout.cardHeight * 0.3,
+        faceFrom: true,
+        faceTo: true,
+      );
+      added[king.card.id] =
+          added[king.card.id]?.followedBy(jump) ??
+          CardMotion(
+            kind: CardMotionKind.fly,
+            from: king.offset,
+            to: king.offset,
+            start: 0,
+            duration: 0,
+            faceFrom: true,
+            faceTo: true,
+            next: jump,
+          );
+    }
+    _addMotions(
+      added,
+      confetti: Confetti(
+        origins: [
+          for (var i = 0; i < 4; i++)
+            layout.slotRect(PileRef.foundation(i)).center,
+        ],
+        starts: starts,
+        scale: layout.cardWidth / 80,
+        seed: _controller.seed,
+      ),
+      celebratedAt: starts.last + hop + 450,
+    );
   }
 
   CardMotion _motionFor(
@@ -382,6 +482,25 @@ class _KlondikeBoardState extends State<KlondikeBoard>
             ),
       });
     });
+  }
+
+  Widget _confettiOverlay() {
+    final confetti = _confetti;
+    final board = _stackKey.currentContext?.findRenderObject() as RenderBox?;
+    if (confetti == null || board == null || !board.hasSize) {
+      return const SizedBox.shrink();
+    }
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: CustomPaint(
+          painter: ConfettiPainter(
+            confetti,
+            _now,
+            origin: board.localToGlobal(Offset.zero),
+          ),
+        ),
+      ),
+    );
   }
 
   Offset _toLocal(Offset global) {

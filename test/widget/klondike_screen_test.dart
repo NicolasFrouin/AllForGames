@@ -380,6 +380,48 @@ void main() {
       expect(stores.stats.records, hasLength(1));
     });
 
+    testWidgets('the dialog waits for the celebration', (tester) async {
+      await pumpGame(tester, finishBoard);
+      await tester.tap(byKey('auto-complete'));
+      // The cards go up one by one: the last one is not there yet.
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(at(tester, 'spades-13'), isNot(at(tester, 'foundation-3')));
+      await tester.pump(const Duration(milliseconds: 700));
+      expect(at(tester, 'spades-13'), at(tester, 'foundation-3'));
+      expect(find.text('You won!'), findsNothing, reason: 'kings still hop');
+
+      await tester.pumpAndSettle();
+      expect(find.text('You won!'), findsOneWidget);
+    });
+
+    testWidgets('with reduced motion, the dialog comes at once', (
+      tester,
+    ) async {
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
+      await pumpGame(tester, finishBoard);
+      await tester.tap(byKey('auto-complete'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('You won!'), findsOneWidget);
+    });
+
+    testWidgets('leaving during the celebration keeps the win', (tester) async {
+      final stores = await pumpGame(tester, finishBoard);
+      await tester.tap(byKey('auto-complete'));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.byType(HubScreen), findsOneWidget);
+      expect(find.text('You won!'), findsNothing);
+      expect(stores.stats.records.single.outcome, GameOutcome.won);
+    });
+
     testWidgets('back to games shows the win on the hub', (tester) async {
       final stores = await finish(tester);
 

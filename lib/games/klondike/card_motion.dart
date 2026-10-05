@@ -83,6 +83,22 @@ class CardMotion {
     next?.end ?? double.negativeInfinity,
   );
 
+  /// This motion, then [then] after it (and after any [next] already there).
+  CardMotion followedBy(CardMotion then) => CardMotion(
+    kind: kind,
+    from: from,
+    to: to,
+    start: start,
+    duration: duration,
+    faceFrom: faceFrom,
+    faceTo: faceTo,
+    height: height,
+    curve: curve,
+    flipStart: flipStart,
+    flipDuration: flipDuration,
+    next: next?.followedBy(then) ?? then,
+  );
+
   /// The part of the motion that runs at [t]: this one or a later [next].
   CardMotion segmentAt(double t) => switch (next) {
     final next? when t >= next.start => next.segmentAt(t),

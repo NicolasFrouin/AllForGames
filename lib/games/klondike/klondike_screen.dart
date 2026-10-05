@@ -145,17 +145,14 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
   }
 
   void _onGameChanged() {
-    if (_controller.result == null) {
-      _resultShown = false;
-    } else if (!_resultShown) {
-      _resultShown = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _showWinDialog());
-    }
+    if (_controller.result == null) _resultShown = false;
   }
 
+  /// Called by the board once the win celebration has played.
   Future<void> _showWinDialog() async {
     final record = _controller.result;
-    if (!mounted || record == null) return;
+    if (!mounted || record == null || _resultShown) return;
+    _resultShown = true;
     final stores = widget.stores;
     final stats = stores.stats.statsFor(
       KlondikeController.gameId,
@@ -165,13 +162,24 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
     // after the save: this check unlocks what the win reached right away.
     stores.achievements.check(stores.stats.records);
     final unlocked = stores.achievements.takeAnnouncements();
-    final playAgain = await showDialog<bool>(
+    final playAgain = await showGeneralDialog<bool>(
       context: context,
-      barrierDismissible: false,
-      builder: (context) {
+      // Light, so the confetti stays visible behind the dialog.
+      barrierColor: Colors.black38,
+      transitionDuration: const Duration(milliseconds: 420),
+      transitionBuilder: (context, animation, _, child) => FadeTransition(
+        opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+        child: ScaleTransition(
+          scale: Tween(begin: 0.8, end: 1.0).animate(
+            CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
+          ),
+          child: child,
+        ),
+      ),
+      pageBuilder: (context, _, _) {
         final l10n = AppLocalizations.of(context);
         return AlertDialog(
-          icon: const Icon(Icons.emoji_events, size: 40),
+          icon: const _Trophy(),
           title: Text(l10n.winTitle),
           // New achievements make it taller than a small phone.
           scrollable: true,
@@ -179,8 +187,8 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               _ResultRow(l10n.time, formatClock(record.playTime)),
-              _ResultRow(l10n.moves, '${record.moves}'),
-              _ResultRow(l10n.score, '${record.score}'),
+              _ResultRow(l10n.moves, '${record.moves}', count: record.moves),
+              _ResultRow(l10n.score, '${record.score}', count: record.score),
               const Divider(),
               _ResultRow(
                 l10n.bestTime,
@@ -281,14 +289,25 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
       ),
       floatingActionButton: ListenableBuilder(
         listenable: _controller,
-        builder: (context, _) => _controller.canAutoComplete
-            ? FloatingActionButton.extended(
-                key: const ValueKey('auto-complete'),
-                onPressed: _controller.autoComplete,
-                icon: const Icon(Icons.auto_awesome),
-                label: Text(l10n.finish),
-              )
-            : const SizedBox.shrink(),
+        builder: (context, _) => AnimatedSwitcher(
+          duration: const Duration(milliseconds: 320),
+          transitionBuilder: (child, animation) => ScaleTransition(
+            scale: CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOutBack,
+              reverseCurve: Curves.easeIn,
+            ),
+            child: child,
+          ),
+          child: _controller.canAutoComplete
+              ? FloatingActionButton.extended(
+                  key: const ValueKey('auto-complete'),
+                  onPressed: _controller.autoComplete,
+                  icon: const Icon(Icons.auto_awesome),
+                  label: Text(l10n.finish),
+                )
+              : const SizedBox.shrink(),
+        ),
       ),
       body: SafeArea(
         child: Column(
@@ -300,6 +319,7 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
                 builder: (context, _) => KlondikeBoard(
                   controller: _controller,
                   cardBack: cardBackById(widget.stores.settings.cardBackId),
+                  onCelebrated: _showWinDialog,
                 ),
               ),
             ),
@@ -415,21 +435,55 @@ class _StatusItem extends StatelessWidget {
 }
 
 class _ResultRow extends StatelessWidget {
-  const _ResultRow(this.label, this.value);
+  const _ResultRow(this.label, this.value, {this.count});
 
   final String label;
   final String value;
 
+  /// When given, the value counts up from 0 to [count] (then shows [value]).
+  final int? count;
+
   @override
   Widget build(BuildContext context) {
+    const style = TextStyle(fontWeight: FontWeight.w700);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
           Expanded(child: Text(label)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
+          if (count case final count?)
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: count.toDouble()),
+              duration: const Duration(milliseconds: 900),
+              curve: Curves.easeOutCubic,
+              builder: (context, shown, _) => Text(
+                shown == count ? value : '${shown.round()}',
+                style: style,
+              ),
+            )
+          else
+            Text(value, style: style),
         ],
       ),
+    );
+  }
+}
+
+/// The trophy of the win dialog: it springs in with a little swing.
+class _Trophy extends StatelessWidget {
+  const _Trophy();
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 900),
+      curve: Curves.elasticOut,
+      builder: (context, t, child) => Transform.rotate(
+        angle: (1 - t) * 0.6,
+        child: Transform.scale(scale: t, child: child),
+      ),
+      child: const Icon(Icons.emoji_events, size: 48, color: Colors.amber),
     );
   }
 }
