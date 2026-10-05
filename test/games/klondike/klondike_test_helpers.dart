@@ -1,5 +1,5 @@
+import 'package:all_for_games/cards/playing_card.dart';
 import 'package:all_for_games/games/klondike/klondike_state.dart';
-import 'package:all_for_games/games/klondike/playing_card.dart';
 
 const _ranks = {'A': 1, 'J': 11, 'Q': 12, 'K': 13};
 const _suits = {

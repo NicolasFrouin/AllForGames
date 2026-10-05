@@ -4,10 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../app_stores.dart';
+import '../cards/playing_card.dart';
+import '../cards/suit_icon.dart';
 import '../common/format.dart';
 import '../games/game_catalog.dart';
-import '../games/klondike/playing_card.dart';
-import '../games/klondike/suit_icon.dart';
 import '../l10n/app_localizations.dart';
 import '../saves/game_save_store.dart';
 import '../settings/settings_store.dart';

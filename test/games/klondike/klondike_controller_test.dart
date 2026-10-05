@@ -1,9 +1,9 @@
+import 'package:all_for_games/cards/playing_card.dart';
 import 'package:all_for_games/games/klondike/klondike_controller.dart';
 import 'package:all_for_games/games/klondike/deal_picker.dart';
 import 'package:all_for_games/games/klondike/klondike_deals.dart';
 import 'package:all_for_games/games/klondike/klondike_difficulty.dart';
 import 'package:all_for_games/games/klondike/klondike_state.dart';
-import 'package:all_for_games/games/klondike/playing_card.dart';
 import 'package:all_for_games/saves/game_save_store.dart';
 import 'package:all_for_games/stats/game_record.dart';
 import 'package:all_for_games/stats/stats_store.dart';

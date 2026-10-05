@@ -1,4 +1,4 @@
-import 'package:all_for_games/games/klondike/card_motion.dart';
+import 'package:all_for_games/cards/card_motion.dart';
 import 'package:flutter/animation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -53,6 +53,27 @@ void main() {
     expect(motion.poseAt(300).faceUp, isTrue);
     expect(motion.poseAt(400).faceUp, isTrue);
     expect(motion.poseAt(400).flipAngle, 0);
+  });
+
+  test('faceAt is the face of the pose, also in a later segment', () {
+    final turnAgain = CardMotion(
+      kind: CardMotionKind.fly,
+      from: const Offset(210, 320),
+      to: const Offset(10, 20),
+      start: 600,
+      duration: 300,
+      faceFrom: true,
+      faceTo: false,
+      flipStart: 600,
+      flipDuration: 300,
+    );
+    final motion = flight(faceFrom: false, faceTo: true, next: turnAgain);
+    for (final t in [0.0, 200.0, 300.0, 500.0, 700.0, 800.0, 1000.0]) {
+      expect(motion.faceAt(t), motion.poseAt(t).faceUp, reason: 't=$t');
+    }
+    expect(motion.flips, isTrue);
+    expect(flight(next: turnAgain).flips, isTrue);
+    expect(flight().flips, isFalse);
   });
 
   test('a shifted motion goes on along the same path', () {

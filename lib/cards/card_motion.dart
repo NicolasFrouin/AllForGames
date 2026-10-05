@@ -39,9 +39,23 @@ class CardPose {
 
   /// 0 on the table, 1 at the top of a flight (for the shadow).
   final double elevation;
+
+  @override
+  bool operator ==(Object other) =>
+      other is CardPose &&
+      other.position == position &&
+      other.faceUp == faceUp &&
+      other.scale == scale &&
+      other.rotation == rotation &&
+      other.flipAngle == flipAngle &&
+      other.elevation == elevation;
+
+  @override
+  int get hashCode =>
+      Object.hash(position, faceUp, scale, rotation, flipAngle, elevation);
 }
 
-/// One planned movement of a card. Times are milliseconds on the board
+/// One planned movement of a card. Times are milliseconds on the table
 /// timeline; [start] may be negative for a motion that began before.
 class CardMotion {
   const CardMotion({
@@ -115,6 +129,15 @@ class CardMotion {
 
   /// True before the motion starts: the card still waits at [from].
   bool isWaitingAt(double t) => t <= start;
+
+  /// True when the card turns over in this motion or a later [next].
+  bool get flips => faceFrom != faceTo || (next?.flips ?? false);
+
+  /// The face to draw at [t], as in [poseAt].
+  bool faceAt(double t) {
+    if (next case final next? when t >= next.start) return next.faceAt(t);
+    return _flipAt(t).$1;
+  }
 
   /// The same motion, on a timeline that starts [ms] later.
   CardMotion shifted(double ms) => CardMotion(

@@ -1,6 +1,6 @@
-import 'package:all_for_games/games/klondike/deal_random.dart';
+import 'package:all_for_games/cards/deal_random.dart';
+import 'package:all_for_games/cards/playing_card.dart';
 import 'package:all_for_games/games/klondike/klondike_state.dart';
-import 'package:all_for_games/games/klondike/playing_card.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'klondike_test_helpers.dart';

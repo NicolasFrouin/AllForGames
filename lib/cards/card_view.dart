@@ -1,7 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
-import '../../l10n/app_localizations.dart';
-import '../../skins/card_backs.dart';
+import '../l10n/app_localizations.dart';
+import '../skins/card_backs.dart';
 import 'playing_card.dart';
 import 'suit_icon.dart';
 
@@ -40,6 +40,10 @@ class CardView extends StatelessWidget {
     required this.cardBack,
   });
 
+  /// Narrower cards (ten columns on a phone) show a compact face: a bigger
+  /// corner index that stays readable.
+  static const compactWidth = 56.0;
+
   final PlayingCard card;
   final double width;
 
@@ -67,9 +71,11 @@ class CardView extends StatelessWidget {
         ),
         child: ClipRRect(
           borderRadius: radius,
-          child: card.faceUp
-              ? _Face(card: card, width: width)
-              : CardBackView(skin: cardBack, width: width),
+          child: !card.faceUp
+              ? CardBackView(skin: cardBack, width: width)
+              : width < compactWidth
+              ? _CompactFace(card: card, width: width)
+              : _Face(card: card, width: width),
         ),
       ),
     );
@@ -112,6 +118,54 @@ class _Face extends StatelessWidget {
               right: width * 0.08,
               bottom: width * 0.08,
               child: SuitIcon(card.suit, size: width * 0.5),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The face of a narrow card: the corner index takes most of the width, so it
+/// stays readable in the strip that a pile leaves visible.
+class _CompactFace extends StatelessWidget {
+  const _CompactFace({required this.card, required this.width});
+
+  final PlayingCard card;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: const Color(0xFFFDFBF7),
+      child: ExcludeSemantics(
+        child: Stack(
+          children: [
+            Positioned(
+              left: width * 0.05,
+              top: width * 0.05,
+              child: Row(
+                children: [
+                  Text(
+                    rankIndex(card.rank, AppLocalizations.of(context)),
+                    style: TextStyle(
+                      color: card.suit.isRed ? SuitIcon.red : SuitIcon.black,
+                      fontSize: width * 0.36,
+                      fontWeight: FontWeight.w800,
+                      // Keeps a 10 within the card.
+                      letterSpacing: -width * 0.03,
+                      height: 1,
+                    ),
+                  ),
+                  SizedBox(width: width * 0.02),
+                  SuitIcon(card.suit, size: width * 0.26),
+                ],
+              ),
+            ),
+            Positioned(
+              left: width * 0.2,
+              bottom: width * 0.1,
+              child: SuitIcon(card.suit, size: width * 0.6),
             ),
           ],
         ),

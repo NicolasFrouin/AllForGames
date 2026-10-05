@@ -21,9 +21,9 @@ import 'dart:collection';
 import 'dart:math';
 import 'dart:typed_data';
 
+import '../../cards/playing_card.dart';
 import 'klondike_difficulty.dart';
 import 'klondike_state.dart';
-import 'playing_card.dart';
 
 /// One step of a solution, to replay with [KlondikeState.draw] and
 /// [KlondikeState.move].

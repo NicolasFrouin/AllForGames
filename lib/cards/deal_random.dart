@@ -2,7 +2,7 @@ import 'playing_card.dart';
 
 const _mask32 = 0xFFFFFFFF;
 
-/// Deterministic random numbers for Klondike deals.
+/// Deterministic random numbers for deals.
 ///
 /// Gives the same sequence on the Dart VM, dart2js and dart2wasm. On the web
 /// (dart2js) an `int` is a double: bitwise operators truncate their operands

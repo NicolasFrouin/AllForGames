@@ -1,5 +1,8 @@
 import 'dart:math';
+import 'dart:typed_data';
+import 'dart:ui' show Vertices;
 
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:material_ui/material_ui.dart';
 
 const _colors = [
@@ -39,7 +42,7 @@ class _Piece {
   final Color color;
 }
 
-/// Bursts of confetti, one per origin, on the board timeline (milliseconds).
+/// Bursts of confetti, one per origin, on the table timeline (milliseconds).
 class Confetti {
   Confetti({
     required List<Offset> origins,
@@ -85,8 +88,12 @@ class Confetti {
   /// The same bursts, on a timeline that starts [ms] later.
   Confetti shifted(double ms) => Confetti._(_pieces, _scale, _shift + ms);
 
+  /// Draws the pieces in the air at [t] in one call: each piece is a
+  /// rectangle of two triangles, turned and squeezed on the CPU.
   void paint(Canvas canvas, double t) {
-    final paint = Paint();
+    final positions = Float32List(_pieces.length * 8);
+    final colors = Int32List(_pieces.length * 4);
+    var count = 0;
     for (final piece in _pieces) {
       final age = t + _shift - piece.start;
       if (age <= 0 || age >= lifetime) continue;
@@ -98,26 +105,60 @@ class Confetti {
       final fade = age > lifetime * 0.7
           ? 1 - (age - lifetime * 0.7) / (lifetime * 0.3)
           : 1.0;
-      paint.color = piece.color.withValues(alpha: fade);
-      canvas
-        ..save()
-        ..translate(position.dx, position.dy)
-        ..rotate(piece.phase + piece.spin * age)
-        // Turning over in the air: the piece gets thin, then wide again.
-        ..scale(cos(piece.phase + piece.flutter * age), 1)
-        ..drawRect(Offset.zero & piece.size, paint)
-        ..restore();
+      final angle = piece.phase + piece.spin * age;
+      // Turning over in the air: the piece gets thin, then wide again.
+      final squeeze = cos(piece.phase + piece.flutter * age);
+      // The two sides of the rectangle from its corner, turned by angle.
+      final widthX = cos(angle) * piece.size.width * squeeze;
+      final widthY = sin(angle) * piece.size.width * squeeze;
+      final heightX = -sin(angle) * piece.size.height;
+      final heightY = cos(angle) * piece.size.height;
+      final p = count * 8;
+      positions
+        ..[p] = position.dx
+        ..[p + 1] = position.dy
+        ..[p + 2] = position.dx + widthX
+        ..[p + 3] = position.dy + widthY
+        ..[p + 4] = position.dx + widthX + heightX
+        ..[p + 5] = position.dy + widthY + heightY
+        ..[p + 6] = position.dx + heightX
+        ..[p + 7] = position.dy + heightY;
+      final color = piece.color.withValues(alpha: fade).toARGB32();
+      colors.fillRange(count * 4, count * 4 + 4, color);
+      count++;
     }
+    if (count == 0) return;
+    final indices = Uint16List(count * 6);
+    for (var i = 0, corner = 0; i < indices.length; i += 6, corner += 4) {
+      indices
+        ..[i] = corner
+        ..[i + 1] = corner + 1
+        ..[i + 2] = corner + 2
+        ..[i + 3] = corner
+        ..[i + 4] = corner + 2
+        ..[i + 5] = corner + 3;
+    }
+    final vertices = Vertices.raw(
+      VertexMode.triangles,
+      Float32List.sublistView(positions, 0, count * 8),
+      colors: Int32List.sublistView(colors, 0, count * 4),
+      indices: indices,
+    );
+    // Only the colors of the vertices.
+    canvas.drawVertices(vertices, BlendMode.dst, Paint());
+    vertices.dispose();
   }
 }
 
+/// Paints [confetti] at the time of [clock], repainting when it ticks.
 class ConfettiPainter extends CustomPainter {
-  const ConfettiPainter(this.confetti, this.t, {this.origin = Offset.zero});
+  ConfettiPainter(this.confetti, this.clock, {this.origin = Offset.zero})
+    : super(repaint: clock);
 
   final Confetti confetti;
-  final double t;
+  final ValueListenable<double> clock;
 
-  /// Where the board is: the bursts start from board positions.
+  /// Where the table is: the bursts start from table positions.
   final Offset origin;
 
   @override
@@ -125,13 +166,13 @@ class ConfettiPainter extends CustomPainter {
     canvas
       ..save()
       ..translate(origin.dx, origin.dy);
-    confetti.paint(canvas, t);
+    confetti.paint(canvas, clock.value);
     canvas.restore();
   }
 
   @override
   bool shouldRepaint(ConfettiPainter oldDelegate) =>
-      oldDelegate.t != t ||
       oldDelegate.confetti != confetti ||
+      oldDelegate.clock != clock ||
       oldDelegate.origin != origin;
 }

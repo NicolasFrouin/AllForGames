@@ -1,7 +1,7 @@
 import 'dart:math';
 
-import 'deal_random.dart';
-import 'playing_card.dart';
+import '../../cards/deal_random.dart';
+import '../../cards/playing_card.dart';
 
 enum PileType { stock, waste, foundation, tableau }
 

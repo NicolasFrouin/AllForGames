@@ -1,7 +1,7 @@
 import 'package:all_for_games/app.dart';
 import 'package:all_for_games/app_stores.dart';
+import 'package:all_for_games/cards/card_view.dart';
 import 'package:all_for_games/games/game_catalog.dart';
-import 'package:all_for_games/games/klondike/card_view.dart';
 import 'package:all_for_games/games/klondike/deal_picker.dart';
 import 'package:all_for_games/games/klondike/klondike_controller.dart';
 import 'package:all_for_games/games/klondike/klondike_deals.dart';
