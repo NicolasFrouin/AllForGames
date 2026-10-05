@@ -48,16 +48,20 @@ build): drop it when a Flutter upgrade removes it.
 lib/
   main.dart, app.dart        loads the stores, routes (go_router): /, /klondike?draw=3&seed=42,
                              /freecell?difficulty=hard&seed=42, /spider?difficulty=hard&seed=42,
-                             /mahjong?difficulty=easy&seed=42, /stats/:gameId, /achievements, /card-backs
+                             /mahjong?difficulty=easy&seed=42, /stats/:gameId, /achievements, /skins
                              (without params, a game route continues the saved game)
   app_stores.dart            AppStores: every store (stats, saves, settings, achievements), loaded once, given to
                              the screens; its constructor keeps the achievements in sync with the stats
   l10n/                      app_en.arb (template) + app_fr.arb; app_localizations*.dart are generated (git-ignored)
-  settings/                  SettingsStore: player settings (language, card back), one storage key per setting
-  achievements/              Achievement definitions (goal + progress from records), AchievementStore (unlock dates),
-                             achievement_texts (id -> title/description, card back names), achievements page
-  skins/                     CardBackSkin list (free or unlocked by an achievement), CardBackView, card backs page
-  hub/                       home page: header (achievements, card backs, language), overall stats, game grid
+  settings/                  SettingsStore: player settings (language, card back, tile style, game options), one
+                             storage key per setting
+  achievements/              Achievement definitions (goal + progress from records; achievementGameIds orders the
+                             groups), AchievementStore (unlock dates), achievement_texts (id -> title/description,
+                             card back and tile style names), achievements page (grouped by game)
+  skins/                     card_backs (CardBackSkin list, CardBackView), tile_styles (TileStyle list for Mahjong,
+                             TileStylePreview), skin_rewards (SkinReward, skinRewardOf: what an achievement
+                             unlocks), skins_screen (Skins page: card backs + Mahjong tiles)
+  hub/                       home page: header (achievements, skins, language), overall stats, game grid
   saves/                     SavedGame (one game in progress, game-specific JSON in data), GameSaveStore
   stats/                     GameRecord (one finished game), GameStats (aggregates), StatsStore, PlayTimer, stats page
   common/format.dart         duration/date/percent formatting, in the app language
@@ -109,7 +113,8 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   list (other tabs and unreadable entries must survive). Keys: `stats.game.<gameId>-<startedAt µs>-<seed>` per
   record (`StatsStore.keyOf`), `save.<gameId>` per game in progress (`GameSaveStore.keyOf`), `settings.<name>`
   per setting (`settings.locale`: `en`/`fr`, absent = device language; `settings.cardBack`: skin id, unknown =
-  classic; `settings.klondike.drawCount`: int 1/3, unknown = 1; `settings.<game>.difficulty`:
+  classic; `settings.tileStyle`: Mahjong tile style id, unknown = classic; `settings.klondike.drawCount`: int
+  1/3, unknown = 1; `settings.<game>.difficulty`:
   `easy`/`medium`/`hard`, unknown = medium), `achievements.<id>` per unlocked achievement (UTC ISO date).
   Catch storage errors (blocked or full storage must not break the app).
 - **ChangeNotifier stores** notify *after* an `await`, never synchronously in a mutating call:
@@ -124,9 +129,12 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
 - **Achievements** are evaluated from the records only: `AppStores` checks them at start (silently: games won
   before) and on every stats change (`stats.addListener`), which queues the new ones; the win dialog checks too,
   then shows `takeAnnouncements()`. Unlocks are permanent (clearing stats keeps them; pages show them full).
-  A card back is free or names the achievement that unlocks it (`unlockedBy`); the card backs page only selects
-  unlocked ones. A new achievement or card back needs its texts in both ARB files and a case in
-  `achievement_texts.dart` (a test checks every id has them).
+  Every achievement unlocks exactly one skin (a card back or a Mahjong tile style), and a skin is free or names
+  the achievement that unlocks it (`unlockedBy`); `skinRewardOf` finds the reward (tests check both ways). The
+  Skins page only selects unlocked skins. Cross-game achievements use gameId `all`; `achievementGameIds` sets
+  the order of the groups. A new achievement, card back or tile style needs its texts in both ARB files and a case
+  in `achievement_texts.dart` (a test checks every id has them). Card back patterns are drawn in proportion to the
+  card width and must be deterministic (use `DealRandom` for any randomness).
 - **Klondike deals**: `KlondikeState.deal(seed)` (`shuffledDeck` with `DealRandom` from `lib/cards/`, the same on VM, JS and Wasm)
   must never change: `klondikeDeals[drawCount][difficulty]` lists seeds proven winnable for these exact deals.
   New games deal `pickDealSeed`: a seed of `klondikeDeals[drawCount][difficulty]`, not yet played in that draw
@@ -178,8 +186,9 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   `foundation-<suit>`, `tableau-<i>`, card ids like `hearts-1`, `moves-value`, `difficulty-value`, `undo`,
   `new-game`, `new-game-draw-<n>`, `new-game-difficulty-<name>`, `new-game-deal`, `stat-<id>` like
   `stat-winRate` or `stat-<detailKey>`, `variant-<id>`, `difficulty-<name>` (and `-all`) on the stats page,
-  `language-menu`, `language-<code>`, `achievements-button`, `card-backs-button`, `achievement-<id>`,
-  `card-back-<id>`, `unlocked-<id>` in the win dialog; Mahjong: `tile-<id>`, `hint`, `shuffle`, `stuck-banner`,
+  `language-menu`, `language-<code>`, `achievements-button`, `skins-button`, `achievement-<id>`,
+  `achievement-group-<gameId>`, `achievements-count-<gameId>`, `card-back-<id>`, `tile-style-<id>`,
+  `unlocked-<id>` in the win dialog; Mahjong: `tile-<id>`, `hint`, `shuffle`, `stuck-banner`,
   `tiles-value`, `pairs-value`; FreeCell: `freecell-<i>`, `cascade-<i>`, `foundation-<i>`, `auto-complete`;
   Spider: `stock`, `column-<i>`, `foundation-<i>`, `deals-left`, card ids like `spades-1-7`, ...).
   Keep them stable. Keys never depend on the language (no `ValueKey('stat-$label')`).

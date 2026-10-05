@@ -9,7 +9,7 @@ Classic games in one app: pick a game on the hub, play, and follow detailed stat
 - Easy, Medium and Hard levels, and every deal can be won (proven by solvers)
 - Games are saved: leave and come back to continue where you were
 - Statistics for every game: time, moves, undos, score, streaks, records and more
-- Achievements, with progress, that unlock new card backs to pick for the games
+- 29 achievements across the games, each unlocking a skin: 24 card backs and 7 Mahjong tile styles
 - English and French
 - Fluid animations: dealing, flying and flipping cards, and a celebration for every win
 
