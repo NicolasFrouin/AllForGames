@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'deal_random.dart';
 import 'playing_card.dart';
 
 enum PileType { stock, waste, foundation, tableau }
@@ -59,11 +60,16 @@ class KlondikeState {
        ),
        tableau = List.unmodifiable(tableau.map(List<PlayingCard>.unmodifiable));
 
-  factory KlondikeState.deal(Random random, {int drawCount = 1}) {
-    final deck = [
-      for (final suit in Suit.values)
-        for (var rank = 1; rank <= 13; rank++) PlayingCard(suit, rank),
-    ]..shuffle(random);
+  /// The deal of [seed], the same on every platform: column `c` gets the next
+  /// `c + 1` cards of [shuffledDeck] (only the last one face up) and the
+  /// remaining 24 cards form the stock in deck order (its last card is the
+  /// top of the stock). [drawCount] does not change the cards.
+  ///
+  /// **Never change this algorithm** (nor [shuffledDeck] and `DealRandom`):
+  /// the seeds of `klondikeDeals` were proven winnable for the exact deals it
+  /// gives today. Other seeds may not be winnable.
+  factory KlondikeState.deal(int seed, {int drawCount = 1}) {
+    final deck = shuffledDeck(seed);
     var next = 0;
     final tableau = [
       for (var column = 0; column < 7; column++)

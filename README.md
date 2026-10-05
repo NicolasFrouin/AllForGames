@@ -2,7 +2,7 @@
 
 Classic games in one app: pick a game on the hub, play, and follow detailed statistics.
 
-- **Klondike** solitaire (Draw 1 / Draw 3), with undo, drag and drop, tap-to-move and auto-finish
+- **Klondike** solitaire (Draw 1 / Draw 3), with undo, drag and drop, tap-to-move and auto-finish; every deal can be won
 - Games are saved: leave and come back to continue where you were
 - Statistics for every game: time, moves, undos, score, streaks, records and more
 - Achievements, with progress, that unlock new card backs to pick for the games

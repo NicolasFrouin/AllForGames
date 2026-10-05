@@ -1,8 +1,7 @@
-import 'dart:math';
-
 import 'package:all_for_games/app.dart';
 import 'package:all_for_games/app_stores.dart';
 import 'package:all_for_games/games/klondike/klondike_controller.dart';
+import 'package:all_for_games/games/klondike/klondike_deals.dart';
 import 'package:all_for_games/games/klondike/klondike_state.dart';
 import 'package:all_for_games/saves/game_save_store.dart';
 import 'package:all_for_games/skins/card_backs.dart';
@@ -49,9 +48,31 @@ void main() {
     expect(valueOf(tester, 'stat-won'), '0');
   });
 
+  testWidgets('deals as on the VM, and a new game deals a winnable seed', (
+    tester,
+  ) async {
+    // The same string as `seed1Deal` in klondike_state_test.dart (Dart VM):
+    // the seed lists hold on the web only if the deals are the same.
+    expect(
+      KlondikeState.deal(1).encode(),
+      '3c2c4s5d8c9c9d6c4hKh6hAh2hTc3d5cJd9sThTs4d2sTdAs,,,,,,'
+      'KC,4cAC,KsJcKD,3h3s7c7S,7d6s6dQsAD,5h8sQd8hQhQC,7h9h2d5s8dJsJH',
+    );
+
+    await startApp(tester);
+    await openKlondike(tester);
+    await goBack(tester);
+
+    final data = (await GameSaveStore.load())[KlondikeController.gameId]!.data;
+    final seed = data['seed'] as int;
+    final winnable = klondikeDeals[1]!.values.expand((seeds) => seeds);
+    expect(winnable, contains(seed));
+    expect(data['state'], KlondikeState.deal(seed).encode());
+  });
+
   testWidgets('drags a card onto another tableau pile', (tester) async {
     final (:seed, :from, :to) = findTableauMove();
-    final card = KlondikeState.deal(Random(seed)).tableau[from].last;
+    final card = KlondikeState.deal(seed).tableau[from].last;
     await startApp(tester, location: '/klondike?seed=$seed');
 
     final cardFinder = find.byKey(ValueKey(card.id));
@@ -221,7 +242,7 @@ String valueOf(WidgetTester tester, String key) => tester
 /// The first deal where a tableau top card can go onto another tableau pile.
 ({int seed, int from, int to}) findTableauMove() {
   for (var seed = 1; seed <= 1000; seed++) {
-    final state = KlondikeState.deal(Random(seed));
+    final state = KlondikeState.deal(seed);
     for (var from = 0; from < 7; from++) {
       for (var to = 0; to < 7; to++) {
         if (state.canMove(PileRef.tableau(from), 1, PileRef.tableau(to))) {

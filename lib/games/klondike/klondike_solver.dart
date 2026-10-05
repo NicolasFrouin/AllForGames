@@ -21,7 +21,6 @@ import 'dart:collection';
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'deal_random.dart';
 import 'klondike_state.dart';
 import 'playing_card.dart';
 
@@ -181,7 +180,7 @@ class KlondikeSolver {
 
   /// Grades the deal of [seed] (see [KlondikeGrading]).
   DealGrade grade(int seed, int drawCount) {
-    final state = dealFromSeed(seed, drawCount: drawCount);
+    final state = KlondikeState.deal(seed, drawCount: drawCount);
     return DealGrade(
       seed: seed,
       drawCount: drawCount,

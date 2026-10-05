@@ -8,6 +8,7 @@ import '../../saves/game_save_store.dart';
 import '../../stats/game_record.dart';
 import '../../stats/play_timer.dart';
 import '../../stats/stats_store.dart';
+import 'deal_picker.dart';
 import 'klondike_state.dart';
 
 enum MoveInput { tap, drag }
@@ -212,13 +213,17 @@ class KlondikeController extends ChangeNotifier {
 
   /// Deals a new game and saves it. The current game counts as abandoned if
   /// the player made at least one move and did not win it.
+  ///
+  /// Without [seed], the deal is a winnable one the player has not played
+  /// yet (see [pickDealSeed]), and never the current deal again.
   void newGame({int? drawCount, int? seed, KlondikeState? initialState}) {
     if (!_finished && _moves > 0) {
       unawaited(_stats.add(_record(GameOutcome.abandoned)));
     }
+    drawCount ??= _state.drawCount;
     _start(
-      drawCount: drawCount ?? _state.drawCount,
-      seed: seed,
+      drawCount: drawCount,
+      seed: seed ?? _pickSeed(drawCount, current: _seed),
       initialState: initialState,
     );
     save();
@@ -285,9 +290,8 @@ class KlondikeController extends ChangeNotifier {
     int? seed,
     KlondikeState? initialState,
   }) {
-    _seed = seed ?? Random().nextInt(1 << 31);
-    _state =
-        initialState ?? KlondikeState.deal(Random(_seed), drawCount: drawCount);
+    _seed = seed ?? _pickSeed(drawCount);
+    _state = initialState ?? KlondikeState.deal(_seed, drawCount: drawCount);
     _initialFaceDown = _state.faceDownCount;
     _startedAt = _clock();
     _timer = PlayTimer(clock: _clock)..start();
@@ -303,6 +307,23 @@ class KlondikeController extends ChangeNotifier {
     _finished = false;
     _lastMovedCardIds = const {};
   }
+
+  /// A winnable seed not in the records of [drawCount] games (the abandoned
+  /// game is already there) nor [current], the deal on screen.
+  int _pickSeed(int drawCount, {int? current}) => pickDealSeed(
+    drawCount: drawCount,
+    played: {
+      for (final record in _stats.recordsFor(
+        gameId,
+        variant: _variant(drawCount),
+      ))
+        record.seed,
+      ?current,
+    },
+    random: Random(),
+  );
+
+  static String _variant(int drawCount) => 'draw$drawCount';
 
   void _commit(KlondikeState next, int scoreDelta) {
     _history.add((state: _state, score: _score));
@@ -336,7 +357,7 @@ class KlondikeController extends ChangeNotifier {
 
   GameRecord _record(GameOutcome outcome) => GameRecord(
     gameId: gameId,
-    variant: 'draw${_state.drawCount}',
+    variant: _variant(_state.drawCount),
     seed: _seed,
     startedAt: _startedAt,
     endedAt: _clock(),

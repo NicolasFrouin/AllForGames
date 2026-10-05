@@ -14,7 +14,6 @@
 import 'dart:io';
 import 'dart:isolate';
 
-import 'package:all_for_games/games/klondike/deal_random.dart';
 import 'package:all_for_games/games/klondike/klondike_solver.dart';
 import 'package:all_for_games/games/klondike/klondike_state.dart';
 
@@ -115,7 +114,7 @@ List<SeedReport> _gradeSeeds(int from, int drawCount, bool solveAll) => [
 
 SeedReport _gradeSeed(int seed, int drawCount, bool solveAll) {
   const solver = KlondikeSolver();
-  final state = dealFromSeed(seed, drawCount: drawCount);
+  final state = KlondikeState.deal(seed, drawCount: drawCount);
   final greedyWins = solver.playGreedy(state) != null;
   if (!greedyWins && !solveAll) {
     return (
@@ -179,9 +178,11 @@ String _render(Map<int, Map<KlondikeDifficulty, List<int>>> deals) {
       '${KlondikeGrading.maxNodes}).',
     )
     ..writeln()
-    ..writeln('/// Winnable seeds for `dealFromSeed`, by draw count, then by')
     ..writeln(
-      '/// difficulty (`KlondikeDifficulty.name`), in increasing order.',
+      '/// Winnable seeds for `KlondikeState.deal`, by draw count, then',
+    )
+    ..writeln(
+      '/// by difficulty (`KlondikeDifficulty.name`), in increasing order.',
     )
     ..writeln('const klondikeDeals = <int, Map<String, List<int>>>{');
   for (final MapEntry(key: drawCount, value: buckets) in deals.entries) {

@@ -19,9 +19,14 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: dart format --output=none --set-exit-if-changed lib test integration_test test_driver
+      - run: dart format --output=none --set-exit-if-changed lib test integration_test test_driver tool
       - run: flutter analyze
       - run: flutter test
+      # Deals come from seeds: they must be the same on the VM, JavaScript and WebAssembly.
+      - name: Deals are the same on the web (JS and Wasm)
+        run: |
+          flutter test --platform chrome test/games/klondike/klondike_state_test.dart
+          flutter test --platform chrome --wasm test/games/klondike/klondike_state_test.dart
 
   e2e:
     name: End-to-end tests (Chrome)

@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:all_for_games/app.dart';
 import 'package:all_for_games/app_stores.dart';
 import 'package:all_for_games/games/game_catalog.dart';
@@ -27,7 +25,7 @@ final stockBoard = board(
 );
 
 /// The seed 42 deal: a full board, so a save of it can continue.
-final deal = KlondikeState.deal(Random(42));
+final deal = KlondikeState.deal(42);
 
 /// Opens [state] in the app routes, with the hub below the game. Opening the
 /// game again from the hub continues the saved game.
@@ -435,7 +433,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(textOf('moves-value'), '0');
-    expectTableauTops(tester, KlondikeState.deal(Random(7)));
+    expectTableauTops(tester, KlondikeState.deal(7));
     final record = stores.stats.records.single;
     expect(
       (record.seed, record.outcome, record.moves),

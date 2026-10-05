@@ -6,8 +6,8 @@
 // - medium: otherwise, the solver needs at most 1000 nodes;
 // - hard: the solver needs more nodes (budget 100000).
 
-/// Winnable seeds for `dealFromSeed`, by draw count, then by
-/// difficulty (`KlondikeDifficulty.name`), in increasing order.
+/// Winnable seeds for `KlondikeState.deal`, by draw count, then
+/// by difficulty (`KlondikeDifficulty.name`), in increasing order.
 const klondikeDeals = <int, Map<String, List<int>>>{
   1: {
     'easy': [

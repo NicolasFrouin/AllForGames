@@ -19,6 +19,7 @@ dart format lib test integration_test test_driver
 flutter test                                  # unit + widget tests (fast)
 flutter test test/games/klondike              # one folder or file: prefer narrow runs
 scripts/e2e_web.sh                            # e2e in headless Chrome (--no-headless to watch)
+dart run tool/generate_klondike_deals.dart    # regenerates klondike_deals.dart (about 1 minute)
 flutter build web --release --wasm            # release web build in build/web
 ```
 
@@ -43,9 +44,12 @@ lib/
   common/format.dart         duration/date/percent formatting, in the app language
   games/game_catalog.dart    GameInfo list shown on the hub (route, localized title/tagline/variants/stat labels)
   games/klondike/            playing_card, klondike_state (immutable rules), klondike_controller (game session,
-                             undo, stat counters), klondike_board (cards + drag and drop), klondike_screen, card_view, suit_icon
+                             undo, stat counters), klondike_board (cards + drag and drop), klondike_screen, card_view, suit_icon,
+                             deal_random (seeded shuffle), klondike_deals (generated winnable seeds), deal_picker,
+                             klondike_solver (offline only: the generator and tests)
 test/                        unit (games/, stats/) and widget (widget/) tests; helpers in test/helpers and *_test_helpers.dart
 integration_test/            e2e tests (run on web by scripts/e2e_web.sh, or on a device)
+tool/                        generate_klondike_deals.dart (solves and grades deals, writes klondike_deals.dart)
 ```
 
 ## Conventions
@@ -83,6 +87,12 @@ integration_test/            e2e tests (run on web by scripts/e2e_web.sh, or on 
   A card back is free or names the achievement that unlocks it (`unlockedBy`); the card backs page only selects
   unlocked ones. A new achievement or card back needs its texts in both ARB files and a case in
   `achievement_texts.dart` (a test checks every id has them).
+- **Klondike deals**: `KlondikeState.deal(seed)` (`shuffledDeck` with `DealRandom`, the same on VM, JS and Wasm)
+  must never change: `klondikeDeals[drawCount][difficulty]` lists seeds proven winnable for these exact deals.
+  New games deal `pickDealSeed`: a listed seed for the draw count, not yet played in that draw mode (records) nor
+  on screen, any listed seed once all were played. An explicit seed (`/klondike?seed=42`, `newGame(seed:)`, for
+  tests and links) deals any seed: only seeds from `klondikeDeals` are guaranteed winnable. After a change of the
+  solver or grading, regenerate the lists with `dart run tool/generate_klondike_deals.dart` (about 1 minute).
 - **Card suits** are drawn with `SuitIcon` (vector). Text symbols ♥ ♦ render as color emoji on web.
   Face-down cards are drawn with `CardBackView` and the selected skin.
 - **Keys for tests**: widgets that tests drive have `ValueKey`s (`game-<id>`, `stats-<id>`, `stock`, `waste`,

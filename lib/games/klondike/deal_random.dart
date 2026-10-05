@@ -1,4 +1,3 @@
-import 'klondike_state.dart';
 import 'playing_card.dart';
 
 const _mask32 = 0xFFFFFFFF;
@@ -14,9 +13,9 @@ const _mask32 = 0xFFFFFFFF;
 /// The algorithm is xorshift32 (Marsaglia, 2003), with the seed mixed by the
 /// murmur3 finalizer so that consecutive seeds give unrelated deals.
 ///
-/// **Never change this algorithm, [shuffledDeck] or [dealFromSeed]**: the
-/// generated seed lists (`klondike_deals.dart`) were proven winnable for the
-/// exact deals they produce today.
+/// **Never change this algorithm or [shuffledDeck]**: they make the deals of
+/// `KlondikeState.deal`, and the generated seed lists (`klondike_deals.dart`)
+/// were proven winnable for the exact deals they produce today.
 class DealRandom {
   /// Only the low 32 bits of [seed] are used.
   DealRandom(int seed) : _state = _initialState(seed);
@@ -80,28 +79,4 @@ List<PlayingCard> shuffledDeck(int seed) {
     deck[j] = card;
   }
   return deck;
-}
-
-/// The deal of [seed]: column `c` gets the next `c + 1` cards of
-/// [shuffledDeck] (only the last one face up) and the remaining 24 cards form
-/// the stock in deck order (its last card is the top of the stock).
-///
-/// Must never change: see [DealRandom].
-KlondikeState dealFromSeed(int seed, {int drawCount = 1}) {
-  final deck = shuffledDeck(seed);
-  var next = 0;
-  final tableau = [
-    for (var column = 0; column < 7; column++)
-      [
-        for (var row = 0; row <= column; row++)
-          deck[next++].turned(faceUp: row == column),
-      ],
-  ];
-  return KlondikeState(
-    stock: deck.sublist(next),
-    waste: const [],
-    foundations: List.generate(4, (_) => const []),
-    tableau: tableau,
-    drawCount: drawCount,
-  );
 }

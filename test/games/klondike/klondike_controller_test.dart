@@ -1,6 +1,5 @@
-import 'dart:math';
-
 import 'package:all_for_games/games/klondike/klondike_controller.dart';
+import 'package:all_for_games/games/klondike/klondike_deals.dart';
 import 'package:all_for_games/games/klondike/klondike_state.dart';
 import 'package:all_for_games/games/klondike/playing_card.dart';
 import 'package:all_for_games/saves/game_save_store.dart';
@@ -18,6 +17,11 @@ PileRef fnd(Suit suit) => PileRef.foundation(suit.index);
 Future<void> flush() => Future<void>.delayed(Duration.zero);
 
 const gameId = KlondikeController.gameId;
+
+/// The seeds proven winnable for [drawCount].
+Set<int> winnable(int drawCount) => {
+  ...klondikeDeals[drawCount]!.values.expand((seeds) => seeds),
+};
 
 void main() {
   late StatsStore stats;
@@ -359,7 +363,7 @@ void main() {
     while (restored.canUndo) {
       restored.undo();
     }
-    expect(restored.state.encode(), KlondikeState.deal(Random(1)).encode());
+    expect(restored.state.encode(), KlondikeState.deal(1).encode());
     expect(restored.score, 0);
   });
 
@@ -427,12 +431,59 @@ void main() {
       expect(stats.records, isEmpty);
       final saved = await storedSave(gameId);
       expect(saved!.moves, 0);
-      expect(
-        restore(saved).state.encode(),
-        KlondikeState.deal(Random(2)).encode(),
-      );
+      expect(restore(saved).state.encode(), KlondikeState.deal(2).encode());
     },
   );
+
+  test('a game without a seed deals a winnable seed', () {
+    final game = KlondikeController(stats: stats, saves: saves);
+    expect(winnable(1), contains(game.seed));
+    expect(game.state.encode(), KlondikeState.deal(game.seed).encode());
+
+    for (final drawCount in [3, 1]) {
+      game.newGame(drawCount: drawCount);
+      expect(winnable(drawCount), contains(game.seed));
+      expect(game.state.encode(), KlondikeState.deal(game.seed).encode());
+      expect(game.state.drawCount, drawCount);
+    }
+  });
+
+  test('newGame skips the seeds played in its draw mode and the deal on '
+      'screen', () async {
+    final [a, b, ...played] = winnable(1).toList();
+    GameRecord recordOf(int seed, String variant) => GameRecord(
+      gameId: gameId,
+      variant: variant,
+      seed: seed,
+      startedAt: now,
+      endedAt: now,
+      playTime: Duration.zero,
+      outcome: GameOutcome.abandoned,
+      moves: 1,
+      undos: 0,
+      score: 0,
+    );
+    final stores = await createTestStores(
+      savedData([
+        for (final seed in played) recordOf(seed, 'draw1'),
+        recordOf(b, 'draw3'),
+      ]),
+    );
+    stats = stores.stats;
+    saves = stores.saves;
+    final game = KlondikeController(stats: stats, saves: saves, seed: a);
+
+    game.newGame();
+    expect(game.seed, b, reason: 'b was only played in draw 3');
+    game.newGame();
+    expect(game.seed, a, reason: 'a has no record, b is on screen');
+    game.draw();
+    game.newGame();
+    expect(game.seed, b, reason: 'a is now recorded as abandoned');
+    game.draw();
+    game.newGame();
+    expect(winnable(1), contains(game.seed), reason: 'all played: any seed');
+  });
 
   test('newGame after a move records an abandoned game once', () async {
     final game = controller();
@@ -464,10 +515,7 @@ void main() {
     expect(game.undos, 0);
     expect(game.score, 0);
     expect(game.canUndo, isFalse);
-    expect(
-      game.state.tableau,
-      KlondikeState.deal(Random(2), drawCount: 3).tableau,
-    );
+    expect(game.state.tableau, KlondikeState.deal(2, drawCount: 3).tableau);
 
     game.draw();
     game.newGame();

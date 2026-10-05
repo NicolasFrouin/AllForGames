@@ -1,5 +1,4 @@
-import 'dart:math';
-
+import 'package:all_for_games/games/klondike/deal_random.dart';
 import 'package:all_for_games/games/klondike/klondike_state.dart';
 import 'package:all_for_games/games/klondike/playing_card.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,6 +7,12 @@ import 'klondike_test_helpers.dart';
 
 PileRef tab(int index) => PileRef.tableau(index);
 PileRef fnd(Suit suit) => PileRef.foundation(suit.index);
+
+/// `encode()` of the seed 1 deal: the stock, the empty waste and
+/// foundations, then the 7 columns. The e2e tests check it on the web.
+const seed1Deal =
+    '3c2c4s5d8c9c9d6c4hKh6hAh2hTc3d5cJd9sThTs4d2sTdAs,,,,,,'
+    'KC,4cAC,KsJcKD,3h3s7c7S,7d6s6dQsAD,5h8sQd8hQhQC,7h9h2d5s8dJsJH';
 
 List<PlayingCard> allCards(KlondikeState state) => [
   ...state.stock,
@@ -58,7 +63,7 @@ void main() {
   group('encode', () {
     // A deal after some draws and moves: cards in every kind of pile.
     KlondikeState played() {
-      var state = KlondikeState.deal(Random(7), drawCount: 3);
+      var state = KlondikeState.deal(7, drawCount: 3);
       for (var i = 0; i < 30; i++) {
         state = state.draw()!.state;
         if (state.nextFoundationMove() case (:final from, :final to)) {
@@ -70,7 +75,7 @@ void main() {
 
     test('decode gives back the same board', () {
       for (final state in [
-        KlondikeState.deal(Random(1)),
+        KlondikeState.deal(1),
         played(),
         board(foundations: foundationsUpTo([13, 13, 13, 13])),
       ]) {
@@ -111,7 +116,7 @@ void main() {
     }
 
     test('decode rejects text that is not a full valid board', () {
-      final deal = KlondikeState.deal(Random(1));
+      final deal = KlondikeState.deal(1);
       final good = deal.encode();
       final piles = good.split(',');
       String withPile(int index, String pile) =>
@@ -154,7 +159,7 @@ void main() {
   });
 
   group('deal', () {
-    final state = KlondikeState.deal(Random(42), drawCount: 3);
+    final state = KlondikeState.deal(42, drawCount: 3);
 
     test('uses each of the 52 cards once', () {
       expect(allCards(state), hasLength(52));
@@ -179,10 +184,35 @@ void main() {
     });
 
     test('same seed gives the same deal', () {
-      final again = KlondikeState.deal(Random(42), drawCount: 3);
+      final again = KlondikeState.deal(42, drawCount: 3);
       expect(again.stock, state.stock);
       expect(again.tableau, state.tableau);
-      expect(allCards(KlondikeState.deal(Random(43))), isNot(allCards(state)));
+      expect(allCards(KlondikeState.deal(43)), isNot(allCards(state)));
+    });
+
+    test('deals shuffledDeck: the columns first, then the stock', () {
+      for (final seed in [1, 7, 42, 0xFFFFFFFF]) {
+        final deck = shuffledDeck(seed);
+        final dealt = KlondikeState.deal(seed);
+        var next = 0;
+        for (var column = 0; column < 7; column++) {
+          for (var row = 0; row <= column; row++) {
+            expect(
+              dealt.tableau[column][row],
+              deck[next++].turned(faceUp: row == column),
+              reason: 'seed $seed',
+            );
+          }
+        }
+        expect(dealt.stock, deck.sublist(28), reason: 'seed $seed');
+      }
+    });
+
+    // The seeds of klondikeDeals were proven winnable for these exact deals:
+    // any change of the algorithm must fail here.
+    test('the deal of a seed never changes', () {
+      expect(KlondikeState.deal(1).encode(), seed1Deal);
+      expect(KlondikeState.deal(1, drawCount: 3).encode(), seed1Deal);
     });
   });
 

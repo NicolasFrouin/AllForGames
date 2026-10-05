@@ -75,23 +75,6 @@ void main() {
       ]);
       expect(shuffledDeck(43), isNot(deck));
     });
-
-    test('dealFromSeed deals the deck in the standard layout', () {
-      final deck = shuffledDeck(7);
-      final state = dealFromSeed(7, drawCount: 3);
-      var next = 0;
-      for (var column = 0; column < 7; column++) {
-        final pile = state.tableau[column];
-        expect(pile, hasLength(column + 1));
-        for (var row = 0; row <= column; row++) {
-          expect(pile[row], deck[next++].turned(faceUp: row == column));
-        }
-      }
-      expect(state.stock, deck.sublist(28));
-      expect(state.waste, isEmpty);
-      expect(state.foundationCardCount, 0);
-      expect(state.drawCount, 3);
-    });
   });
 
   group('solver', () {
@@ -108,7 +91,7 @@ void main() {
     for (final drawCount in [1, 3]) {
       test('solutions of real deals replay to a win, draw $drawCount', () {
         for (final seed in [1, 2, 3]) {
-          final state = dealFromSeed(seed, drawCount: drawCount);
+          final state = KlondikeState.deal(seed, drawCount: drawCount);
           final result = solver.solve(state);
           expect(result.status, SolveStatus.solved, reason: 'seed $seed');
           expect(replaysToWin(state, result.solution), isTrue);
@@ -141,7 +124,7 @@ void main() {
     });
 
     test('stops at maxNodes', () {
-      final state = dealFromSeed(klondikeDeals[1]!['hard']!.first);
+      final state = KlondikeState.deal(klondikeDeals[1]!['hard']!.first);
       final result = solver.solve(state, maxNodes: 50);
       expect(result.status, SolveStatus.unknown);
       expect(result.nodes, 50);
@@ -184,7 +167,7 @@ void main() {
           )) {
             final grade = solver.grade(seed, drawCount);
             expect(grade.difficulty, difficulty, reason: 'seed $seed');
-            final state = dealFromSeed(seed, drawCount: drawCount);
+            final state = KlondikeState.deal(seed, drawCount: drawCount);
             expect(replaysToWin(state, grade.result.solution), isTrue);
           }
         });
