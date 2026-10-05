@@ -35,11 +35,13 @@ jobs:
             $sudo apt-get install -y -q --no-install-recommends "${packages[@]}"
           fi
 
+      # No cache archives: the runner keeps its disk between jobs, so the SDK stays in its tool
+      # cache and the pub cache in its home (restoring 1.7 GB of archives took a minute per run).
+      # On a new runner container, flutter-action downloads the SDK once.
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: 3.47.6
           channel: stable
-          cache: true
       # As root (the runner container), tar keeps the owner of the SDK archive: git then refuses the
       # SDK checkout ("dubious ownership"), and every flutter command fails.
       - name: Trust the Flutter SDK for git
@@ -51,11 +53,22 @@ jobs:
       - run: flutter analyze
       - run: flutter test
 
-      # Chrome, a matching chromedriver and the system libraries Chrome needs.
+      # setup-chrome keeps Chrome in the tool cache too; its apt-get step (Chrome's system
+      # libraries) only runs when some are missing.
+      - name: Chrome libraries
+        id: chrome-libs
+        run: |
+          chrome="$RUNNER_TOOL_CACHE/setup-chrome/chrome/stable/x64/chrome"
+          if [[ -x $chrome ]] && ! ldd "$chrome" | grep -q 'not found'; then
+            echo install=false >>"$GITHUB_OUTPUT"
+          else
+            echo install=true >>"$GITHUB_OUTPUT"
+          fi
+      # Chrome and a matching chromedriver.
       - uses: browser-actions/setup-chrome@v2
         id: chrome
         with:
-          install-dependencies: true
+          install-dependencies: ${{ steps.chrome-libs.outputs.install }}
           install-chromedriver: true
 
       # Deals come from seeds: they must be the same on the VM, JavaScript and WebAssembly.
