@@ -23,6 +23,13 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+        with:
+          clean: false
+      # The workspace stays on the runner between jobs: the incremental compilers start from their
+      # last output in build/ and .dart_tool/ (faster unit test and e2e builds). Everything else
+      # git does not track is removed.
+      - name: Clean the workspace, keep the build caches
+        run: git clean -ffdx -e /build/ -e /.dart_tool/
 
       # flutter-action needs these tools; a bare runner image may not have all of them.
       - name: Runner tools
