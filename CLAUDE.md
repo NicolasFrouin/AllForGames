@@ -28,11 +28,16 @@ Toolchain: Flutter 3.47.6 / Dart 3.13 (Homebrew cask). CI (`.github/workflows/ci
 
 ```
 lib/
-  main.dart, app.dart        loads the stores, routes (go_router): /, /klondike?draw=3&seed=42, /stats/:gameId
-  app_stores.dart            AppStores: every store (stats, saves, settings), loaded once, given to the screens
+  main.dart, app.dart        loads the stores, routes (go_router): /, /klondike?draw=3&seed=42, /stats/:gameId,
+                             /achievements, /card-backs
+  app_stores.dart            AppStores: every store (stats, saves, settings, achievements), loaded once, given to
+                             the screens; its constructor keeps the achievements in sync with the stats
   l10n/                      app_en.arb (template) + app_fr.arb; app_localizations*.dart are generated (git-ignored)
-  settings/                  SettingsStore: player settings (language), one storage key per setting
-  hub/                       home page: header + language menu, overall stats, game grid (continue line per game)
+  settings/                  SettingsStore: player settings (language, card back), one storage key per setting
+  achievements/              Achievement definitions (goal + progress from records), AchievementStore (unlock dates),
+                             achievement_texts (id -> title/description, card back names), achievements page
+  skins/                     CardBackSkin list (free or unlocked by an achievement), CardBackView, card backs page
+  hub/                       home page: header (achievements, card backs, language), overall stats, game grid
   saves/                     SavedGame (one game in progress, game-specific JSON in data), GameSaveStore
   stats/                     GameRecord (one finished game), GameStats (aggregates), StatsStore, PlayTimer, stats page
   common/format.dart         duration/date/percent formatting, in the app language
@@ -60,7 +65,8 @@ integration_test/            e2e tests (run on web by scripts/e2e_web.sh, or on 
 - **Storage** (shared_preferences, `SharedPreferencesAsync`; localStorage on web): one key per item, never a whole
   list (other tabs and unreadable entries must survive). Keys: `stats.game.<gameId>-<startedAt µs>-<seed>` per
   record (`StatsStore.keyOf`), `save.<gameId>` per game in progress (`GameSaveStore.keyOf`), `settings.<name>`
-  per setting (`settings.locale`: `en`/`fr`, absent = device language).
+  per setting (`settings.locale`: `en`/`fr`, absent = device language; `settings.cardBack`: skin id, unknown =
+  classic), `achievements.<id>` per unlocked achievement (UTC ISO date).
   Catch storage errors (blocked or full storage must not break the app).
 - **ChangeNotifier stores** notify *after* an `await`, never synchronously in a mutating call:
   screens call them from `dispose()`, when no widget can rebuild.
@@ -71,11 +77,19 @@ integration_test/            e2e tests (run on web by scripts/e2e_web.sh, or on 
   Language names stay in their own language. The generated `app_localizations*.dart` are git-ignored and rebuilt
   by `flutter pub get` / `flutter gen-l10n`. Delegates: `appLocalizationsDelegates` in `app.dart` (material_ui's
   `GlobalMaterialLocalizations`, not the legacy `AppLocalizations.localizationsDelegates`).
+- **Achievements** are evaluated from the records only: `AppStores` checks them at start (silently: games won
+  before) and on every stats change (`stats.addListener`), which queues the new ones; the win dialog checks too,
+  then shows `takeAnnouncements()`. Unlocks are permanent (clearing stats keeps them; pages show them full).
+  A card back is free or names the achievement that unlocks it (`unlockedBy`); the card backs page only selects
+  unlocked ones. A new achievement or card back needs its texts in both ARB files and a case in
+  `achievement_texts.dart` (a test checks every id has them).
 - **Card suits** are drawn with `SuitIcon` (vector). Text symbols ♥ ♦ render as color emoji on web.
+  Face-down cards are drawn with `CardBackView` and the selected skin.
 - **Keys for tests**: widgets that tests drive have `ValueKey`s (`game-<id>`, `stats-<id>`, `stock`, `waste`,
   `foundation-<suit>`, `tableau-<i>`, card ids like `hearts-1`, `moves-value`, `undo`, `stat-<id>` like
-  `stat-winRate` or `stat-<detailKey>`, `language-menu`, `language-<code>`, ...). Keep them stable.
-  Keys never depend on the language (no `ValueKey('stat-$label')`).
+  `stat-winRate` or `stat-<detailKey>`, `language-menu`, `language-<code>`, `achievements-button`,
+  `card-backs-button`, `achievement-<id>`, `card-back-<id>`, `unlocked-<id>` in the win dialog, ...).
+  Keep them stable. Keys never depend on the language (no `ValueKey('stat-$label')`).
 - Keep code simple: no extra abstraction or packages unless clearly needed. Match the existing style; comments only for the why.
 
 ## Tests
@@ -84,10 +98,12 @@ integration_test/            e2e tests (run on web by scripts/e2e_web.sh, or on 
   No tests of static text, colors, markup or mocks only.
 - Each bug fix gets a regression test (check it fails without the fix).
 - Widget tests: `useSurface(tester)` for a desktop-size window; seed data with `seededStores([records], [saves])`
-  (or `createTestStores(data)` from `test/helpers/test_stores.dart`; `{SettingsStore.localeKey: 'fr'}` for French).
+  (or `createTestStores(data)` from `test/helpers/test_stores.dart`; `{SettingsStore.localeKey: 'fr'}` for French,
+  `savedUnlockData({id: date})` for unlocked achievements). Seeded records unlock their achievements silently.
   They run with an English device; a test that pumps its own `MaterialApp` passes `appLocalizationsDelegates`.
   Drag a card by its visible top strip (`getTopLeft + Offset(10, 6)`), move past the touch slop, then to the target.
-- e2e tests use real storage: clear it at the start of each test. `startApp` sets English (the browser may not be).
+- e2e tests use real storage: clear it at the start of each test. `startApp` sets English (the browser may not be)
+  and can seed records first (`records:`, written with `StatsStore`).
 
 ## Adding a game
 

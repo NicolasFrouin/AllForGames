@@ -468,5 +468,165 @@
         "type": "int"
       }
     }
+  },
+  "achievements": "Achievements",
+  "@achievements": {
+    "description": "Title of the achievements page, and tooltip of its button on the hub."
+  },
+  "achievementsUnlockedCount": "{unlocked} / {total} unlocked",
+  "@achievementsUnlockedCount": {
+    "description": "Top of the achievements page: how many achievements the player has unlocked.",
+    "placeholders": {
+      "unlocked": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "achievementUnlocked": "Achievement unlocked!",
+  "@achievementUnlocked": {
+    "description": "Heading of an achievement that the game just won unlocked, in the win dialog."
+  },
+  "achievementUnlockedOn": "Unlocked on {date}",
+  "@achievementUnlockedOn": {
+    "description": "Achievements page: when the player unlocked an achievement.",
+    "placeholders": {
+      "date": {
+        "type": "String",
+        "example": "10/5/2026 14:03"
+      }
+    }
+  },
+  "achievementReward": "Reward: {name} card back",
+  "@achievementReward": {
+    "description": "Achievements page: the card back that an achievement unlocks.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Crimson"
+      }
+    }
+  },
+  "newCardBack": "New card back: {name}",
+  "@newCardBack": {
+    "description": "Win dialog: the card back that a just unlocked achievement gives.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Crimson"
+      }
+    }
+  },
+  "cardBacks": "Card backs",
+  "@cardBacks": {
+    "description": "Title of the card backs page, and tooltip of its button on the hub."
+  },
+  "cardBackSelected": "Selected",
+  "@cardBackSelected": {
+    "description": "Card backs page: label of the card back the games use."
+  },
+  "cardBackLocked": "Locked",
+  "@cardBackLocked": {
+    "description": "Card backs page: screen reader label of the lock on a card back not unlocked yet."
+  },
+  "cardBackUnlockWith": "Unlock it with: {achievement}",
+  "@cardBackUnlockWith": {
+    "description": "Card backs page: the achievement that unlocks a locked card back.",
+    "placeholders": {
+      "achievement": {
+        "type": "String",
+        "example": "First win"
+      }
+    }
+  },
+  "cardBackClassic": "Classic",
+  "@cardBackClassic": {
+    "description": "Name of a card back design, shown on the card backs page and as a reward."
+  },
+  "cardBackCrimson": "Crimson",
+  "@cardBackCrimson": {
+    "description": "Name of a card back design, shown on the card backs page and as a reward."
+  },
+  "cardBackEmerald": "Emerald",
+  "@cardBackEmerald": {
+    "description": "Name of a card back design, shown on the card backs page and as a reward."
+  },
+  "cardBackOcean": "Ocean",
+  "@cardBackOcean": {
+    "description": "Name of a card back design, shown on the card backs page and as a reward."
+  },
+  "cardBackSunset": "Sunset",
+  "@cardBackSunset": {
+    "description": "Name of a card back design, shown on the card backs page and as a reward."
+  },
+  "cardBackMidnight": "Midnight",
+  "@cardBackMidnight": {
+    "description": "Name of a card back design, shown on the card backs page and as a reward."
+  },
+  "cardBackRoyal": "Royal",
+  "@cardBackRoyal": {
+    "description": "Name of a card back design, shown on the card backs page and as a reward."
+  },
+  "cardBackGold": "Gold",
+  "@cardBackGold": {
+    "description": "Name of a card back design, shown on the card backs page and as a reward."
+  },
+  "achievementKlondikeFirstWinTitle": "First win",
+  "@achievementKlondikeFirstWinTitle": {
+    "description": "Title of the Klondike achievement for the first won game."
+  },
+  "achievementKlondikeFirstWinDescription": "Win a game of Klondike.",
+  "@achievementKlondikeFirstWinDescription": {
+    "description": "How to unlock the Klondike achievement for the first won game."
+  },
+  "achievementKlondikeWins10Title": "Seasoned player",
+  "@achievementKlondikeWins10Title": {
+    "description": "Title of the Klondike achievement for 10 won games."
+  },
+  "achievementKlondikeWins10Description": "Win 10 games of Klondike.",
+  "@achievementKlondikeWins10Description": {
+    "description": "How to unlock the Klondike achievement for 10 won games."
+  },
+  "achievementKlondikeWins50Title": "Solitaire master",
+  "@achievementKlondikeWins50Title": {
+    "description": "Title of the Klondike achievement for 50 won games."
+  },
+  "achievementKlondikeWins50Description": "Win 50 games of Klondike.",
+  "@achievementKlondikeWins50Description": {
+    "description": "How to unlock the Klondike achievement for 50 won games."
+  },
+  "achievementKlondikeDraw3WinTitle": "Triple draw",
+  "@achievementKlondikeDraw3WinTitle": {
+    "description": "Title of the Klondike achievement for a won Draw 3 game."
+  },
+  "achievementKlondikeDraw3WinDescription": "Win a Draw 3 game.",
+  "@achievementKlondikeDraw3WinDescription": {
+    "description": "How to unlock the Klondike achievement for a won Draw 3 game."
+  },
+  "achievementKlondikeFastWinTitle": "Against the clock",
+  "@achievementKlondikeFastWinTitle": {
+    "description": "Title of the Klondike achievement for a game won in under 5 minutes."
+  },
+  "achievementKlondikeFastWinDescription": "Win a game in under 5 minutes.",
+  "@achievementKlondikeFastWinDescription": {
+    "description": "How to unlock the Klondike achievement for a game won in under 5 minutes."
+  },
+  "achievementKlondikeNoUndoWinTitle": "No going back",
+  "@achievementKlondikeNoUndoWinTitle": {
+    "description": "Title of the Klondike achievement for a game won without undo."
+  },
+  "achievementKlondikeNoUndoWinDescription": "Win a game without any undo.",
+  "@achievementKlondikeNoUndoWinDescription": {
+    "description": "How to unlock the Klondike achievement for a game won without undo."
+  },
+  "achievementKlondikeStreak3Title": "Hat trick",
+  "@achievementKlondikeStreak3Title": {
+    "description": "Title of the Klondike achievement for 3 games won in a row."
+  },
+  "achievementKlondikeStreak3Description": "Win 3 games in a row.",
+  "@achievementKlondikeStreak3Description": {
+    "description": "How to unlock the Klondike achievement for 3 games won in a row."
   }
 }

@@ -5,6 +5,7 @@ import 'package:all_for_games/app_stores.dart';
 import 'package:all_for_games/games/klondike/klondike_controller.dart';
 import 'package:all_for_games/games/klondike/klondike_state.dart';
 import 'package:all_for_games/saves/game_save_store.dart';
+import 'package:all_for_games/skins/card_backs.dart';
 import 'package:all_for_games/stats/game_record.dart';
 import 'package:all_for_games/stats/stats_store.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -51,7 +52,7 @@ void main() {
   testWidgets('drags a card onto another tableau pile', (tester) async {
     final (:seed, :from, :to) = findTableauMove();
     final card = KlondikeState.deal(Random(seed)).tableau[from].last;
-    await startApp(tester, '/klondike?seed=$seed');
+    await startApp(tester, location: '/klondike?seed=$seed');
 
     final cardFinder = find.byKey(ValueKey(card.id));
     final targetSlot = find.byKey(ValueKey('tableau-$to'));
@@ -71,7 +72,7 @@ void main() {
   });
 
   testWidgets('a game in progress is kept in browser storage', (tester) async {
-    await startApp(tester, '/klondike?seed=42');
+    await startApp(tester, location: '/klondike?seed=42');
     await tapStock(tester);
     await goBack(tester);
 
@@ -107,11 +108,57 @@ void main() {
     expect(find.text('Jeux'), findsOneWidget);
     expect(textOf(tester, 'summary-klondike'), startsWith('Pas encore joué'));
   });
+
+  testWidgets('a card back unlocked by a win stays selected after a restart', (
+    tester,
+  ) async {
+    await startApp(tester, records: [wonGame()]);
+
+    await tester.tap(find.byKey(const ValueKey('card-backs-button')));
+    await tester.pumpAndSettle();
+    final crimson = find.byKey(const ValueKey('card-back-crimson'));
+    await tester.tap(crimson);
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(of: crimson, matching: find.text('Selected')),
+      findsOneWidget,
+    );
+
+    await restartApp(tester);
+    await openKlondike(tester);
+    final backs = tester.widgetList<CardBackView>(find.byType(CardBackView));
+    expect(backs, isNotEmpty);
+    expect({for (final back in backs) back.skin.id}, {'crimson'});
+  });
 }
 
-/// Starts the app in English on empty real storage (localStorage on web).
-Future<void> startApp(WidgetTester tester, [String location = '/']) async {
+/// A Klondike game won before the app starts. It unlocks only the first win
+/// achievement (and its crimson card back).
+GameRecord wonGame() => GameRecord(
+  gameId: KlondikeController.gameId,
+  variant: 'draw1',
+  seed: 42,
+  startedAt: DateTime.utc(2026, 1, 1, 10),
+  endedAt: DateTime.utc(2026, 1, 1, 10, 30),
+  playTime: const Duration(minutes: 10),
+  outcome: GameOutcome.won,
+  moves: 120,
+  undos: 2,
+  score: 600,
+);
+
+/// Starts the app in English on real storage (localStorage on web) that
+/// holds only [records].
+Future<void> startApp(
+  WidgetTester tester, {
+  String location = '/',
+  List<GameRecord> records = const [],
+}) async {
   await SharedPreferencesAsync().clear();
+  final stats = await StatsStore.load();
+  for (final record in records) {
+    await stats.add(record);
+  }
   final stores = await AppStores.load();
   // The checks read English texts, whatever the browser language.
   await stores.settings.setLocale(const Locale('en'));

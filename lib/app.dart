@@ -1,11 +1,13 @@
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'achievements/achievements_screen.dart';
 import 'app_stores.dart';
 import 'games/game_catalog.dart';
 import 'games/klondike/klondike_screen.dart';
 import 'hub/hub_screen.dart';
 import 'l10n/app_localizations.dart';
+import 'skins/card_backs_screen.dart';
 import 'stats/stats_screen.dart';
 
 /// The texts of the app, then the Material, Cupertino and widgets texts.
@@ -63,6 +65,15 @@ class _AllForGamesAppState extends State<AllForGamesApp> {
               stores: widget.stores,
               game: gameById(state.pathParameters['gameId']!)!,
             ),
+          ),
+          GoRoute(
+            path: 'achievements',
+            builder: (context, state) =>
+                AchievementsScreen(stores: widget.stores),
+          ),
+          GoRoute(
+            path: 'card-backs',
+            builder: (context, state) => CardBacksScreen(stores: widget.stores),
           ),
         ],
       ),

@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../skins/card_backs.dart';
 import 'card_view.dart';
 import 'klondike_controller.dart';
 import 'klondike_state.dart';
@@ -28,9 +29,16 @@ const _allPiles = [
 /// Draws the whole Klondike table in one [Stack]: every card is an
 /// [AnimatedPositioned] keyed by card id, so each move animates by itself.
 class KlondikeBoard extends StatefulWidget {
-  const KlondikeBoard({super.key, required this.controller});
+  const KlondikeBoard({
+    super.key,
+    required this.controller,
+    required this.cardBack,
+  });
 
   final KlondikeController controller;
+
+  /// The look of the face-down cards.
+  final CardBackSkin cardBack;
 
   @override
   State<KlondikeBoard> createState() => _KlondikeBoardState();
@@ -175,7 +183,11 @@ class _KlondikeBoardState extends State<KlondikeBoard> {
     final isTop = count == 1;
     final hidden = _isDragging && _dragging!.cardIds.contains(card.id);
 
-    Widget child = CardView(card: card, width: layout.cardWidth);
+    Widget child = CardView(
+      card: card,
+      width: layout.cardWidth,
+      cardBack: widget.cardBack,
+    );
     if (pile.type == PileType.stock) {
       child = GestureDetector(
         onTap: () => _unlessDragging(_controller.draw),
@@ -189,6 +201,7 @@ class _KlondikeBoardState extends State<KlondikeBoard> {
           cards: cards.sublist(index),
           offsets: offsets.sublist(index),
           layout: layout,
+          cardBack: widget.cardBack,
         ),
         onDragStarted: () => setState(() => _dragging = data),
         onDragEnd: (_) => setState(() => _dragging = null),
@@ -322,11 +335,13 @@ class _DragFeedback extends StatelessWidget {
     required this.cards,
     required this.offsets,
     required this.layout,
+    required this.cardBack,
   });
 
   final List<PlayingCard> cards;
   final List<Offset> offsets;
   final _BoardLayout layout;
+  final CardBackSkin cardBack;
 
   @override
   Widget build(BuildContext context) {
@@ -341,7 +356,11 @@ class _DragFeedback extends StatelessWidget {
             for (var i = 0; i < cards.length; i++)
               Positioned(
                 top: offsets[i].dy - top,
-                child: CardView(card: cards[i], width: layout.cardWidth),
+                child: CardView(
+                  card: cards[i],
+                  width: layout.cardWidth,
+                  cardBack: cardBack,
+                ),
               ),
           ],
         ),

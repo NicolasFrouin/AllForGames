@@ -8,11 +8,14 @@ import 'widget_test_helpers.dart';
 
 void main() {
   // A layout overflow is a test failure, so rendering each page is the check.
-  // The hub window is tall so that every game tile is laid out.
+  // The windows of the hub and of the lists are tall so that every tile is
+  // laid out.
   const pages = {
     '/': Size(360, 1400),
     '/klondike?seed=1': Size(360, 640),
     '/stats/klondike': Size(360, 640),
+    '/achievements': Size(360, 5000),
+    '/card-backs': Size(360, 1600),
   };
   for (final MapEntry(key: location, value: size) in pages.entries) {
     for (final language in ['en', 'fr']) {
@@ -39,6 +42,9 @@ void main() {
                 ),
               ]),
               SettingsStore.localeKey: language,
+              // The win unlocks it: the card backs page shows a selected,
+              // an unlocked and a locked back.
+              SettingsStore.cardBackKey: 'crimson',
             });
             await tester.pumpWidget(
               AllForGamesApp(stores: stores, initialLocation: location),

@@ -129,46 +129,65 @@ class _Header extends StatelessWidget {
   final GameStats overall;
   final SettingsStore settings;
 
+  /// Below this width, the title goes under the logo and the buttons, so
+  /// large text never squeezes it.
+  static const _narrowWidth = 600.0;
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final l10n = AppLocalizations.of(context);
+    final title = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.appTitle,
+          style: textTheme.headlineMedium?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        Text(
+          l10n.hubTagline,
+          style: textTheme.bodyLarge?.copyWith(color: Colors.white70),
+        ),
+      ],
+    );
+    final actions = _HeaderActions(settings: settings);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Row(
+        LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth < _narrowWidth) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _Logo(),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.appTitle,
-                          style: textTheme.headlineMedium?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        Text(
-                          l10n.hubTagline,
-                          style: textTheme.bodyLarge?.copyWith(
-                            color: Colors.white70,
-                          ),
-                        ),
-                      ],
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [const _Logo(), const Spacer(), actions],
                   ),
+                  const SizedBox(height: 12),
+                  title,
                 ],
-              ),
-            ),
-            _LanguageMenu(settings: settings),
-          ],
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      const _Logo(),
+                      const SizedBox(width: 16),
+                      Expanded(child: title),
+                    ],
+                  ),
+                ),
+                actions,
+              ],
+            );
+          },
         ),
         const SizedBox(height: 20),
         Wrap(
@@ -195,6 +214,38 @@ class _Header extends StatelessWidget {
             ),
           ],
         ),
+      ],
+    );
+  }
+}
+
+/// Achievements, card backs and language, at the top right.
+class _HeaderActions extends StatelessWidget {
+  const _HeaderActions({required this.settings});
+
+  final SettingsStore settings;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          key: const ValueKey('achievements-button'),
+          tooltip: l10n.achievements,
+          color: Colors.white70,
+          onPressed: () => context.go('/achievements'),
+          icon: const Icon(Icons.emoji_events_outlined),
+        ),
+        IconButton(
+          key: const ValueKey('card-backs-button'),
+          tooltip: l10n.cardBacks,
+          color: Colors.white70,
+          onPressed: () => context.go('/card-backs'),
+          icon: const Icon(Icons.palette_outlined),
+        ),
+        _LanguageMenu(settings: settings),
       ],
     );
   }

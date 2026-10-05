@@ -44,6 +44,31 @@ void main() {
     expect(store.locale, isNull);
   });
 
+  test('the card back is classic without a saved choice', () async {
+    final store = await createStore();
+    expect(store.cardBackId, 'classic');
+  });
+
+  test('keeps the chosen card back after a reload', () async {
+    final store = await createStore();
+
+    await store.setCardBack('crimson');
+    expect(store.cardBackId, 'crimson');
+    expect(await storedCardBackId(), 'crimson');
+
+    await store.setCardBack('classic');
+    expect(await storedCardBackId(), 'classic');
+  });
+
+  test('a card back the app does not have is classic', () async {
+    final store = await createStore({SettingsStore.cardBackKey: 'neon'});
+    expect(store.cardBackId, 'classic');
+
+    await store.setCardBack('neon');
+    expect(store.cardBackId, 'classic');
+    expect(await storedCardBackId(), 'classic');
+  });
+
   test('listeners are told after the write, not during the call', () async {
     final store = await createStore();
     var notified = 0;
@@ -54,6 +79,12 @@ void main() {
     expect(store.locale, const Locale('fr'));
     await saving;
     expect(notified, 1);
+
+    final savingBack = store.setCardBack('crimson');
+    expect(notified, 1);
+    expect(store.cardBackId, 'crimson');
+    await savingBack;
+    expect(notified, 2);
   });
 
   test('blocked storage still gives a working store', () async {
@@ -65,5 +96,7 @@ void main() {
     expect(store.locale, const Locale('fr'));
     await store.setLocale(null);
     expect(store.locale, isNull);
+    await store.setCardBack('crimson');
+    expect(store.cardBackId, 'crimson');
   });
 }

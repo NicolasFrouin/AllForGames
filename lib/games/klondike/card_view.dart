@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../skins/card_backs.dart';
 import 'playing_card.dart';
 import 'suit_icon.dart';
 
@@ -32,10 +33,18 @@ String cardName(PlayingCard card, AppLocalizations l10n) {
 }
 
 class CardView extends StatelessWidget {
-  const CardView({super.key, required this.card, required this.width});
+  const CardView({
+    super.key,
+    required this.card,
+    required this.width,
+    required this.cardBack,
+  });
 
   final PlayingCard card;
   final double width;
+
+  /// The look of the card when it is face down.
+  final CardBackSkin cardBack;
 
   @override
   Widget build(BuildContext context) {
@@ -60,7 +69,7 @@ class CardView extends StatelessWidget {
           borderRadius: radius,
           child: card.faceUp
               ? _Face(card: card, width: width)
-              : _Back(width: width),
+              : CardBackView(skin: cardBack, width: width),
         ),
       ),
     );
@@ -105,41 +114,6 @@ class _Face extends StatelessWidget {
               child: SuitIcon(card.suit, size: width * 0.5),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Back extends StatelessWidget {
-  const _Back({required this.width});
-
-  final double width;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF283593), Color(0xFF1A237E), Color(0xFF3949AB)],
-        ),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(width * 0.07),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            border: Border.all(color: const Color(0x66FFFFFF), width: 1),
-            borderRadius: BorderRadius.circular(width * 0.06),
-          ),
-          child: Center(
-            child: Icon(
-              Icons.diamond_outlined,
-              color: const Color(0x55FFFFFF),
-              size: width * 0.4,
-            ),
-          ),
         ),
       ),
     );

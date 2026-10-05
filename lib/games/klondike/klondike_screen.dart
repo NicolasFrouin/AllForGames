@@ -3,9 +3,12 @@ import 'dart:async';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../achievements/achievement_texts.dart';
+import '../../achievements/achievements.dart';
 import '../../app_stores.dart';
 import '../../common/format.dart';
 import '../../l10n/app_localizations.dart';
+import '../../skins/card_backs.dart';
 import 'klondike_board.dart';
 import 'klondike_controller.dart';
 import 'klondike_state.dart';
@@ -146,10 +149,15 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
   Future<void> _showWinDialog() async {
     final record = _controller.result;
     if (!mounted || record == null) return;
-    final stats = widget.stores.stats.statsFor(
+    final stores = widget.stores;
+    final stats = stores.stats.statsFor(
       KlondikeController.gameId,
       variant: record.variant,
     );
+    // The record is already in the stats, but they tell their listeners only
+    // after the save: this check unlocks what the win reached right away.
+    stores.achievements.check(stores.stats.records);
+    final unlocked = stores.achievements.takeAnnouncements();
     final playAgain = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -158,6 +166,8 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
         return AlertDialog(
           icon: const Icon(Icons.emoji_events, size: 40),
           title: Text(l10n.winTitle),
+          // New achievements make it taller than a small phone.
+          scrollable: true,
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -171,6 +181,10 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
               ),
               _ResultRow(l10n.winStreak, '${stats.currentStreak}'),
               _ResultRow(l10n.gamesWon, '${stats.won} / ${stats.played}'),
+              for (final achievement in unlocked) ...[
+                const SizedBox(height: 8),
+                _UnlockedRow(achievement),
+              ],
             ],
           ),
           actions: [
@@ -280,7 +294,15 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
         child: Column(
           children: [
             _StatusBar(controller: _controller),
-            Expanded(child: KlondikeBoard(controller: _controller)),
+            Expanded(
+              child: ListenableBuilder(
+                listenable: widget.stores.settings,
+                builder: (context, _) => KlondikeBoard(
+                  controller: _controller,
+                  cardBack: cardBackById(widget.stores.settings.cardBackId),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -400,6 +422,62 @@ class _ResultRow extends StatelessWidget {
         children: [
           Expanded(child: Text(label)),
           Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
+        ],
+      ),
+    );
+  }
+}
+
+/// An achievement that the win just unlocked, with the card back it gives.
+class _UnlockedRow extends StatelessWidget {
+  const _UnlockedRow(this.achievement);
+
+  final Achievement achievement;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final reward = cardBackUnlockedBy(achievement.id);
+    return Container(
+      key: ValueKey('unlocked-${achievement.id}'),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(achievement.icon, color: Colors.amber, size: 32),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.achievementUnlocked,
+                  style: theme.textTheme.labelSmall,
+                ),
+                Text(
+                  achievementTitle(achievement.id, l10n),
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                if (reward != null)
+                  Text(
+                    l10n.newCardBack(cardBackName(reward.id, l10n)),
+                    style: theme.textTheme.bodySmall,
+                  ),
+              ],
+            ),
+          ),
+          if (reward != null) ...[
+            const SizedBox(width: 12),
+            SizedBox(
+              width: 30,
+              height: 42,
+              child: CardBackView(skin: reward, width: 30),
+            ),
+          ],
         ],
       ),
     );

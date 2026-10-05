@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:ui' show Locale;
 
+import 'package:all_for_games/achievements/achievement_store.dart';
 import 'package:all_for_games/app_stores.dart';
 import 'package:all_for_games/saves/game_save_store.dart';
 import 'package:all_for_games/settings/settings_store.dart';
@@ -17,6 +18,8 @@ void useTestStorage([Map<String, Object> data = const {}]) =>
         InMemorySharedPreferencesAsync.withData(data);
 
 /// The app stores on in-memory preferences, optionally with saved data.
+/// As in the app, the achievements follow the stats: the records of [data]
+/// unlock theirs silently.
 Future<AppStores> createTestStores([Map<String, Object> data = const {}]) {
   useTestStorage(data);
   return AppStores.load();
@@ -40,6 +43,13 @@ Map<String, Object> savedGameData(Iterable<SavedGame> games) => {
     GameSaveStore.keyOf(game.gameId): jsonEncode(game.toJson()),
 };
 
+/// Saved data where the achievements of [unlockedAt] (by id) are unlocked,
+/// as [AchievementStore] writes it.
+Map<String, Object> savedUnlockData(Map<String, DateTime> unlockedAt) => {
+  for (final MapEntry(key: id, value: date) in unlockedAt.entries)
+    AchievementStore.keyOf(id): date.toUtc().toIso8601String(),
+};
+
 /// The records in storage now, as a fresh app start would read them.
 Future<List<GameRecord>> storedRecords() async =>
     (await StatsStore.load()).records;
@@ -50,6 +60,10 @@ Future<SavedGame?> storedSave(String gameId) async =>
 
 /// The language in storage now, as a fresh app start would read it.
 Future<Locale?> storedLocale() async => (await SettingsStore.load()).locale;
+
+/// The card back in storage now, as a fresh app start would read it.
+Future<String> storedCardBackId() async =>
+    (await SettingsStore.load()).cardBackId;
 
 /// Storage where every read and write fails, like a blocked localStorage.
 final class BrokenPrefs extends InMemorySharedPreferencesAsync {

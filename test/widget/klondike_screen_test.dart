@@ -317,6 +317,35 @@ void main() {
       expect(stores.stats.records.single.outcome, GameOutcome.won);
     });
 
+    testWidgets('the win shows the achievements it unlocks, only once', (
+      tester,
+    ) async {
+      final stores = await finish(tester);
+      final firstWin = byKey('unlocked-klondike.firstWin');
+      expect(firstWin, findsOneWidget);
+      expect(
+        find.descendant(
+          of: firstWin,
+          matching: find.text('New card back: Crimson'),
+        ),
+        findsOneWidget,
+      );
+      expect(stores.achievements.isUnlocked('klondike.firstWin'), isTrue);
+
+      // The same board again, from the hub.
+      await tester.tap(find.text('Back to games'));
+      await tester.pumpAndSettle();
+      GoRouter.of(tester.element(find.byType(HubScreen)))
+          .go('/klondike', extra: finishBoard);
+      await tester.pumpAndSettle();
+      await tester.tap(byKey('auto-complete'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('You won!'), findsOneWidget);
+      expect(stores.stats.records, hasLength(2));
+      expect(firstWin, findsNothing);
+    });
+
     testWidgets('a win removes the saved game: the next visit deals anew', (
       tester,
     ) async {
