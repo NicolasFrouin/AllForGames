@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:ui' show Locale;
 
 import 'package:all_for_games/app_stores.dart';
 import 'package:all_for_games/saves/game_save_store.dart';
+import 'package:all_for_games/settings/settings_store.dart';
 import 'package:all_for_games/stats/game_record.dart';
 import 'package:all_for_games/stats/stats_store.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
@@ -46,6 +48,9 @@ Future<List<GameRecord>> storedRecords() async =>
 Future<SavedGame?> storedSave(String gameId) async =>
     (await GameSaveStore.load())[gameId];
 
+/// The language in storage now, as a fresh app start would read it.
+Future<Locale?> storedLocale() async => (await SettingsStore.load()).locale;
+
 /// Storage where every read and write fails, like a blocked localStorage.
 final class BrokenPrefs extends InMemorySharedPreferencesAsync {
   BrokenPrefs() : super.empty();
@@ -61,6 +66,10 @@ final class BrokenPrefs extends InMemorySharedPreferencesAsync {
     GetPreferencesParameters parameters,
     SharedPreferencesOptions options,
   ) => throw StateError('storage blocked');
+
+  @override
+  Future<String?> getString(String key, SharedPreferencesOptions options) =>
+      throw StateError('storage blocked');
 
   @override
   Future<bool> setString(

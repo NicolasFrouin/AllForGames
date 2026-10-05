@@ -5,6 +5,7 @@ Classic games in one app: pick a game on the hub, play, and follow detailed stat
 - **Klondike** solitaire (Draw 1 / Draw 3), with undo, drag and drop, tap-to-move and auto-finish
 - Games are saved: leave and come back to continue where you were
 - Statistics for every game: time, moves, undos, score, streaks, records and more
+- English and French
 - FreeCell, Spider and Mahjong are coming
 
 Built with [Flutter](https://flutter.dev): one codebase for Web, Android, iOS, Windows, macOS and Linux.

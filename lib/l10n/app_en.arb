@@ -1,0 +1,472 @@
+{
+  "@@locale": "en",
+  "appTitle": "All For Games",
+  "@appTitle": {
+    "description": "Name of the app: window title and hub heading."
+  },
+  "language": "Language",
+  "@language": {
+    "description": "Tooltip of the language menu on the hub."
+  },
+  "languageSystem": "System default",
+  "@languageSystem": {
+    "description": "Language menu item: follow the language of the device."
+  },
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Dialog button that closes the dialog without doing anything."
+  },
+  "undo": "Undo",
+  "@undo": {
+    "description": "Tooltip of the button that takes back the last move."
+  },
+  "newGame": "New game",
+  "@newGame": {
+    "description": "Tooltip of the new game menu, and button that confirms a new game."
+  },
+  "newGameMode": "New game · {mode}",
+  "@newGameMode": {
+    "description": "New game menu item for one game mode.",
+    "placeholders": {
+      "mode": {
+        "type": "String",
+        "example": "Draw 1"
+      }
+    }
+  },
+  "newGameConfirmTitle": "Start a new game?",
+  "@newGameConfirmTitle": {
+    "description": "Title of the dialog shown before a new game replaces a game with moves."
+  },
+  "newGameConfirmBody": "The current game will count as abandoned.",
+  "@newGameConfirmBody": {
+    "description": "Body of the dialog shown before a new game replaces a game with moves."
+  },
+  "statistics": "Statistics",
+  "@statistics": {
+    "description": "Tooltip of the button that opens the statistics of the game."
+  },
+  "gameStatistics": "{game} statistics",
+  "@gameStatistics": {
+    "description": "Title of the statistics page of a game, and tooltip of its button on the hub.",
+    "placeholders": {
+      "game": {
+        "type": "String",
+        "example": "Klondike"
+      }
+    }
+  },
+  "finish": "Finish",
+  "@finish": {
+    "description": "Button that plays every remaining card to the foundations."
+  },
+  "moves": "Moves",
+  "@moves": {
+    "description": "Label of the move count during a game and after a win."
+  },
+  "score": "Score",
+  "@score": {
+    "description": "Label of the score during a game and after a win."
+  },
+  "time": "Time",
+  "@time": {
+    "description": "Label of the play time of the game just won."
+  },
+  "bestTime": "Best time",
+  "@bestTime": {
+    "description": "Shortest play time of a won game."
+  },
+  "timePlayed": "Time played",
+  "@timePlayed": {
+    "description": "Total play time of all games."
+  },
+  "winTitle": "You won!",
+  "@winTitle": {
+    "description": "Title of the dialog shown when the player wins."
+  },
+  "winStreak": "Win streak",
+  "@winStreak": {
+    "description": "Number of games won in a row, in the win dialog."
+  },
+  "gamesWon": "Games won",
+  "@gamesWon": {
+    "description": "Games won out of games played, in the win dialog."
+  },
+  "backToGames": "Back to games",
+  "@backToGames": {
+    "description": "Win dialog button that goes back to the hub."
+  },
+  "playAgain": "Play again",
+  "@playAgain": {
+    "description": "Win dialog button that starts a new game."
+  },
+  "hubTagline": "Classic games, all in one place.",
+  "@hubTagline": {
+    "description": "Subtitle under the app name on the hub."
+  },
+  "hubGames": "Games",
+  "@hubGames": {
+    "description": "Heading above the game tiles on the hub."
+  },
+  "hubGamesPlayed": "Games played",
+  "@hubGamesPlayed": {
+    "description": "Hub chip: number of finished games, all games together."
+  },
+  "hubWins": "Wins",
+  "@hubWins": {
+    "description": "Hub chip: number of won games, all games together."
+  },
+  "hubComingSoon": "Coming soon",
+  "@hubComingSoon": {
+    "description": "Badge of a game tile whose game is not available yet."
+  },
+  "hubContinue": "Continue · {moves, plural, =1{{moves} move} other{{moves} moves}} · {time}",
+  "@hubContinue": {
+    "description": "Game tile line of a game in progress: tapping the tile continues it.",
+    "placeholders": {
+      "moves": {
+        "type": "int"
+      },
+      "time": {
+        "type": "String",
+        "example": "3:05"
+      }
+    }
+  },
+  "hubNotPlayed": "Not played yet · Tap to play",
+  "@hubNotPlayed": {
+    "description": "Game tile summary of a game without a finished game."
+  },
+  "hubSummaryPlayed": "{count} played",
+  "@hubSummaryPlayed": {
+    "description": "Game tile summary: number of finished games.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "hubSummaryWon": "{percent} won",
+  "@hubSummaryWon": {
+    "description": "Game tile summary: share of the finished games that were won.",
+    "placeholders": {
+      "percent": {
+        "type": "String",
+        "example": "67%"
+      }
+    }
+  },
+  "hubSummaryBest": "best {time}",
+  "@hubSummaryBest": {
+    "description": "Game tile summary: best time.",
+    "placeholders": {
+      "time": {
+        "type": "String",
+        "example": "3:05"
+      }
+    }
+  },
+  "klondikeTitle": "Klondike",
+  "@klondikeTitle": {
+    "description": "Name of the Klondike solitaire game."
+  },
+  "klondikeTagline": "The classic solitaire. Build the four suits from Ace to King.",
+  "@klondikeTagline": {
+    "description": "One-line description of Klondike on its hub tile."
+  },
+  "klondikeDraw": "Draw {count}",
+  "@klondikeDraw": {
+    "description": "Klondike game mode: number of cards turned from the stock at a time.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "klondikeStockDraws": "Stock draws",
+  "@klondikeStockDraws": {
+    "description": "Klondike statistic: taps on the stock."
+  },
+  "klondikeStockRecycles": "Stock recycles",
+  "@klondikeStockRecycles": {
+    "description": "Klondike statistic: times the waste was turned back into the stock."
+  },
+  "klondikeCardsToFoundation": "Cards on foundations",
+  "@klondikeCardsToFoundation": {
+    "description": "Klondike statistic: cards played to the foundations."
+  },
+  "klondikeCardsRevealed": "Cards revealed",
+  "@klondikeCardsRevealed": {
+    "description": "Klondike statistic: face-down tableau cards turned face up."
+  },
+  "klondikeTapMoves": "Tap moves",
+  "@klondikeTapMoves": {
+    "description": "Klondike statistic: moves made by tapping a card."
+  },
+  "klondikeDragMoves": "Drag moves",
+  "@klondikeDragMoves": {
+    "description": "Klondike statistic: moves made by dragging cards."
+  },
+  "klondikeFoundationToTableau": "Foundation take-backs",
+  "@klondikeFoundationToTableau": {
+    "description": "Klondike statistic: cards moved from a foundation back to the tableau."
+  },
+  "klondikeAutoCompleted": "Auto-finished",
+  "@klondikeAutoCompleted": {
+    "description": "Klondike statistic: games finished with the Finish button."
+  },
+  "klondikeTimeToFirstMove": "Time to first move",
+  "@klondikeTimeToFirstMove": {
+    "description": "Klondike statistic: time from the deal to the first move."
+  },
+  "klondikeLongestThink": "Longest think time",
+  "@klondikeLongestThink": {
+    "description": "Klondike statistic: longest time between two moves."
+  },
+  "freecellTitle": "FreeCell",
+  "@freecellTitle": {
+    "description": "Name of the FreeCell solitaire game."
+  },
+  "freecellTagline": "Every card is visible. Use the four free cells well.",
+  "@freecellTagline": {
+    "description": "One-line description of FreeCell on its hub tile."
+  },
+  "spiderTitle": "Spider",
+  "@spiderTitle": {
+    "description": "Name of the Spider solitaire game."
+  },
+  "spiderTagline": "Build eight full suits, from King down to Ace.",
+  "@spiderTagline": {
+    "description": "One-line description of Spider on its hub tile."
+  },
+  "mahjongTitle": "Mahjong",
+  "@mahjongTitle": {
+    "description": "Name of the Mahjong solitaire game."
+  },
+  "mahjongTagline": "Match free tiles in pairs to clear the board.",
+  "@mahjongTagline": {
+    "description": "One-line description of Mahjong on its hub tile."
+  },
+  "cardName": "{rank} of {suit}",
+  "@cardName": {
+    "description": "Name of a face-up card for screen readers.",
+    "placeholders": {
+      "rank": {
+        "type": "String",
+        "example": "Ace"
+      },
+      "suit": {
+        "type": "String",
+        "example": "hearts"
+      }
+    }
+  },
+  "cardFaceDown": "Face-down card",
+  "@cardFaceDown": {
+    "description": "Name of a face-down card for screen readers."
+  },
+  "rankAce": "Ace",
+  "@rankAce": {
+    "description": "Card rank 1, in a card name."
+  },
+  "rankJack": "Jack",
+  "@rankJack": {
+    "description": "Card rank 11, in a card name."
+  },
+  "rankQueen": "Queen",
+  "@rankQueen": {
+    "description": "Card rank 12, in a card name."
+  },
+  "rankKing": "King",
+  "@rankKing": {
+    "description": "Card rank 13, in a card name."
+  },
+  "rankIndexAce": "A",
+  "@rankIndexAce": {
+    "description": "Short rank index printed in the card corner (rank ace)."
+  },
+  "rankIndexJack": "J",
+  "@rankIndexJack": {
+    "description": "Short rank index printed in the card corner (rank jack)."
+  },
+  "rankIndexQueen": "Q",
+  "@rankIndexQueen": {
+    "description": "Short rank index printed in the card corner (rank queen)."
+  },
+  "rankIndexKing": "K",
+  "@rankIndexKing": {
+    "description": "Short rank index printed in the card corner (rank king)."
+  },
+  "suitClubs": "clubs",
+  "@suitClubs": {
+    "description": "Card suit, in a card name."
+  },
+  "suitDiamonds": "diamonds",
+  "@suitDiamonds": {
+    "description": "Card suit, in a card name."
+  },
+  "suitHearts": "hearts",
+  "@suitHearts": {
+    "description": "Card suit, in a card name."
+  },
+  "suitSpades": "spades",
+  "@suitSpades": {
+    "description": "Card suit, in a card name."
+  },
+  "statsResetTooltip": "Reset statistics",
+  "@statsResetTooltip": {
+    "description": "Tooltip of the button that deletes the statistics of a game."
+  },
+  "statsResetTitle": "Reset {game} statistics?",
+  "@statsResetTitle": {
+    "description": "Title of the dialog that confirms deleting the statistics of a game.",
+    "placeholders": {
+      "game": {
+        "type": "String",
+        "example": "Klondike"
+      }
+    }
+  },
+  "statsResetBody": "This deletes all saved games of this game.",
+  "@statsResetBody": {
+    "description": "Body of the dialog that confirms deleting the statistics of a game."
+  },
+  "statsReset": "Reset",
+  "@statsReset": {
+    "description": "Button that confirms deleting the statistics of a game."
+  },
+  "statsAllVariants": "All",
+  "@statsAllVariants": {
+    "description": "Filter chip: statistics of every game mode together."
+  },
+  "statsEmpty": "No games yet. Play one to see your statistics.",
+  "@statsEmpty": {
+    "description": "Statistics page of a game without a finished game."
+  },
+  "statsOverview": "Overview",
+  "@statsOverview": {
+    "description": "Statistics section heading."
+  },
+  "statsRecords": "Records",
+  "@statsRecords": {
+    "description": "Statistics section heading: best results and totals."
+  },
+  "statsAveragePerGame": "Average per game",
+  "@statsAveragePerGame": {
+    "description": "Statistics section heading: game-specific counters, averaged."
+  },
+  "statsRecentGames": "Recent games",
+  "@statsRecentGames": {
+    "description": "Statistics section heading: list of the last finished games."
+  },
+  "statPlayed": "Played",
+  "@statPlayed": {
+    "description": "Statistic: number of finished games."
+  },
+  "statWon": "Won",
+  "@statWon": {
+    "description": "Statistic: number of won games."
+  },
+  "statWinRate": "Win rate",
+  "@statWinRate": {
+    "description": "Statistic: share of the finished games that were won."
+  },
+  "statCurrentStreak": "Current streak",
+  "@statCurrentStreak": {
+    "description": "Statistic: games won in a row up to the last one."
+  },
+  "statBestStreak": "Best streak",
+  "@statBestStreak": {
+    "description": "Statistic: most games won in a row."
+  },
+  "statAverageWinTime": "Average win time",
+  "@statAverageWinTime": {
+    "description": "Statistic: average play time of the won games."
+  },
+  "statFewestMoves": "Fewest moves",
+  "@statFewestMoves": {
+    "description": "Statistic: fewest moves in a won game."
+  },
+  "statBestScore": "Best score",
+  "@statBestScore": {
+    "description": "Statistic: highest score of a game."
+  },
+  "statTotalMoves": "Total moves",
+  "@statTotalMoves": {
+    "description": "Statistic: moves of all games together."
+  },
+  "statTotalUndos": "Total undos",
+  "@statTotalUndos": {
+    "description": "Statistic: undos of all games together."
+  },
+  "recordWon": "Won",
+  "@recordWon": {
+    "description": "Outcome of one finished game in the recent games list."
+  },
+  "recordAbandoned": "Abandoned",
+  "@recordAbandoned": {
+    "description": "Outcome of one game replaced by a new game, in the recent games list."
+  },
+  "recordMoves": "{count, plural, =1{{count} move} other{{count} moves}}",
+  "@recordMoves": {
+    "description": "Moves of one game in the recent games list.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recordUndos": "{count, plural, =1{{count} undo} other{{count} undos}}",
+  "@recordUndos": {
+    "description": "Undos of one game in the recent games list.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recordPoints": "{count, plural, =1{{count} pt} other{{count} pts}}",
+  "@recordPoints": {
+    "description": "Score of one game in the recent games list (pts: points).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "durationHoursMinutes": "{hours}h {minutes}m",
+  "@durationHoursMinutes": {
+    "description": "A duration of an hour or more.",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "String",
+        "example": "05"
+      }
+    }
+  },
+  "durationMinutesSeconds": "{minutes}m {seconds}s",
+  "@durationMinutesSeconds": {
+    "description": "A duration of a minute or more, under an hour.",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      },
+      "seconds": {
+        "type": "String",
+        "example": "05"
+      }
+    }
+  },
+  "durationSeconds": "{seconds}s",
+  "@durationSeconds": {
+    "description": "A duration under a minute.",
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  }
+}

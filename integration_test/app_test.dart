@@ -44,8 +44,8 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('stats-klondike')));
     await tester.pumpAndSettle();
-    expect(valueOf(tester, 'stat-Played'), '1');
-    expect(valueOf(tester, 'stat-Won'), '0');
+    expect(valueOf(tester, 'stat-played'), '1');
+    expect(valueOf(tester, 'stat-won'), '0');
   });
 
   testWidgets('drags a card onto another tableau pile', (tester) async {
@@ -79,10 +79,7 @@ void main() {
     expect(saved!.moves, 1);
     expect((await StatsStore.load()).records, isEmpty);
 
-    // Close the app, then start it again on the same storage.
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pumpWidget(AllForGamesApp(stores: await AppStores.load()));
-    await tester.pumpAndSettle();
+    await restartApp(tester);
     expect(textOf(tester, 'resume-klondike'), startsWith('Continue · 1 move'));
 
     await openKlondike(tester);
@@ -95,15 +92,39 @@ void main() {
       (42, 1, GameOutcome.abandoned),
     );
   });
+
+  testWidgets('the chosen language stays after a restart', (tester) async {
+    await startApp(tester);
+    expect(find.text('Games'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('language-menu')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('language-fr')));
+    await tester.pumpAndSettle();
+    expect(find.text('Jeux'), findsOneWidget);
+
+    await restartApp(tester);
+    expect(find.text('Jeux'), findsOneWidget);
+    expect(textOf(tester, 'summary-klondike'), startsWith('Pas encore joué'));
+  });
 }
 
-/// Starts the app on empty real storage (localStorage on web).
+/// Starts the app in English on empty real storage (localStorage on web).
 Future<void> startApp(WidgetTester tester, [String location = '/']) async {
   await SharedPreferencesAsync().clear();
   final stores = await AppStores.load();
+  // The checks read English texts, whatever the browser language.
+  await stores.settings.setLocale(const Locale('en'));
   await tester.pumpWidget(
     AllForGamesApp(stores: stores, initialLocation: location),
   );
+  await tester.pumpAndSettle();
+}
+
+/// Closes the app, then starts it again on the same storage.
+Future<void> restartApp(WidgetTester tester) async {
+  await tester.pumpWidget(const SizedBox.shrink());
+  await tester.pumpWidget(AllForGamesApp(stores: await AppStores.load()));
   await tester.pumpAndSettle();
 }
 

@@ -1,8 +1,10 @@
+import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../app_stores.dart';
 import '../common/format.dart';
 import '../games/game_catalog.dart';
+import '../l10n/app_localizations.dart';
 import 'game_record.dart';
 import 'game_stats.dart';
 
@@ -23,21 +25,24 @@ class _StatsScreenState extends State<StatsScreen> {
   Future<void> _confirmReset() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Reset ${widget.game.title} statistics?'),
-        content: const Text('This deletes all saved games of this game.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            key: const ValueKey('confirm-reset'),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Reset'),
-          ),
-        ],
-      ),
+      builder: (context) {
+        final l10n = AppLocalizations.of(context);
+        return AlertDialog(
+          title: Text(l10n.statsResetTitle(widget.game.title(l10n))),
+          content: Text(l10n.statsResetBody),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              key: const ValueKey('confirm-reset'),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(l10n.statsReset),
+            ),
+          ],
+        );
+      },
     );
     if (confirmed ?? false) await widget.stores.stats.clear(widget.game.id);
   }
@@ -45,13 +50,15 @@ class _StatsScreenState extends State<StatsScreen> {
   @override
   Widget build(BuildContext context) {
     final game = widget.game;
+    final l10n = AppLocalizations.of(context);
+    final locale = l10n.localeName;
     return Scaffold(
       appBar: AppBar(
-        title: Text('${game.title} statistics'),
+        title: Text(l10n.gameStatistics(game.title(l10n))),
         actions: [
           IconButton(
             key: const ValueKey('reset-stats'),
-            tooltip: 'Reset statistics',
+            tooltip: l10n.statsResetTooltip,
             onPressed: _confirmReset,
             icon: const Icon(Icons.delete_outline),
           ),
@@ -72,52 +79,77 @@ class _StatsScreenState extends State<StatsScreen> {
                 child: ListView(
                   padding: const EdgeInsets.all(20),
                   children: [
-                    if (game.variants.isNotEmpty) _variantFilter(game),
+                    if (game.variants.isNotEmpty) _variantFilter(game, l10n),
                     if (stats.played == 0)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 48),
-                        child: Center(
-                          child: Text(
-                            'No games yet. Play one to see your statistics.',
-                          ),
-                        ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 48),
+                        child: Center(child: Text(l10n.statsEmpty)),
                       )
                     else ...[
-                      _Section('Overview', [
-                        _StatTile('Played', '${stats.played}'),
-                        _StatTile('Won', '${stats.won}'),
-                        _StatTile('Win rate', formatPercent(stats.winRate)),
-                        _StatTile('Current streak', '${stats.currentStreak}'),
-                        _StatTile('Best streak', '${stats.bestStreak}'),
+                      _Section(l10n.statsOverview, [
+                        _StatTile('played', l10n.statPlayed, '${stats.played}'),
+                        _StatTile('won', l10n.statWon, '${stats.won}'),
                         _StatTile(
-                          'Time played',
-                          formatLongDuration(stats.totalPlayTime),
+                          'winRate',
+                          l10n.statWinRate,
+                          formatPercent(stats.winRate, locale),
+                        ),
+                        _StatTile(
+                          'currentStreak',
+                          l10n.statCurrentStreak,
+                          '${stats.currentStreak}',
+                        ),
+                        _StatTile(
+                          'bestStreak',
+                          l10n.statBestStreak,
+                          '${stats.bestStreak}',
+                        ),
+                        _StatTile(
+                          'timePlayed',
+                          l10n.timePlayed,
+                          formatLongDuration(stats.totalPlayTime, l10n),
                         ),
                       ]),
-                      _Section('Records', [
+                      _Section(l10n.statsRecords, [
                         _StatTile(
-                          'Best time',
+                          'bestTime',
+                          l10n.bestTime,
                           _orDash(stats.bestTime, formatClock),
                         ),
                         _StatTile(
-                          'Average win time',
+                          'averageWinTime',
+                          l10n.statAverageWinTime,
                           _orDash(stats.averageWinTime, formatClock),
                         ),
                         _StatTile(
-                          'Fewest moves',
+                          'fewestMoves',
+                          l10n.statFewestMoves,
                           _orDash(stats.fewestMoves, _int),
                         ),
-                        _StatTile('Best score', _orDash(stats.bestScore, _int)),
-                        _StatTile('Total moves', '${stats.totalMoves}'),
-                        _StatTile('Total undos', '${stats.totalUndos}'),
+                        _StatTile(
+                          'bestScore',
+                          l10n.statBestScore,
+                          _orDash(stats.bestScore, _int),
+                        ),
+                        _StatTile(
+                          'totalMoves',
+                          l10n.statTotalMoves,
+                          '${stats.totalMoves}',
+                        ),
+                        _StatTile(
+                          'totalUndos',
+                          l10n.statTotalUndos,
+                          '${stats.totalUndos}',
+                        ),
                       ]),
                       if (stats.detailAverages.isNotEmpty)
-                        _Section('Average per game', [
+                        _Section(l10n.statsAveragePerGame, [
                           for (final MapEntry(:key, :value)
                               in stats.detailAverages.entries)
                             _StatTile(
-                              game.detailLabels[key] ?? key,
-                              _formatDetail(key, value),
+                              key,
+                              game.detailLabels[key]?.call(l10n) ?? key,
+                              _formatDetail(key, value, l10n),
                             ),
                         ]),
                       _RecentGames(records: records, game: game),
@@ -132,7 +164,7 @@ class _StatsScreenState extends State<StatsScreen> {
     );
   }
 
-  Widget _variantFilter(GameInfo game) {
+  Widget _variantFilter(GameInfo game, AppLocalizations l10n) {
     Widget chip(String? variant, String label) => ChoiceChip(
       key: ValueKey('variant-${variant ?? 'all'}'),
       label: Text(label),
@@ -144,9 +176,9 @@ class _StatsScreenState extends State<StatsScreen> {
       child: Wrap(
         spacing: 8,
         children: [
-          chip(null, 'All'),
+          chip(null, l10n.statsAllVariants),
           for (final MapEntry(:key, :value) in game.variants.entries)
-            chip(key, value),
+            chip(key, value(l10n)),
         ],
       ),
     );
@@ -157,13 +189,12 @@ class _StatsScreenState extends State<StatsScreen> {
   static String _orDash<T>(T? value, String Function(T) format) =>
       value == null ? '—' : format(value);
 
-  static String _formatDetail(String key, double value) {
+  static String _formatDetail(String key, double value, AppLocalizations l10n) {
     if (key.endsWith('Ms')) {
-      return formatLongDuration(Duration(milliseconds: value.round()));
+      return formatLongDuration(Duration(milliseconds: value.round()), l10n);
     }
-    return value == value.roundToDouble()
-        ? value.toStringAsFixed(0)
-        : value.toStringAsFixed(1);
+    // One decimal at most: `16.5`, `31`.
+    return NumberFormat('0.#', l10n.localeName).format(value);
   }
 }
 
@@ -190,8 +221,10 @@ class _Section extends StatelessWidget {
 }
 
 class _StatTile extends StatelessWidget {
-  const _StatTile(this.label, this.value);
+  const _StatTile(this.id, this.label, this.value);
 
+  /// Names the tile for tests, in any language.
+  final String id;
   final String label;
   final String value;
 
@@ -199,7 +232,7 @@ class _StatTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      key: ValueKey('stat-$label'),
+      key: ValueKey('stat-$id'),
       // Two tiles per row on a 360 px wide phone.
       width: 150,
       padding: const EdgeInsets.all(14),
@@ -233,6 +266,7 @@ class _RecentGames extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final recent =
         (records.toList()..sort((a, b) => b.endedAt.compareTo(a.endedAt))).take(
           20,
@@ -242,7 +276,10 @@ class _RecentGames extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Recent games', style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            l10n.statsRecentGames,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           const SizedBox(height: 4),
           for (final record in recent)
             ListTile(
@@ -252,17 +289,18 @@ class _RecentGames extends StatelessWidget {
                 color: record.won ? Colors.amber : null,
               ),
               title: Text(
-                '${record.won ? 'Won' : 'Abandoned'} · ${formatClock(record.playTime)}',
+                '${record.won ? l10n.recordWon : l10n.recordAbandoned}'
+                ' · ${formatClock(record.playTime)}',
               ),
               subtitle: Text(
                 [
-                  game.variants[record.variant] ?? record.variant,
-                  '${record.moves} moves',
-                  '${record.undos} undos',
-                  '${record.score} pts',
+                  game.variants[record.variant]?.call(l10n) ?? record.variant,
+                  l10n.recordMoves(record.moves),
+                  l10n.recordUndos(record.undos),
+                  l10n.recordPoints(record.score),
                 ].join(' · '),
               ),
-              trailing: Text(formatDateTime(record.endedAt)),
+              trailing: Text(formatDateTime(record.endedAt, l10n.localeName)),
             ),
         ],
       ),

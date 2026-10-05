@@ -66,7 +66,12 @@ Future<AppStores> pumpGame(
     ],
   );
   addTearDown(router.dispose);
-  await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+  await tester.pumpWidget(
+    MaterialApp.router(
+      localizationsDelegates: appLocalizationsDelegates,
+      routerConfig: router,
+    ),
+  );
   await tester.pumpAndSettle();
   return stores;
 }

@@ -1,6 +1,10 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../l10n/app_localizations.dart';
 import 'klondike/klondike_controller.dart';
+
+/// A text in the language of the app.
+typedef LocalizedText = String Function(AppLocalizations l10n);
 
 class GameInfo {
   const GameInfo({
@@ -15,8 +19,8 @@ class GameInfo {
   });
 
   final String id;
-  final String title;
-  final String tagline;
+  final LocalizedText title;
+  final LocalizedText tagline;
   final IconData icon;
   final Color color;
 
@@ -24,45 +28,48 @@ class GameInfo {
   final String? route;
 
   /// Variant id (as saved in records) to display name.
-  final Map<String, String> variants;
+  final Map<String, LocalizedText> variants;
 
   /// Labels of the game-specific counters in `GameRecord.details`.
-  final Map<String, String> detailLabels;
+  final Map<String, LocalizedText> detailLabels;
 
   bool get isAvailable => route != null;
 }
 
-const gameCatalog = [
+final gameCatalog = [
   GameInfo(
     id: KlondikeController.gameId,
-    title: 'Klondike',
-    tagline: 'The classic solitaire. Build the four suits from Ace to King.',
+    title: (l10n) => l10n.klondikeTitle,
+    tagline: (l10n) => l10n.klondikeTagline,
     icon: Icons.style,
-    color: Color(0xFF2E7D32),
+    color: const Color(0xFF2E7D32),
     route: '/klondike',
-    variants: {'draw1': 'Draw 1', 'draw3': 'Draw 3'},
+    variants: {
+      'draw1': (l10n) => l10n.klondikeDraw(1),
+      'draw3': (l10n) => l10n.klondikeDraw(3),
+    },
     detailLabels: KlondikeStatKeys.labels,
   ),
   GameInfo(
     id: 'freecell',
-    title: 'FreeCell',
-    tagline: 'Every card is visible. Use the four free cells well.',
+    title: (l10n) => l10n.freecellTitle,
+    tagline: (l10n) => l10n.freecellTagline,
     icon: Icons.view_column,
-    color: Color(0xFF1565C0),
+    color: const Color(0xFF1565C0),
   ),
   GameInfo(
     id: 'spider',
-    title: 'Spider',
-    tagline: 'Build full suits in eight piles.',
+    title: (l10n) => l10n.spiderTitle,
+    tagline: (l10n) => l10n.spiderTagline,
     icon: Icons.layers,
-    color: Color(0xFF6A1B9A),
+    color: const Color(0xFF6A1B9A),
   ),
   GameInfo(
     id: 'mahjong',
-    title: 'Mahjong',
-    tagline: 'Match free tiles in pairs to clear the board.',
+    title: (l10n) => l10n.mahjongTitle,
+    tagline: (l10n) => l10n.mahjongTagline,
     icon: Icons.grid_view,
-    color: Color(0xFFC62828),
+    color: const Color(0xFFC62828),
   ),
 ];
 

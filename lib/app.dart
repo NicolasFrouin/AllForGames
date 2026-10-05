@@ -5,7 +5,16 @@ import 'app_stores.dart';
 import 'games/game_catalog.dart';
 import 'games/klondike/klondike_screen.dart';
 import 'hub/hub_screen.dart';
+import 'l10n/app_localizations.dart';
 import 'stats/stats_screen.dart';
+
+/// The texts of the app, then the Material, Cupertino and widgets texts.
+/// These come from material_ui: the flutter_localizations ones (in
+/// `AppLocalizations.localizationsDelegates`) do not serve material_ui widgets.
+const appLocalizationsDelegates = <LocalizationsDelegate<Object?>>[
+  AppLocalizations.delegate,
+  ...GlobalMaterialLocalizations.delegates,
+];
 
 class AllForGamesApp extends StatefulWidget {
   const AllForGamesApp({
@@ -68,16 +77,24 @@ class _AllForGamesAppState extends State<AllForGamesApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'All For Games',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2E7D32),
-          brightness: Brightness.dark,
+    final settings = widget.stores.settings;
+    return ListenableBuilder(
+      listenable: settings,
+      builder: (context, _) => MaterialApp.router(
+        onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF2E7D32),
+            brightness: Brightness.dark,
+          ),
         ),
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        // Null follows the device language.
+        locale: settings.locale,
+        routerConfig: _router,
       ),
-      routerConfig: _router,
     );
   }
 }

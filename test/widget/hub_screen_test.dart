@@ -93,8 +93,8 @@ void main() {
 
     expect(find.byType(StatsScreen), findsOneWidget);
     expect(find.widgetWithText(AppBar, 'Klondike statistics'), findsOneWidget);
-    expect(valueIn('stat-Played'), '2');
-    expect(valueIn('stat-Won'), '1');
+    expect(valueIn('stat-played'), '2');
+    expect(valueIn('stat-won'), '1');
 
     await tester.pageBack();
     await tester.pumpAndSettle();

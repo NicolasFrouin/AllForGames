@@ -1,13 +1,12 @@
 enum Suit {
-  clubs('♣', 'clubs', isRed: false),
-  diamonds('♦', 'diamonds', isRed: true),
-  hearts('♥', 'hearts', isRed: true),
-  spades('♠', 'spades', isRed: false);
+  clubs('♣', isRed: false),
+  diamonds('♦', isRed: true),
+  hearts('♥', isRed: true),
+  spades('♠', isRed: false);
 
-  const Suit(this.symbol, this.label, {required this.isRed});
+  const Suit(this.symbol, {required this.isRed});
 
   final String symbol;
-  final String label;
   final bool isRed;
 }
 
@@ -60,17 +59,6 @@ class PlayingCard {
     13 => 'K',
     _ => '$rank',
   };
-
-  String get name {
-    final rankName = switch (rank) {
-      1 => 'Ace',
-      11 => 'Jack',
-      12 => 'Queen',
-      13 => 'King',
-      _ => '$rank',
-    };
-    return '$rankName of ${suit.label}';
-  }
 
   PlayingCard turned({required bool faceUp}) =>
       PlayingCard(suit, rank, faceUp: faceUp);

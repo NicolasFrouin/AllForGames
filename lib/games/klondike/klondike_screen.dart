@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../app_stores.dart';
 import '../../common/format.dart';
+import '../../l10n/app_localizations.dart';
 import 'klondike_board.dart';
 import 'klondike_controller.dart';
 import 'klondike_state.dart';
@@ -152,36 +153,39 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
     final playAgain = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        icon: const Icon(Icons.emoji_events, size: 40),
-        title: const Text('You won!'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _ResultRow('Time', formatClock(record.playTime)),
-            _ResultRow('Moves', '${record.moves}'),
-            _ResultRow('Score', '${record.score}'),
-            const Divider(),
-            _ResultRow(
-              'Best time',
-              formatClock(stats.bestTime ?? record.playTime),
+      builder: (context) {
+        final l10n = AppLocalizations.of(context);
+        return AlertDialog(
+          icon: const Icon(Icons.emoji_events, size: 40),
+          title: Text(l10n.winTitle),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _ResultRow(l10n.time, formatClock(record.playTime)),
+              _ResultRow(l10n.moves, '${record.moves}'),
+              _ResultRow(l10n.score, '${record.score}'),
+              const Divider(),
+              _ResultRow(
+                l10n.bestTime,
+                formatClock(stats.bestTime ?? record.playTime),
+              ),
+              _ResultRow(l10n.winStreak, '${stats.currentStreak}'),
+              _ResultRow(l10n.gamesWon, '${stats.won} / ${stats.played}'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(l10n.backToGames),
             ),
-            _ResultRow('Win streak', '${stats.currentStreak}'),
-            _ResultRow('Games won', '${stats.won} / ${stats.played}'),
+            FilledButton(
+              key: const ValueKey('play-again'),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(l10n.playAgain),
+            ),
           ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Back to games'),
-          ),
-          FilledButton(
-            key: const ValueKey('play-again'),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Play again'),
-          ),
-        ],
-      ),
+        );
+      },
     );
     if (!mounted) return;
     if (playAgain ?? false) {
@@ -196,21 +200,24 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
     if (_controller.moves > 0 && _controller.result == null) {
       final confirmed = await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Start a new game?'),
-          content: const Text('The current game will count as abandoned.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              key: const ValueKey('confirm-new-game'),
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('New game'),
-            ),
-          ],
-        ),
+        builder: (context) {
+          final l10n = AppLocalizations.of(context);
+          return AlertDialog(
+            title: Text(l10n.newGameConfirmTitle),
+            content: Text(l10n.newGameConfirmBody),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: Text(l10n.cancel),
+              ),
+              FilledButton(
+                key: const ValueKey('confirm-new-game'),
+                onPressed: () => Navigator.of(context).pop(true),
+                child: Text(l10n.newGame),
+              ),
+            ],
+          );
+        },
       );
       if (!(confirmed ?? false) || !mounted) return;
     }
@@ -221,34 +228,38 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: feltColor,
       appBar: AppBar(
         backgroundColor: const Color(0xFF08452C),
-        title: const Text('Klondike'),
+        title: Text(l10n.klondikeTitle),
         actions: [
           ListenableBuilder(
             listenable: _controller,
             builder: (context, _) => IconButton(
               key: const ValueKey('undo'),
-              tooltip: 'Undo',
+              tooltip: l10n.undo,
               onPressed: _controller.canUndo ? _controller.undo : null,
               icon: const Icon(Icons.undo),
             ),
           ),
           PopupMenuButton<int>(
             key: const ValueKey('new-game'),
-            tooltip: 'New game',
+            tooltip: l10n.newGame,
             icon: const Icon(Icons.add_box_outlined),
             onSelected: _newGame,
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: 1, child: Text('New game · Draw 1')),
-              PopupMenuItem(value: 3, child: Text('New game · Draw 3')),
+            itemBuilder: (context) => [
+              for (final drawCount in [1, 3])
+                PopupMenuItem(
+                  value: drawCount,
+                  child: Text(l10n.newGameMode(l10n.klondikeDraw(drawCount))),
+                ),
             ],
           ),
           IconButton(
             key: const ValueKey('open-stats'),
-            tooltip: 'Statistics',
+            tooltip: l10n.statistics,
             onPressed: _openStats,
             icon: const Icon(Icons.bar_chart),
           ),
@@ -261,7 +272,7 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
                 key: const ValueKey('auto-complete'),
                 onPressed: _controller.autoComplete,
                 icon: const Icon(Icons.auto_awesome),
-                label: const Text('Finish'),
+                label: Text(l10n.finish),
               )
             : const SizedBox.shrink(),
       ),
@@ -307,6 +318,7 @@ class _StatusBarState extends State<_StatusBar> {
   @override
   Widget build(BuildContext context) {
     final controller = widget.controller;
+    final l10n = AppLocalizations.of(context);
     return ListenableBuilder(
       listenable: controller,
       builder: (context, _) => Padding(
@@ -324,19 +336,19 @@ class _StatusBarState extends State<_StatusBar> {
             _StatusItem(
               id: 'moves',
               icon: Icons.swap_horiz,
-              label: 'Moves',
+              label: l10n.moves,
               value: '${controller.moves}',
             ),
             _StatusItem(
               id: 'score',
               icon: Icons.star_outline,
-              label: 'Score',
+              label: l10n.score,
               value: '${controller.score}',
             ),
             _StatusItem(
               id: 'draw',
               icon: Icons.style_outlined,
-              value: 'Draw ${controller.state.drawCount}',
+              value: l10n.klondikeDraw(controller.state.drawCount),
             ),
           ],
         ),

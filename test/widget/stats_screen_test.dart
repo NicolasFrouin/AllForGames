@@ -1,9 +1,11 @@
 import 'package:all_for_games/app.dart';
 import 'package:all_for_games/app_stores.dart';
+import 'package:all_for_games/settings/settings_store.dart';
 import 'package:all_for_games/stats/stats_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../helpers/test_stores.dart';
 import 'widget_test_helpers.dart';
 
 const emptyText = 'No games yet. Play one to see your statistics.';
@@ -78,7 +80,7 @@ void main() {
     await pumpStats(tester, await seededStores([savedGames.last]));
 
     expect(find.text(emptyText), findsOneWidget);
-    expect(find.byKey(const ValueKey('stat-Played')), findsNothing);
+    expect(find.byKey(const ValueKey('stat-played')), findsNothing);
     expect(find.text('Recent games'), findsNothing);
   });
 
@@ -87,20 +89,20 @@ void main() {
 
     expect(find.text(emptyText), findsNothing);
     expectStats({
-      'Played': '4',
-      'Won': '2',
-      'Win rate': '50%',
-      'Current streak': '0',
-      'Best streak': '2',
-      'Time played': '7m 00s',
-      'Best time': '2:00',
-      'Average win time': '2:30',
-      'Fewest moves': '90',
-      'Best score': '500',
-      'Total moves': '235',
-      'Total undos': '3',
-      'Stock draws': '16.5',
-      'Time to first move': '1s',
+      'played': '4',
+      'won': '2',
+      'winRate': '50%',
+      'currentStreak': '0',
+      'bestStreak': '2',
+      'timePlayed': '7m 00s',
+      'bestTime': '2:00',
+      'averageWinTime': '2:30',
+      'fewestMoves': '90',
+      'bestScore': '500',
+      'totalMoves': '235',
+      'totalUndos': '3',
+      'stockDraws': '16.5',
+      'timeToFirstMoveMs': '1s',
     });
 
     // Most recent first.
@@ -116,43 +118,65 @@ void main() {
     expect(tops, orderedEquals([...tops]..sort()));
   });
 
+  testWidgets('in French, the tiles keep their keys with French numbers', (
+    tester,
+  ) async {
+    await pumpStats(
+      tester,
+      await createTestStores({
+        ...savedData(savedGames),
+        SettingsStore.localeKey: 'fr',
+      }),
+    );
+
+    expect(find.widgetWithText(AppBar, 'Statistiques – Klondike'), findsOne);
+    expectStats({
+      'played': '4',
+      'winRate': '50\u00a0%',
+      'timePlayed': '7\u00a0min\u00a000\u00a0s',
+      'stockDraws': '16,5',
+      'timeToFirstMoveMs': '1\u00a0s',
+    });
+    expect(find.text('Gagnée · 3:00'), findsOneWidget);
+  });
+
   testWidgets('variant chips filter the numbers', (tester) async {
     await pumpStats(tester, await seededStores(savedGames));
 
     await selectVariant(tester, 'draw1');
     expectStats({
-      'Played': '3',
-      'Won': '1',
-      'Win rate': '33%',
-      'Current streak': '0',
-      'Best streak': '1',
-      'Time played': '4m 00s',
-      'Best time': '2:00',
-      'Fewest moves': '90',
-      'Total moves': '115',
-      'Stock draws': '11.7',
+      'played': '3',
+      'won': '1',
+      'winRate': '33%',
+      'currentStreak': '0',
+      'bestStreak': '1',
+      'timePlayed': '4m 00s',
+      'bestTime': '2:00',
+      'fewestMoves': '90',
+      'totalMoves': '115',
+      'stockDraws': '11.7',
     });
     expect(find.text('Won · 3:00'), findsNothing);
 
     await selectVariant(tester, 'draw3');
     expectStats({
-      'Played': '1',
-      'Won': '1',
-      'Win rate': '100%',
-      'Current streak': '1',
-      'Best time': '3:00',
-      'Fewest moves': '120',
-      'Best score': '300',
-      'Total undos': '1',
-      'Stock draws': '31',
-      'Time to first move': '2s',
+      'played': '1',
+      'won': '1',
+      'winRate': '100%',
+      'currentStreak': '1',
+      'bestTime': '3:00',
+      'fewestMoves': '120',
+      'bestScore': '300',
+      'totalUndos': '1',
+      'stockDraws': '31',
+      'timeToFirstMoveMs': '2s',
     });
     expect(find.text('Won · 3:00'), findsOneWidget);
     expect(find.text('Won · 2:00'), findsNothing);
     expect(find.textContaining('Abandoned'), findsNothing);
 
     await selectVariant(tester, 'all');
-    expectStats({'Played': '4', 'Won': '2'});
+    expectStats({'played': '4', 'won': '2'});
   });
 
   testWidgets('cancelling the reset keeps the games', (tester) async {
@@ -161,7 +185,7 @@ void main() {
 
     await tapReset(tester, find.text('Cancel'));
 
-    expectStats({'Played': '4'});
+    expectStats({'played': '4'});
     expect(stores.stats.records, hasLength(savedGames.length));
   });
 
@@ -172,7 +196,7 @@ void main() {
     await tapReset(tester, find.byKey(const ValueKey('confirm-reset')));
 
     expect(find.text(emptyText), findsOneWidget);
-    expect(find.byKey(const ValueKey('stat-Played')), findsNothing);
+    expect(find.byKey(const ValueKey('stat-played')), findsNothing);
     expect(stores.stats.records.map((r) => r.gameId), ['freecell']);
     final reloaded = await StatsStore.load();
     expect(reloaded.records.map((r) => r.gameId), ['freecell']);

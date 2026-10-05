@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../saves/game_save_store.dart';
 import '../../stats/game_record.dart';
 import '../../stats/play_timer.dart';
@@ -24,17 +25,17 @@ abstract final class KlondikeStatKeys {
   static const timeToFirstMoveMs = 'timeToFirstMoveMs';
   static const longestThinkMs = 'longestThinkMs';
 
-  static const labels = {
-    stockDraws: 'Stock draws',
-    stockRecycles: 'Stock recycles',
-    cardsToFoundation: 'Cards on foundations',
-    cardsRevealed: 'Cards revealed',
-    tapMoves: 'Tap moves',
-    dragMoves: 'Drag moves',
-    foundationToTableau: 'Foundation take-backs',
-    autoCompleted: 'Auto-finished',
-    timeToFirstMoveMs: 'Time to first move',
-    longestThinkMs: 'Longest think time',
+  static final labels = <String, String Function(AppLocalizations)>{
+    stockDraws: (l10n) => l10n.klondikeStockDraws,
+    stockRecycles: (l10n) => l10n.klondikeStockRecycles,
+    cardsToFoundation: (l10n) => l10n.klondikeCardsToFoundation,
+    cardsRevealed: (l10n) => l10n.klondikeCardsRevealed,
+    tapMoves: (l10n) => l10n.klondikeTapMoves,
+    dragMoves: (l10n) => l10n.klondikeDragMoves,
+    foundationToTableau: (l10n) => l10n.klondikeFoundationToTableau,
+    autoCompleted: (l10n) => l10n.klondikeAutoCompleted,
+    timeToFirstMoveMs: (l10n) => l10n.klondikeTimeToFirstMove,
+    longestThinkMs: (l10n) => l10n.klondikeLongestThink,
   };
 }
 

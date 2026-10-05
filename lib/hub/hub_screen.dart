@@ -8,7 +8,9 @@ import '../common/format.dart';
 import '../games/game_catalog.dart';
 import '../games/klondike/playing_card.dart';
 import '../games/klondike/suit_icon.dart';
+import '../l10n/app_localizations.dart';
 import '../saves/game_save_store.dart';
+import '../settings/settings_store.dart';
 import '../stats/game_stats.dart';
 
 class HubScreen extends StatelessWidget {
@@ -18,6 +20,7 @@ class HubScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       body: DecoratedBox(
         decoration: const BoxDecoration(
@@ -38,14 +41,17 @@ class HubScreen extends StatelessWidget {
                     SliverPadding(
                       padding: const EdgeInsets.fromLTRB(20, 28, 20, 8),
                       sliver: SliverToBoxAdapter(
-                        child: _Header(overall: stores.stats.overall),
+                        child: _Header(
+                          overall: stores.stats.overall,
+                          settings: stores.settings,
+                        ),
                       ),
                     ),
                     SliverPadding(
                       padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
                       sliver: SliverToBoxAdapter(
                         child: Text(
-                          'Games',
+                          l10n.hubGames,
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(
                                 color: Colors.white70,
@@ -118,38 +124,50 @@ class _GameGrid extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.overall});
+  const _Header({required this.overall, required this.settings});
 
   final GameStats overall;
+  final SettingsStore settings;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const _Logo(),
-            const SizedBox(width: 16),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  Text(
-                    'All For Games',
-                    style: textTheme.headlineMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
+                  const _Logo(),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.appTitle,
+                          style: textTheme.headlineMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        Text(
+                          l10n.hubTagline,
+                          style: textTheme.bodyLarge?.copyWith(
+                            color: Colors.white70,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  Text(
-                    'Classic games, all in one place.',
-                    style: textTheme.bodyLarge?.copyWith(color: Colors.white70),
                   ),
                 ],
               ),
             ),
+            _LanguageMenu(settings: settings),
           ],
         ),
         const SizedBox(height: 20),
@@ -160,24 +178,62 @@ class _Header extends StatelessWidget {
             _OverallChip(
               key: const ValueKey('overall-played'),
               icon: Icons.casino_outlined,
-              label: 'Games played',
+              label: l10n.hubGamesPlayed,
               value: '${overall.played}',
             ),
             _OverallChip(
               key: const ValueKey('overall-won'),
               icon: Icons.emoji_events_outlined,
-              label: 'Wins',
+              label: l10n.hubWins,
               value: '${overall.won}',
             ),
             _OverallChip(
               key: const ValueKey('overall-time'),
               icon: Icons.timer_outlined,
-              label: 'Time played',
-              value: formatLongDuration(overall.totalPlayTime),
+              label: l10n.timePlayed,
+              value: formatLongDuration(overall.totalPlayTime, l10n),
             ),
           ],
         ),
       ],
+    );
+  }
+}
+
+class _LanguageMenu extends StatelessWidget {
+  const _LanguageMenu({required this.settings});
+
+  final SettingsStore settings;
+
+  static const _system = 'system';
+
+  /// Each language name is in its own language.
+  static const _names = {'en': 'English', 'fr': 'Français'};
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return PopupMenuButton<String>(
+      key: const ValueKey('language-menu'),
+      tooltip: l10n.language,
+      icon: const Icon(Icons.translate, color: Colors.white70),
+      onSelected: (code) =>
+          settings.setLocale(code == _system ? null : Locale(code)),
+      itemBuilder: (context) {
+        final current = settings.locale?.languageCode ?? _system;
+        PopupMenuEntry<String> item(String code, String name) =>
+            CheckedPopupMenuItem(
+              key: ValueKey('language-$code'),
+              value: code,
+              checked: code == current,
+              child: Text(name),
+            );
+        return [
+          item(_system, l10n.languageSystem),
+          for (final Locale(:languageCode) in AppLocalizations.supportedLocales)
+            item(languageCode, _names[languageCode] ?? languageCode),
+        ];
+      },
     );
   }
 }
@@ -244,21 +300,24 @@ class _OverallChip extends StatelessWidget {
         children: [
           Icon(icon, color: Colors.white70, size: 20),
           const SizedBox(width: 10),
-          Text(
-            value,
-            key: const ValueKey('value'),
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-              fontSize: 16,
-            ),
-          ),
-          const SizedBox(width: 6),
+          // The label goes under the value when both do not fit on one line
+          // (large text, long French durations).
           Flexible(
-            child: Text(
-              label,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white60),
+            child: Wrap(
+              spacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text(
+                  value,
+                  key: const ValueKey('value'),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                  ),
+                ),
+                Text(label, style: const TextStyle(color: Colors.white60)),
+              ],
             ),
           ),
         ],
@@ -284,6 +343,8 @@ class GameTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final l10n = AppLocalizations.of(context);
+    final title = game.title(l10n);
     final route = game.route;
     return Opacity(
       opacity: game.isAvailable ? 1 : 0.55,
@@ -326,7 +387,7 @@ class GameTile extends StatelessWidget {
                       if (game.isAvailable)
                         IconButton(
                           key: ValueKey('stats-${game.id}'),
-                          tooltip: '${game.title} statistics',
+                          tooltip: l10n.gameStatistics(title),
                           color: Colors.white,
                           onPressed: () => context.go('/stats/${game.id}'),
                           icon: const Icon(Icons.bar_chart),
@@ -343,7 +404,7 @@ class GameTile extends StatelessWidget {
                               borderRadius: BorderRadius.circular(999),
                             ),
                             child: Text(
-                              'Coming soon',
+                              l10n.hubComingSoon,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: textTheme.labelMedium?.copyWith(
@@ -356,7 +417,7 @@ class GameTile extends StatelessWidget {
                   ),
                   const Spacer(),
                   Text(
-                    game.title,
+                    title,
                     style: textTheme.titleLarge?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w800,
@@ -364,7 +425,7 @@ class GameTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    game.tagline,
+                    game.tagline(l10n),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: textTheme.bodyMedium?.copyWith(
@@ -385,8 +446,7 @@ class GameTile extends StatelessWidget {
                           const SizedBox(width: 6),
                           Flexible(
                             child: Text(
-                              'Continue · $moves ${moves == 1 ? 'move' : 'moves'}'
-                              ' · ${formatClock(playTime)}',
+                              l10n.hubContinue(moves, formatClock(playTime)),
                               key: ValueKey('resume-${game.id}'),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -401,7 +461,7 @@ class GameTile extends StatelessWidget {
                       const SizedBox(height: 4),
                     ],
                     Text(
-                      _summary(stats),
+                      _summary(stats, l10n),
                       key: ValueKey('summary-${game.id}'),
                       style: textTheme.labelLarge?.copyWith(
                         color: Colors.white,
@@ -417,12 +477,13 @@ class GameTile extends StatelessWidget {
     );
   }
 
-  static String _summary(GameStats stats) {
-    if (stats.played == 0) return 'Not played yet · Tap to play';
+  static String _summary(GameStats stats, AppLocalizations l10n) {
+    if (stats.played == 0) return l10n.hubNotPlayed;
     return [
-      '${stats.played} played',
-      '${formatPercent(stats.winRate)} won',
-      if (stats.bestTime case final best?) 'best ${formatClock(best)}',
+      l10n.hubSummaryPlayed(stats.played),
+      l10n.hubSummaryWon(formatPercent(stats.winRate, l10n.localeName)),
+      if (stats.bestTime case final best?)
+        l10n.hubSummaryBest(formatClock(best)),
     ].join(' · ');
   }
 }

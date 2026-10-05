@@ -1,7 +1,35 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../l10n/app_localizations.dart';
 import 'playing_card.dart';
 import 'suit_icon.dart';
+
+/// The rank printed in the card corner: `K` in English, `R` (Roi) in French.
+String rankIndex(int rank, AppLocalizations l10n) => switch (rank) {
+  1 => l10n.rankIndexAce,
+  11 => l10n.rankIndexJack,
+  12 => l10n.rankIndexQueen,
+  13 => l10n.rankIndexKing,
+  _ => '$rank',
+};
+
+/// The name of a face-up card for screen readers: `Ace of hearts`.
+String cardName(PlayingCard card, AppLocalizations l10n) {
+  final rank = switch (card.rank) {
+    1 => l10n.rankAce,
+    11 => l10n.rankJack,
+    12 => l10n.rankQueen,
+    13 => l10n.rankKing,
+    final number => '$number',
+  };
+  final suit = switch (card.suit) {
+    Suit.clubs => l10n.suitClubs,
+    Suit.diamonds => l10n.suitDiamonds,
+    Suit.hearts => l10n.suitHearts,
+    Suit.spades => l10n.suitSpades,
+  };
+  return l10n.cardName(rank, suit);
+}
 
 class CardView extends StatelessWidget {
   const CardView({super.key, required this.card, required this.width});
@@ -12,8 +40,9 @@ class CardView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final radius = BorderRadius.circular(width * 0.1);
+    final l10n = AppLocalizations.of(context);
     return Semantics(
-      label: card.faceUp ? card.name : 'Face-down card',
+      label: card.faceUp ? cardName(card, l10n) : l10n.cardFaceDown,
       child: Container(
         width: width,
         height: width * 1.4,
@@ -57,7 +86,7 @@ class _Face extends StatelessWidget {
               child: Row(
                 children: [
                   Text(
-                    card.rankLabel,
+                    rankIndex(card.rank, AppLocalizations.of(context)),
                     style: TextStyle(
                       color: card.suit.isRed ? SuitIcon.red : SuitIcon.black,
                       fontSize: width * 0.26,

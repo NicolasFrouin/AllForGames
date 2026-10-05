@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:material_ui/material_ui.dart';
 
+import '../../l10n/app_localizations.dart';
 import 'card_view.dart';
 import 'klondike_controller.dart';
 import 'klondike_state.dart';
@@ -134,7 +135,8 @@ class _KlondikeBoardState extends State<KlondikeBoard> {
         offset: layout.slot(PileRef.tableau(i)),
         layout: layout,
         child: Text(
-          'K',
+          // Only a king can go on an empty column.
+          rankIndex(13, AppLocalizations.of(context)),
           style: TextStyle(
             color: Colors.white24,
             fontSize: layout.cardWidth * 0.4,
