@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -54,25 +56,15 @@ class HubScreen extends StatelessWidget {
                     ),
                     SliverPadding(
                       padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
-                      sliver: SliverGrid.builder(
-                        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 360,
-                          // Grows with the user's font size. Room for every
-                          // line, the continue line too.
-                          mainAxisExtent: MediaQuery.textScalerOf(context)
-                              .scale(250),
-                          mainAxisSpacing: 16,
-                          crossAxisSpacing: 16,
-                        ),
-                        itemCount: gameCatalog.length,
-                        itemBuilder: (context, index) {
-                          final game = gameCatalog[index];
-                          return GameTile(
-                            game: game,
-                            stats: stores.stats.statsFor(game.id),
-                            saved: stores.saves[game.id],
-                          );
-                        },
+                      sliver: _GameGrid(
+                        tiles: [
+                          for (final game in gameCatalog)
+                            GameTile(
+                              game: game,
+                              stats: stores.stats.statsFor(game.id),
+                              saved: stores.saves[game.id],
+                            ),
+                        ],
                       ),
                     ),
                   ],
@@ -82,6 +74,45 @@ class HubScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// A grid where each row is as tall as its tallest tile, so no text size
+/// can overflow a tile.
+class _GameGrid extends StatelessWidget {
+  const _GameGrid({required this.tiles});
+
+  final List<Widget> tiles;
+
+  static const _maxTileWidth = 360.0;
+  static const _spacing = 16.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverLayoutBuilder(
+      builder: (context, constraints) {
+        final columns = max(
+          1,
+          (constraints.crossAxisExtent / (_maxTileWidth + _spacing)).ceil(),
+        );
+        return SliverList.separated(
+          itemCount: (tiles.length / columns).ceil(),
+          separatorBuilder: (context, _) => const SizedBox(height: _spacing),
+          itemBuilder: (context, row) => IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: _spacing,
+              children: [
+                for (var i = row * columns; i < (row + 1) * columns; i++)
+                  Expanded(
+                    child: i < tiles.length ? tiles[i] : const SizedBox(),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -275,86 +306,110 @@ class GameTile extends StatelessWidget {
               ),
             ),
             padding: const EdgeInsets.all(18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: const Color(0x26FFFFFF),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Icon(game.icon, color: Colors.white, size: 30),
-                    ),
-                    const Spacer(),
-                    if (game.isAvailable)
-                      IconButton(
-                        key: ValueKey('stats-${game.id}'),
-                        tooltip: '${game.title} statistics',
-                        color: Colors.white,
-                        onPressed: () => context.go('/stats/${game.id}'),
-                        icon: const Icon(Icons.bar_chart),
-                      )
-                    else
-                      const Chip(
-                        label: Text('Coming soon'),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                  ],
-                ),
-                const Spacer(),
-                Text(
-                  game.title,
-                  style: textTheme.titleLarge?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  game.tagline,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: textTheme.bodyMedium?.copyWith(color: Colors.white70),
-                ),
-                if (game.isAvailable) ...[
-                  const SizedBox(height: 12),
-                  if (saved case SavedGame(:final moves, :final playTime)
-                      when moves > 0) ...[
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.play_circle_outline,
-                          color: Colors.white,
-                          size: 18,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 190),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    spacing: 12,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0x26FFFFFF),
+                          borderRadius: BorderRadius.circular(14),
                         ),
-                        const SizedBox(width: 6),
+                        child: Icon(game.icon, color: Colors.white, size: 30),
+                      ),
+                      if (game.isAvailable)
+                        IconButton(
+                          key: ValueKey('stats-${game.id}'),
+                          tooltip: '${game.title} statistics',
+                          color: Colors.white,
+                          onPressed: () => context.go('/stats/${game.id}'),
+                          icon: const Icon(Icons.bar_chart),
+                        )
+                      else
                         Flexible(
-                          child: Text(
-                            'Continue · $moves ${moves == 1 ? 'move' : 'moves'}'
-                            ' · ${formatClock(playTime)}',
-                            key: ValueKey('resume-${game.id}'),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: textTheme.labelLarge?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black26,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              'Coming soon',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: textTheme.labelMedium?.copyWith(
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                  ],
-                  Text(
-                    _summary(stats),
-                    key: ValueKey('summary-${game.id}'),
-                    style: textTheme.labelLarge?.copyWith(color: Colors.white),
+                    ],
                   ),
+                  const Spacer(),
+                  Text(
+                    game.title,
+                    style: textTheme.titleLarge?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    game.tagline,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: Colors.white70,
+                    ),
+                  ),
+                  if (game.isAvailable) ...[
+                    const SizedBox(height: 12),
+                    if (saved case SavedGame(:final moves, :final playTime)
+                        when moves > 0) ...[
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.play_circle_outline,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              'Continue · $moves ${moves == 1 ? 'move' : 'moves'}'
+                              ' · ${formatClock(playTime)}',
+                              key: ValueKey('resume-${game.id}'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: textTheme.labelLarge?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                    ],
+                    Text(
+                      _summary(stats),
+                      key: ValueKey('summary-${game.id}'),
+                      style: textTheme.labelLarge?.copyWith(
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),
