@@ -62,6 +62,11 @@ done
 # --no-web-experimental-hot-reload: the older module format builds the debug app in about half
 # the time (and from the build/ cache), and the tests need no hot reload. The flag is deprecated:
 # drop it if a newer Flutter removes it.
+# Without a GPU (CI), Chrome draws every frame in software: a smaller window than the default
+# 1600x1024 halves that work. Pass --browser-dimension to choose another size.
+size=--browser-dimension=1024x768
+[[ " $* " == *" --browser-dimension"* ]] && size=
+
 flutter drive \
   --driver=test_driver/integration_test.dart \
   --target=integration_test/app_test.dart \
@@ -70,5 +75,6 @@ flutter drive \
   --headless \
   --no-web-experimental-hot-reload \
   --driver-port="$port" \
+  ${size:+"$size"} \
   ${CHROME_EXECUTABLE:+--chrome-binary="$CHROME_EXECUTABLE"} \
   "$@"
