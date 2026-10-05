@@ -52,8 +52,6 @@ jobs:
             git config --global --add safe.directory "$FLUTTER_ROOT"
       - run: flutter pub get
       - run: dart format --output=none --set-exit-if-changed lib test integration_test test_driver tool
-      - run: flutter analyze
-      - run: flutter test
 
       # setup-chrome keeps Chrome in the tool cache too; its apt-get step (Chrome's system
       # libraries) only runs when some are missing.
@@ -73,16 +71,40 @@ jobs:
           install-dependencies: ${{ steps.chrome-libs.outputs.install }}
           install-chromedriver: true
 
+      # The e2e tests are the longest step (a debug build, then the app in Chrome): they run in the
+      # background while the checks below run, and "End-to-end tests" waits for them and shows
+      # their log. From here, flutter commands take --no-pub: dependencies are resolved once above,
+      # commands running side by side must not resolve them again.
+      - name: Start the end-to-end tests (Chrome)
+        env:
+          CHROME_EXECUTABLE: ${{ steps.chrome.outputs.chrome-path }}
+          CHROMEDRIVER: ${{ steps.chrome.outputs.chromedriver-path }}
+        # A container has a small /dev/shm: Chrome must not use it.
+        run: |
+          (
+            start=$(date +%s) status=0
+            scripts/e2e_web.sh --no-pub --web-browser-flag=--disable-dev-shm-usage || status=$?
+            echo "End-to-end tests: exit code $status after $(($(date +%s) - start)) s"
+            echo "$status" >"$RUNNER_TEMP/e2e.status"
+          ) </dev/null >"$RUNNER_TEMP/e2e.log" 2>&1 &
+          echo $! >"$RUNNER_TEMP/e2e.pid"
+
+      - run: flutter analyze --no-pub
+      # The runner reports 8 CPUs but has a quota of 4: two test processes (the default is half the
+      # CPUs) leave room for the e2e build, which the quota would otherwise slow down.
+      - run: flutter test --no-pub --concurrency=2
+
       # Deals come from seeds: they must be the same on the VM, JavaScript and WebAssembly.
       # The e2e tests check a deal in the JavaScript app; this checks WebAssembly (release builds).
       - name: Deals are the same in WebAssembly
         env:
           CHROME_EXECUTABLE: ${{ steps.chrome.outputs.chrome-path }}
-        run: flutter test --platform chrome --wasm test/games/klondike/klondike_state_test.dart
+        run: flutter test --no-pub --platform chrome --wasm test/games/klondike/klondike_state_test.dart
 
       - name: End-to-end tests (Chrome)
-        env:
-          CHROME_EXECUTABLE: ${{ steps.chrome.outputs.chrome-path }}
-          CHROMEDRIVER: ${{ steps.chrome.outputs.chromedriver-path }}
-        # A container has a small /dev/shm: Chrome must not use it.
-        run: scripts/e2e_web.sh --web-browser-flag=--disable-dev-shm-usage
+        run: |
+          pid=$(<"$RUNNER_TEMP/e2e.pid")
+          while [[ ! -f $RUNNER_TEMP/e2e.status ]] && kill -0 "$pid" 2>/dev/null; do sleep 1; done
+          cat "$RUNNER_TEMP/e2e.log"
+          [[ -f $RUNNER_TEMP/e2e.status ]] || { echo 'The end-to-end tests stopped without a result.'; exit 1; }
+          exit "$(<"$RUNNER_TEMP/e2e.status")"
