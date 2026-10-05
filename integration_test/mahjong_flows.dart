@@ -10,10 +10,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'fast_animations.dart';
+
 /// The Mahjong flows of the e2e tests, on real storage (localStorage on
 /// web). `integration_test/app_test.dart` runs them.
 void mahjongFlows() {
-  testWidgets('Mahjong deals as on the VM; a match from the hub, undone', (
+  testFlow('Mahjong deals as on the VM; a match from the hub, undone', (
     tester,
   ) async {
     // The same faces as `seed1MediumFaces` in mahjong_generator_test.dart
@@ -46,7 +48,7 @@ void mahjongFlows() {
     expect(_text(tester, 'tiles-value'), '144');
   });
 
-  testWidgets('Mahjong: a game left continues after a restart', (tester) async {
+  testFlow('Mahjong: a game left continues after a restart', (tester) async {
     await _startApp(tester, location: '/mahjong?seed=42&difficulty=hard');
     final (a, b) = await _hint(tester);
     await _tapTile(tester, a);
@@ -74,9 +76,7 @@ void mahjongFlows() {
     expect(record.details[MahjongStatKeys.tilesLeft], 142);
   });
 
-  testWidgets('Mahjong: an Easy board played to the end is a win', (
-    tester,
-  ) async {
+  testFlow('Mahjong: an Easy board played to the end is a win', (tester) async {
     await _startApp(tester, location: '/mahjong?seed=5&difficulty=easy');
     await _hint(tester);
     // The order that clears the deal, as the hint knows it.

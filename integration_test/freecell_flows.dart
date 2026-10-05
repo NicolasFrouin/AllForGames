@@ -10,10 +10,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'fast_animations.dart';
+
 /// The FreeCell flows of the e2e tests, on real storage (localStorage on
 /// web). `integration_test/app_test.dart` runs them.
 void freecellFlows() {
-  testWidgets('FreeCell deals as on the VM; a move from the hub, undone', (
+  testFlow('FreeCell deals as on the VM; a move from the hub, undone', (
     tester,
   ) async {
     // The same deal as `seed1Deal` in freecell_state_test.dart (Dart VM): a
@@ -50,9 +52,7 @@ void freecellFlows() {
     expect(_text(tester, 'moves-value'), '1');
   });
 
-  testWidgets('FreeCell: a game left continues after a restart', (
-    tester,
-  ) async {
+  testFlow('FreeCell: a game left continues after a restart', (tester) async {
     await _startApp(tester, location: '/freecell?seed=42');
     final top = FreeCellState.deal(42).cascades[3].last.id;
     await _tapCard(tester, top);
@@ -80,9 +80,7 @@ void freecellFlows() {
     );
   });
 
-  testWidgets('FreeCell: a near-won saved game finishes itself', (
-    tester,
-  ) async {
+  testFlow('FreeCell: a near-won saved game finishes itself', (tester) async {
     await _startApp(tester, save: _nearWon());
     expect(_text(tester, 'resume-freecell'), startsWith('Continue · 9 moves'));
     await _openFreeCell(tester);

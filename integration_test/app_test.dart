@@ -15,6 +15,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'freecell_flows.dart';
+import 'fast_animations.dart';
 import 'mahjong_flows.dart';
 import 'spider_flows.dart';
 
@@ -24,7 +25,7 @@ void main() {
   spiderFlows();
   freecellFlows();
 
-  testWidgets('a game left continues; a new game records it as abandoned', (
+  testFlow('a game left continues; a new game records it as abandoned', (
     tester,
   ) async {
     await startApp(tester);
@@ -57,7 +58,7 @@ void main() {
     expect(valueOf(tester, 'stat-won'), '0');
   });
 
-  testWidgets('deals as on the VM, and a new game deals a winnable seed', (
+  testFlow('deals as on the VM, and a new game deals a winnable seed', (
     tester,
   ) async {
     // The same string as `seed1Deal` in klondike_state_test.dart (Dart VM):
@@ -79,7 +80,7 @@ void main() {
     expect(data['state'], KlondikeState.deal(seed).encode());
   });
 
-  testWidgets('the new game sheet deals an Easy game and keeps the choice', (
+  testFlow('the new game sheet deals an Easy game and keeps the choice', (
     tester,
   ) async {
     await startApp(tester);
@@ -99,7 +100,7 @@ void main() {
     );
   });
 
-  testWidgets('drags a card onto another tableau pile', (tester) async {
+  testFlow('drags a card onto another tableau pile', (tester) async {
     final (:seed, :from, :to) = findTableauMove();
     final card = KlondikeState.deal(seed).tableau[from].last;
     await startApp(tester, location: '/klondike?seed=$seed');
@@ -121,7 +122,7 @@ void main() {
     expect(tester.getTopLeft(cardFinder).dx, tester.getTopLeft(targetSlot).dx);
   });
 
-  testWidgets('a game in progress is kept in browser storage', (tester) async {
+  testFlow('a game in progress is kept in browser storage', (tester) async {
     await startApp(tester, location: '/klondike?seed=42');
     await tapStock(tester);
     await goBack(tester);
@@ -144,7 +145,7 @@ void main() {
     );
   });
 
-  testWidgets('the chosen language stays after a restart', (tester) async {
+  testFlow('the chosen language stays after a restart', (tester) async {
     await startApp(tester);
     expect(find.text('Games'), findsOneWidget);
 
@@ -159,7 +160,7 @@ void main() {
     expect(textOf(tester, 'summary-klondike'), startsWith('Pas encore joué'));
   });
 
-  testWidgets('a card back unlocked by a win stays selected after a restart', (
+  testFlow('a card back unlocked by a win stays selected after a restart', (
     tester,
   ) async {
     await startApp(tester, records: [wonGame()]);

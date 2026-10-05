@@ -12,10 +12,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'fast_animations.dart';
+
 /// The Spider flows of the e2e tests, on real storage (localStorage on web).
 /// `integration_test/app_test.dart` runs them.
 void spiderFlows() {
-  testWidgets('Spider deals as on the VM; a stock deal from the hub, undone', (
+  testFlow('Spider deals as on the VM; a stock deal from the hub, undone', (
     tester,
   ) async {
     // The same board as `seed1HardDeal` in spider_state_test.dart (Dart VM):
@@ -48,7 +50,7 @@ void spiderFlows() {
     expect(_text(tester, 'score-value'), '498');
   });
 
-  testWidgets('Spider: a move, then the game continues after a restart', (
+  testFlow('Spider: a move, then the game continues after a restart', (
     tester,
   ) async {
     final (:seed, :from, :to) = _tapMove();
@@ -85,7 +87,7 @@ void spiderFlows() {
     );
   });
 
-  testWidgets('Spider: the last run of a saved game wins it', (tester) async {
+  testFlow('Spider: the last run of a saved game wins it', (tester) async {
     await SharedPreferencesAsync().clear();
     final stores = await AppStores.load();
     await stores.settings.setLocale(const Locale('en'));

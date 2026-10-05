@@ -17,6 +17,7 @@ flutter run -d chrome                         # dev, hot reload
 flutter analyze                               # must be clean
 dart format lib test integration_test test_driver
 flutter test                                  # unit + widget tests (fast)
+scripts/test_bundle.sh                        # the same in one compile (what CI runs)
 flutter test test/games/klondike              # one folder or file: prefer narrow runs
 scripts/e2e_web.sh                            # e2e in headless Chrome (--no-headless to watch)
 dart run tool/generate_klondike_deals.dart    # regenerates klondike_deals.dart (about 1 minute)
@@ -192,7 +193,9 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   `savedUnlockData({id: date})` for unlocked achievements). Seeded records unlock their achievements silently.
   They run with an English device; a test that pumps its own `MaterialApp` passes `appLocalizationsDelegates`.
   Drag a card by its visible top strip (`getTopLeft + Offset(10, 6)`), move past the touch slop, then to the target.
-- e2e tests use real storage: clear it at the start of each test. `startApp` sets English (the browser may not be)
+- e2e tests use real storage: clear it at the start of each test. Declare them with `testFlow` (from
+  `integration_test/fast_animations.dart`), not `testWidgets`: animations play 5 times faster (`timeDilation`), the
+  widget tests check the timings. `startApp` sets English (the browser may not be)
   and can seed records first (`records:`, written with `StatsStore`).
 
 ## Adding a game
