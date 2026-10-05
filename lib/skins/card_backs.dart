@@ -2,7 +2,17 @@ import 'dart:math';
 
 import 'package:material_ui/material_ui.dart';
 
-enum CardBackPattern { none, stripes, lattice, waves, rays, stars, dots, rings }
+enum CardBackPattern {
+  none,
+  stripes,
+  lattice,
+  waves,
+  rays,
+  stars,
+  dots,
+  rings,
+  chevrons,
+}
 
 /// The look of the face-down cards.
 class CardBackSkin {
@@ -103,6 +113,14 @@ const cardBacks = [
     emblem: Icons.star_rounded,
     unlockedBy: 'klondike.wins50',
   ),
+  CardBackSkin(
+    id: 'obsidian',
+    colors: [Color(0xFF3B3E44), Color(0xFF141518), Color(0xFF2C2F34)],
+    pattern: CardBackPattern.chevrons,
+    patternColor: Color(0x8CC8CDD4),
+    borderColor: Color(0xB3D9DDE3),
+    unlockedBy: 'klondike.hardWin',
+  ),
 ];
 
 /// The skin with [id], or [classicCardBack] when there is none (for example a
@@ -201,6 +219,8 @@ class _PatternPainter extends CustomPainter {
         _dots(canvas, inner, fill);
       case CardBackPattern.rings:
         _rings(canvas, size, stroke);
+      case CardBackPattern.chevrons:
+        _chevrons(canvas, size, stroke);
     }
   }
 
@@ -338,6 +358,24 @@ class _PatternPainter extends CustomPainter {
     final reach = size.longestSide;
     for (var radius = step * 3.5; radius < reach; radius += step) {
       canvas.drawCircle(center, radius, paint);
+    }
+  }
+
+  /// Rows of chevrons, as in a herringbone weave, centered on the card.
+  void _chevrons(Canvas canvas, Size size, Paint paint) {
+    final step = width / 4;
+    final rise = step / 2;
+    final gap = width / 5;
+    paint.strokeJoin = StrokeJoin.miter;
+    final left = size.width / 2 % step - step;
+    for (var y = size.height / 2 % gap - gap; y < size.height; y += gap) {
+      final path = Path()..moveTo(left, y);
+      for (var x = left; x < size.width; x += step) {
+        path
+          ..lineTo(x + step / 2, y + rise)
+          ..lineTo(x + step, y);
+      }
+      canvas.drawPath(path, paint);
     }
   }
 

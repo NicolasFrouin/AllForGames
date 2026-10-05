@@ -93,6 +93,17 @@ final class BrokenPrefs extends InMemorySharedPreferencesAsync {
   ) => throw StateError('storage blocked');
 
   @override
+  Future<int?> getInt(String key, SharedPreferencesOptions options) =>
+      throw StateError('storage blocked');
+
+  @override
+  Future<bool> setInt(
+    String key,
+    int value,
+    SharedPreferencesOptions options,
+  ) => throw StateError('storage blocked');
+
+  @override
   Future<bool> clear(
     ClearPreferencesParameters parameters,
     SharedPreferencesOptions options,

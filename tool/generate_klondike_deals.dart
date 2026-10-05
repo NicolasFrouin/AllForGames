@@ -14,6 +14,7 @@
 import 'dart:io';
 import 'dart:isolate';
 
+import 'package:all_for_games/games/klondike/klondike_difficulty.dart';
 import 'package:all_for_games/games/klondike/klondike_solver.dart';
 import 'package:all_for_games/games/klondike/klondike_state.dart';
 

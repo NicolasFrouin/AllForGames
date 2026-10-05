@@ -22,25 +22,51 @@
   },
   "newGame": "New game",
   "@newGame": {
-    "description": "Tooltip of the new game menu, and button that confirms a new game."
+    "description": "Tooltip of the new game button, and title of the new game sheet."
   },
-  "newGameMode": "New game · {mode}",
-  "@newGameMode": {
-    "description": "New game menu item for one game mode.",
-    "placeholders": {
-      "mode": {
-        "type": "String",
-        "example": "Draw 1"
-      }
-    }
+  "newGameAbandons": "The current game will count as abandoned.",
+  "@newGameAbandons": {
+    "description": "New game sheet: shown when the game on screen has moves and is not won."
   },
-  "newGameConfirmTitle": "Start a new game?",
-  "@newGameConfirmTitle": {
-    "description": "Title of the dialog shown before a new game replaces a game with moves."
+  "newGameDraw": "Draw",
+  "@newGameDraw": {
+    "description": "New game sheet: heading of the choice of how many cards are drawn from the stock at a time."
   },
-  "newGameConfirmBody": "The current game will count as abandoned.",
-  "@newGameConfirmBody": {
-    "description": "Body of the dialog shown before a new game replaces a game with moves."
+  "difficulty": "Difficulty",
+  "@difficulty": {
+    "description": "New game sheet: heading of the choice of the difficulty of the deal."
+  },
+  "difficultyEasy": "Easy",
+  "@difficultyEasy": {
+    "description": "Difficulty level of a deal: new game sheet, status bar, statistics filter."
+  },
+  "difficultyMedium": "Medium",
+  "@difficultyMedium": {
+    "description": "Difficulty level of a deal: new game sheet, status bar, statistics filter."
+  },
+  "difficultyHard": "Hard",
+  "@difficultyHard": {
+    "description": "Difficulty level of a deal: new game sheet, status bar, statistics filter."
+  },
+  "klondikeEasyHint": "Simple moves are enough.",
+  "@klondikeEasyHint": {
+    "description": "New game sheet: what an Easy Klondike deal needs, under the difficulty choice."
+  },
+  "klondikeMediumHint": "Needs some planning.",
+  "@klondikeMediumHint": {
+    "description": "New game sheet: what a Medium Klondike deal needs, under the difficulty choice."
+  },
+  "klondikeHardHint": "Needs careful planning and backtracking.",
+  "@klondikeHardHint": {
+    "description": "New game sheet: what a Hard Klondike deal needs, under the difficulty choice."
+  },
+  "newGameWinnable": "Every deal can be won.",
+  "@newGameWinnable": {
+    "description": "New game sheet: every deal offered was proven winnable."
+  },
+  "newGameDeal": "Deal",
+  "@newGameDeal": {
+    "description": "New game sheet button that deals the new game."
   },
   "statistics": "Statistics",
   "@statistics": {
@@ -337,7 +363,7 @@
   },
   "statsAllVariants": "All",
   "@statsAllVariants": {
-    "description": "Filter chip: statistics of every game mode together."
+    "description": "Filter chip: statistics of every game mode, or of every difficulty, together."
   },
   "statsEmpty": "No games yet. Play one to see your statistics.",
   "@statsEmpty": {
@@ -573,6 +599,10 @@
   "@cardBackGold": {
     "description": "Name of a card back design, shown on the card backs page and as a reward."
   },
+  "cardBackObsidian": "Obsidian",
+  "@cardBackObsidian": {
+    "description": "Name of a card back design, shown on the card backs page and as a reward."
+  },
   "achievementKlondikeFirstWinTitle": "First win",
   "@achievementKlondikeFirstWinTitle": {
     "description": "Title of the Klondike achievement for the first won game."
@@ -628,5 +658,13 @@
   "achievementKlondikeStreak3Description": "Win 3 games in a row.",
   "@achievementKlondikeStreak3Description": {
     "description": "How to unlock the Klondike achievement for 3 games won in a row."
+  },
+  "achievementKlondikeHardWinTitle": "Expert",
+  "@achievementKlondikeHardWinTitle": {
+    "description": "Title of the Klondike achievement for a won Hard game."
+  },
+  "achievementKlondikeHardWinDescription": "Win a Hard game.",
+  "@achievementKlondikeHardWinDescription": {
+    "description": "How to unlock the Klondike achievement for a won Hard game."
   }
 }

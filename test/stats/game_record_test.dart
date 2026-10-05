@@ -19,6 +19,7 @@ void main() {
     moves: 120,
     undos: 3,
     score: 640,
+    difficulty: 'hard',
     details: const {'stockDraws': 40, 'longestThinkMs': 12000},
   );
 
@@ -35,6 +36,7 @@ void main() {
     expect(restored.moves, 120);
     expect(restored.undos, 3);
     expect(restored.score, 640);
+    expect(restored.difficulty, 'hard');
     expect(restored.details, record.details);
   });
 
@@ -57,6 +59,13 @@ void main() {
     expect(restored.startedAt.isUtc, isTrue);
     expect(restored.startedAt.isAtSameMomentAs(local), isTrue);
     expect(restored.won, isFalse);
+  });
+
+  test('reads a record saved before difficulty levels, and writes none', () {
+    final json = record.toJson()..remove('difficulty');
+    final older = GameRecord.fromJson(json);
+    expect(older.difficulty, isNull);
+    expect(older.toJson(), json);
   });
 
   test('reads a record saved without details', () {

@@ -12,9 +12,11 @@ GameRecord game(
   int endMinute = 10,
   GameOutcome outcome = GameOutcome.won,
   int moves = 80,
+  String variant = 'draw1',
+  String? difficulty,
 }) => GameRecord(
   gameId: gameId,
-  variant: 'draw1',
+  variant: variant,
   seed: seed,
   startedAt: DateTime.utc(2026, 1, 1, 0, seed),
   endedAt: DateTime.utc(2026, 1, 1, 1, endMinute),
@@ -23,6 +25,7 @@ GameRecord game(
   moves: moves,
   undos: 0,
   score: 400,
+  difficulty: difficulty,
 );
 
 List<int> seeds(Iterable<GameRecord> records) => [
@@ -133,5 +136,25 @@ void main() {
     expect(store.statsFor('klondike').won, 1);
     expect(store.statsFor('klondike', variant: 'draw3').played, 0);
     expect(store.overall.played, 3);
+  });
+
+  test('recordsFor filters by difficulty, with the variant too', () async {
+    final store = await createTestStatsStore(
+      savedData([
+        game('klondike', seed: 1, difficulty: 'hard'),
+        game('klondike', seed: 2, difficulty: 'hard', variant: 'draw3'),
+        game('klondike', seed: 3, difficulty: 'easy'),
+        game('klondike', seed: 4),
+        game('mahjong', seed: 5, difficulty: 'hard'),
+      ]),
+    );
+    expect(seeds(store.recordsFor('klondike', difficulty: 'hard')), [1, 2]);
+    expect(
+      seeds(store.recordsFor('klondike', variant: 'draw3', difficulty: 'hard')),
+      [2],
+    );
+    expect(seeds(store.recordsFor('klondike', difficulty: 'medium')), isEmpty);
+    expect(store.statsFor('klondike', difficulty: 'easy').played, 1);
+    expect(store.statsFor('klondike').played, 4);
   });
 }

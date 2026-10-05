@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:material_ui/material_ui.dart';
 
 import '../games/klondike/klondike_controller.dart';
+import '../games/klondike/klondike_difficulty.dart';
 import '../stats/game_record.dart';
 import '../stats/game_stats.dart';
 
@@ -81,6 +82,13 @@ const achievements = [
     goal: 3,
     progress: _klondikeBestStreak,
   ),
+  Achievement(
+    id: 'klondike.hardWin',
+    gameId: KlondikeController.gameId,
+    icon: Icons.psychology,
+    goal: 1,
+    progress: _klondikeHardWins,
+  ),
 ];
 
 Achievement? achievementById(String id) {
@@ -109,6 +117,11 @@ int _klondikeFastWins(List<GameRecord> records) =>
 
 int _klondikeNoUndoWins(List<GameRecord> records) =>
     _klondikeWins(records).where((record) => record.undos == 0).length;
+
+int _klondikeHardWins(List<GameRecord> records) =>
+    _klondikeWins(records)
+        .where((record) => record.difficulty == KlondikeDifficulty.hard.name)
+        .length;
 
 int _klondikeBestStreak(List<GameRecord> records) =>
     GameStats.from(_klondike(records)).bestStreak;

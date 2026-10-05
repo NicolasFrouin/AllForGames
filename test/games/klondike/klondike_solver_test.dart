@@ -1,5 +1,6 @@
 import 'package:all_for_games/games/klondike/deal_random.dart';
 import 'package:all_for_games/games/klondike/klondike_deals.dart';
+import 'package:all_for_games/games/klondike/klondike_difficulty.dart';
 import 'package:all_for_games/games/klondike/klondike_solver.dart';
 import 'package:all_for_games/games/klondike/klondike_state.dart';
 import 'package:flutter_test/flutter_test.dart';

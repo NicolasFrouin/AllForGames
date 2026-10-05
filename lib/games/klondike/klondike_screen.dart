@@ -11,7 +11,9 @@ import '../../l10n/app_localizations.dart';
 import '../../skins/card_backs.dart';
 import 'klondike_board.dart';
 import 'klondike_controller.dart';
+import 'klondike_difficulty_texts.dart';
 import 'klondike_state.dart';
+import 'new_game_sheet.dart';
 
 const feltColor = Color(0xFF0B5D3B);
 
@@ -28,7 +30,8 @@ class KlondikeScreen extends StatefulWidget {
   final AppStores stores;
 
   /// [drawCount], [seed] and [initialState] ask for a new deal. Without any
-  /// of them, the saved game continues.
+  /// of them, the saved game continues. A new deal takes the options of the
+  /// settings for the others.
   final int? drawCount;
   final int? seed;
 
@@ -69,10 +72,13 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
         widget.seed != null ||
         widget.initialState != null;
     if (saved != null && !newDeal) return saved;
-    final drawCount = widget.drawCount ?? 1;
+    final settings = widget.stores.settings;
+    final drawCount = widget.drawCount ?? settings.klondikeDrawCount;
+    final difficulty = settings.klondikeDifficulty;
     if (saved != null) {
       return saved..newGame(
         drawCount: drawCount,
+        difficulty: difficulty,
         seed: widget.seed,
         initialState: widget.initialState,
       );
@@ -81,6 +87,7 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
       stats: widget.stores.stats,
       saves: widget.stores.saves,
       drawCount: drawCount,
+      difficulty: difficulty,
       seed: widget.seed,
       initialState: widget.initialState,
       clock: widget.clock,
@@ -203,39 +210,39 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
     );
     if (!mounted) return;
     if (playAgain ?? false) {
-      _controller.newGame();
+      // Same options; a deal from a link has no difficulty.
+      _controller.newGame(
+        difficulty:
+            _controller.difficulty ?? stores.settings.klondikeDifficulty,
+      );
     } else {
       context.go('/');
     }
   }
 
-  /// Asks first when the current game would count as abandoned.
-  Future<void> _newGame(int drawCount) async {
-    if (_controller.moves > 0 && _controller.result == null) {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) {
-          final l10n = AppLocalizations.of(context);
-          return AlertDialog(
-            title: Text(l10n.newGameConfirmTitle),
-            content: Text(l10n.newGameConfirmBody),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: Text(l10n.cancel),
-              ),
-              FilledButton(
-                key: const ValueKey('confirm-new-game'),
-                onPressed: () => Navigator.of(context).pop(true),
-                child: Text(l10n.newGame),
-              ),
-            ],
-          );
-        },
-      );
-      if (!(confirmed ?? false) || !mounted) return;
-    }
-    _controller.newGame(drawCount: drawCount);
+  /// Opens the new game sheet with the options of the settings, then deals
+  /// the chosen game and keeps its options for the next time.
+  Future<void> _newGame() async {
+    final settings = widget.stores.settings;
+    final options = await showNewGameSheet(
+      context,
+      initial: (
+        drawCount: settings.klondikeDrawCount,
+        difficulty: settings.klondikeDifficulty,
+      ),
+      abandons: _controller.moves > 0 && _controller.result == null,
+    );
+    if (options == null || !mounted) return;
+    unawaited(
+      settings.setKlondikeNewGame(
+        drawCount: options.drawCount,
+        difficulty: options.difficulty,
+      ),
+    );
+    _controller.newGame(
+      drawCount: options.drawCount,
+      difficulty: options.difficulty,
+    );
   }
 
   void _openStats() => context.push('/stats/${KlondikeController.gameId}');
@@ -258,18 +265,11 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
               icon: const Icon(Icons.undo),
             ),
           ),
-          PopupMenuButton<int>(
+          IconButton(
             key: const ValueKey('new-game'),
             tooltip: l10n.newGame,
+            onPressed: _newGame,
             icon: const Icon(Icons.add_box_outlined),
-            onSelected: _newGame,
-            itemBuilder: (context) => [
-              for (final drawCount in [1, 3])
-                PopupMenuItem(
-                  value: drawCount,
-                  child: Text(l10n.newGameMode(l10n.klondikeDraw(drawCount))),
-                ),
-            ],
           ),
           IconButton(
             key: const ValueKey('open-stats'),
@@ -372,6 +372,12 @@ class _StatusBarState extends State<_StatusBar> {
               icon: Icons.style_outlined,
               value: l10n.klondikeDraw(controller.state.drawCount),
             ),
+            if (controller.difficulty case final difficulty?)
+              _StatusItem(
+                id: 'difficulty',
+                icon: Icons.speed,
+                value: difficulty.label(l10n),
+              ),
           ],
         ),
       ),

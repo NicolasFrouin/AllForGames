@@ -2,8 +2,10 @@ import 'package:all_for_games/app.dart';
 import 'package:all_for_games/app_stores.dart';
 import 'package:all_for_games/games/klondike/klondike_controller.dart';
 import 'package:all_for_games/games/klondike/klondike_deals.dart';
+import 'package:all_for_games/games/klondike/klondike_difficulty.dart';
 import 'package:all_for_games/games/klondike/klondike_state.dart';
 import 'package:all_for_games/saves/game_save_store.dart';
+import 'package:all_for_games/settings/settings_store.dart';
 import 'package:all_for_games/skins/card_backs.dart';
 import 'package:all_for_games/stats/game_record.dart';
 import 'package:all_for_games/stats/stats_store.dart';
@@ -68,6 +70,26 @@ void main() {
     final winnable = klondikeDeals[1]!.values.expand((seeds) => seeds);
     expect(winnable, contains(seed));
     expect(data['state'], KlondikeState.deal(seed).encode());
+  });
+
+  testWidgets('the new game sheet deals an Easy game and keeps the choice', (
+    tester,
+  ) async {
+    await startApp(tester);
+    await openKlondike(tester);
+    expect(textOf(tester, 'difficulty-value'), 'Medium');
+
+    await confirmNewGame(tester, difficulty: 'easy');
+    expect(textOf(tester, 'difficulty-value'), 'Easy');
+    await goBack(tester);
+
+    final saved = (await GameSaveStore.load())[KlondikeController.gameId]!;
+    expect(klondikeDeals[1]!['easy'], contains(saved.data['seed']));
+    expect(saved.data['difficulty'], 'easy');
+    expect(
+      (await SettingsStore.load()).klondikeDifficulty,
+      KlondikeDifficulty.easy,
+    );
   });
 
   testWidgets('drags a card onto another tableau pile', (tester) async {
@@ -210,13 +232,17 @@ bool canUndo(WidgetTester tester) =>
     tester.widget<IconButton>(find.byKey(const ValueKey('undo'))).onPressed !=
     null;
 
-/// Starts a new Draw 1 game over a game with moves, which asks first.
-Future<void> confirmNewGame(WidgetTester tester) async {
+/// Deals a new game from the new game sheet, in Draw 1 and in [difficulty]
+/// when given. Over a game with moves, Deal also confirms the abandon.
+Future<void> confirmNewGame(WidgetTester tester, {String? difficulty}) async {
   await tester.tap(find.byKey(const ValueKey('new-game')));
   await tester.pumpAndSettle();
-  await tester.tap(find.text('New game · Draw 1'));
+  await tester.tap(find.byKey(const ValueKey('new-game-draw-1')));
+  if (difficulty != null) {
+    await tester.tap(find.byKey(ValueKey('new-game-difficulty-$difficulty')));
+  }
   await tester.pumpAndSettle();
-  await tester.tap(find.byKey(const ValueKey('confirm-new-game')));
+  await tester.tap(find.byKey(const ValueKey('new-game-deal')));
   await tester.pumpAndSettle();
 }
 

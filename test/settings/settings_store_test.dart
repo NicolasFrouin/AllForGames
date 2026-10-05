@@ -1,5 +1,6 @@
 import 'dart:ui' show Locale;
 
+import 'package:all_for_games/games/klondike/klondike_difficulty.dart';
 import 'package:all_for_games/settings/settings_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -69,6 +70,50 @@ void main() {
     expect(await storedCardBackId(), 'classic');
   });
 
+  test(
+    'a new Klondike game is Draw 1, Medium without a saved choice',
+    () async {
+      final store = await createStore();
+      expect(store.klondikeDrawCount, 1);
+      expect(store.klondikeDifficulty, KlondikeDifficulty.medium);
+    },
+  );
+
+  test('keeps the options of the last new Klondike game', () async {
+    final store = await createStore();
+
+    await store.setKlondikeNewGame(
+      drawCount: 3,
+      difficulty: KlondikeDifficulty.hard,
+    );
+    expect(store.klondikeDrawCount, 3);
+    expect(store.klondikeDifficulty, KlondikeDifficulty.hard);
+
+    final reloaded = await SettingsStore.load();
+    expect(reloaded.klondikeDrawCount, 3);
+    expect(reloaded.klondikeDifficulty, KlondikeDifficulty.hard);
+    expect(await SharedPreferencesAsync().getAll(), {
+      SettingsStore.klondikeDrawCountKey: 3,
+      SettingsStore.klondikeDifficultyKey: 'hard',
+    });
+  });
+
+  test('unknown Klondike options are the defaults', () async {
+    final store = await createStore({
+      SettingsStore.klondikeDrawCountKey: 2,
+      SettingsStore.klondikeDifficultyKey: 'extreme',
+    });
+    expect(store.klondikeDrawCount, 1);
+    expect(store.klondikeDifficulty, KlondikeDifficulty.medium);
+
+    await store.setKlondikeNewGame(
+      drawCount: 5,
+      difficulty: KlondikeDifficulty.easy,
+    );
+    expect(store.klondikeDrawCount, 1);
+    expect((await SettingsStore.load()).klondikeDrawCount, 1);
+  });
+
   test('listeners are told after the write, not during the call', () async {
     final store = await createStore();
     var notified = 0;
@@ -85,6 +130,15 @@ void main() {
     expect(store.cardBackId, 'crimson');
     await savingBack;
     expect(notified, 2);
+
+    final savingOptions = store.setKlondikeNewGame(
+      drawCount: 3,
+      difficulty: KlondikeDifficulty.easy,
+    );
+    expect(notified, 2);
+    expect(store.klondikeDrawCount, 3);
+    await savingOptions;
+    expect(notified, 3);
   });
 
   test('blocked storage still gives a working store', () async {
@@ -98,5 +152,12 @@ void main() {
     expect(store.locale, isNull);
     await store.setCardBack('crimson');
     expect(store.cardBackId, 'crimson');
+    expect(store.klondikeDifficulty, KlondikeDifficulty.medium);
+    await store.setKlondikeNewGame(
+      drawCount: 3,
+      difficulty: KlondikeDifficulty.hard,
+    );
+    expect(store.klondikeDrawCount, 3);
+    expect(store.klondikeDifficulty, KlondikeDifficulty.hard);
   });
 }

@@ -3,33 +3,53 @@ import 'dart:ui' show Locale;
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../games/klondike/klondike_difficulty.dart';
 import '../l10n/app_localizations.dart';
 import '../skins/card_backs.dart';
 
 /// The player's settings, one storage key per setting.
 class SettingsStore extends ChangeNotifier {
-  SettingsStore._(this._prefs, this._locale, this._cardBackId);
+  SettingsStore._(
+    this._prefs,
+    this._locale,
+    this._cardBackId,
+    this._klondikeDrawCount,
+    this._klondikeDifficulty,
+  );
 
   static const localeKey = 'settings.locale';
   static const cardBackKey = 'settings.cardBack';
+  static const klondikeDrawCountKey = 'settings.klondike.drawCount';
+  static const klondikeDifficultyKey = 'settings.klondike.difficulty';
+
+  static const _defaultDrawCount = 1;
+  static const _defaultDifficulty = KlondikeDifficulty.medium;
 
   final SharedPreferencesAsync _prefs;
   Locale? _locale;
   String _cardBackId;
+  int _klondikeDrawCount;
+  KlondikeDifficulty _klondikeDifficulty;
 
   static Future<SettingsStore> load([SharedPreferencesAsync? prefs]) async {
     prefs ??= SharedPreferencesAsync();
     Locale? locale;
     var cardBackId = classicCardBack.id;
+    var drawCount = _defaultDrawCount;
+    var difficulty = _defaultDifficulty;
     try {
       locale = _supportedLocale(await prefs.getString(localeKey));
       cardBackId = _knownCardBack(await prefs.getString(cardBackKey));
+      drawCount = _knownDrawCount(await prefs.getInt(klondikeDrawCountKey));
+      difficulty = _knownDifficulty(
+        await prefs.getString(klondikeDifficultyKey),
+      );
     } on Object catch (error) {
       // Storage can be blocked (for example site data off in the browser).
       // The app still works, it only keeps the settings of this session.
       debugPrint('SettingsStore: cannot read settings: $error');
     }
-    return SettingsStore._(prefs, locale, cardBackId);
+    return SettingsStore._(prefs, locale, cardBackId, drawCount, difficulty);
   }
 
   /// The language chosen by the player. Null follows the device language.
@@ -37,6 +57,11 @@ class SettingsStore extends ChangeNotifier {
 
   /// Id of the card back the games draw face-down cards with.
   String get cardBackId => _cardBackId;
+
+  /// Options of the last new Klondike game the player dealt, for the next
+  /// one: 1 or 3 cards drawn at a time, and the difficulty.
+  int get klondikeDrawCount => _klondikeDrawCount;
+  KlondikeDifficulty get klondikeDifficulty => _klondikeDifficulty;
 
   /// Listeners are told after the write, never during the call, like the
   /// other stores.
@@ -62,6 +87,21 @@ class SettingsStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Keeps the options of a new Klondike game ([drawCount] 1 when it is not
+  /// 1 or 3).
+  Future<void> setKlondikeNewGame({
+    required int drawCount,
+    required KlondikeDifficulty difficulty,
+  }) async {
+    _klondikeDrawCount = _knownDrawCount(drawCount);
+    _klondikeDifficulty = difficulty;
+    await _guard('save the Klondike options', () async {
+      await _prefs.setInt(klondikeDrawCountKey, _klondikeDrawCount);
+      await _prefs.setString(klondikeDifficultyKey, difficulty.name);
+    });
+    notifyListeners();
+  }
+
   /// Null for a language the app does not have (for example saved by a newer
   /// app version).
   static Locale? _supportedLocale(String? languageCode) {
@@ -73,6 +113,13 @@ class SettingsStore extends ChangeNotifier {
 
   /// Classic for a card back the app does not have.
   static String _knownCardBack(String? id) => cardBackById(id ?? '').id;
+
+  static int _knownDrawCount(int? drawCount) =>
+      drawCount == 3 ? 3 : _defaultDrawCount;
+
+  /// Medium for a difficulty the app does not have.
+  static KlondikeDifficulty _knownDifficulty(String? name) =>
+      KlondikeDifficulty.values.asNameMap()[name] ?? _defaultDifficulty;
 
   /// A full or blocked storage must not break the app.
   static Future<void> _guard(String action, Future<void> Function() io) async {

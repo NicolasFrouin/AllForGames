@@ -19,8 +19,9 @@ class StatsScreen extends StatefulWidget {
 }
 
 class _StatsScreenState extends State<StatsScreen> {
-  /// Null means all variants.
+  /// Null means all variants, all difficulties.
   String? _variant;
+  String? _difficulty;
 
   Future<void> _confirmReset() async {
     final confirmed = await showDialog<bool>(
@@ -71,6 +72,7 @@ class _StatsScreenState extends State<StatsScreen> {
             final records = widget.stores.stats.recordsFor(
               game.id,
               variant: _variant,
+              difficulty: _difficulty,
             );
             final stats = GameStats.from(records);
             return Center(
@@ -79,7 +81,22 @@ class _StatsScreenState extends State<StatsScreen> {
                 child: ListView(
                   padding: const EdgeInsets.all(20),
                   children: [
-                    if (game.variants.isNotEmpty) _variantFilter(game, l10n),
+                    if (game.variants.isNotEmpty)
+                      _filter(
+                        'variant',
+                        game.variants,
+                        _variant,
+                        (variant) => _variant = variant,
+                        l10n,
+                      ),
+                    if (game.difficulties.isNotEmpty)
+                      _filter(
+                        'difficulty',
+                        game.difficulties,
+                        _difficulty,
+                        (difficulty) => _difficulty = difficulty,
+                        l10n,
+                      ),
                     if (stats.played == 0)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 48),
@@ -164,20 +181,28 @@ class _StatsScreenState extends State<StatsScreen> {
     );
   }
 
-  Widget _variantFilter(GameInfo game, AppLocalizations l10n) {
-    Widget chip(String? variant, String label) => ChoiceChip(
-      key: ValueKey('variant-${variant ?? 'all'}'),
+  /// A row of chips keyed `<kind>-<value>`: All (null), then [values].
+  Widget _filter(
+    String kind,
+    Map<String, LocalizedText> values,
+    String? selected,
+    void Function(String?) select,
+    AppLocalizations l10n,
+  ) {
+    Widget chip(String? value, String label) => ChoiceChip(
+      key: ValueKey('$kind-${value ?? 'all'}'),
       label: Text(label),
-      selected: _variant == variant,
-      onSelected: (_) => setState(() => _variant = variant),
+      selected: selected == value,
+      onSelected: (_) => setState(() => select(value)),
     );
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Wrap(
         spacing: 8,
+        runSpacing: 8,
         children: [
           chip(null, l10n.statsAllVariants),
-          for (final MapEntry(:key, :value) in game.variants.entries)
+          for (final MapEntry(:key, :value) in values.entries)
             chip(key, value(l10n)),
         ],
       ),
@@ -295,6 +320,8 @@ class _RecentGames extends StatelessWidget {
               subtitle: Text(
                 [
                   game.variants[record.variant]?.call(l10n) ?? record.variant,
+                  if (record.difficulty case final difficulty?)
+                    game.difficulties[difficulty]?.call(l10n) ?? difficulty,
                   l10n.recordMoves(record.moves),
                   l10n.recordUndos(record.undos),
                   l10n.recordPoints(record.score),

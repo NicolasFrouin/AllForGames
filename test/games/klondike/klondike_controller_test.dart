@@ -1,5 +1,7 @@
 import 'package:all_for_games/games/klondike/klondike_controller.dart';
+import 'package:all_for_games/games/klondike/deal_picker.dart';
 import 'package:all_for_games/games/klondike/klondike_deals.dart';
+import 'package:all_for_games/games/klondike/klondike_difficulty.dart';
 import 'package:all_for_games/games/klondike/klondike_state.dart';
 import 'package:all_for_games/games/klondike/playing_card.dart';
 import 'package:all_for_games/saves/game_save_store.dart';
@@ -18,10 +20,19 @@ Future<void> flush() => Future<void>.delayed(Duration.zero);
 
 const gameId = KlondikeController.gameId;
 
-/// The seeds proven winnable for [drawCount].
-Set<int> winnable(int drawCount) => {
-  ...klondikeDeals[drawCount]!.values.expand((seeds) => seeds),
-};
+const easy = KlondikeDifficulty.easy;
+const medium = KlondikeDifficulty.medium;
+const hard = KlondikeDifficulty.hard;
+
+/// The seeds proven winnable for [drawCount] and [difficulty].
+List<int> listOf(int drawCount, KlondikeDifficulty difficulty) =>
+    klondikeDeals[drawCount]![difficulty.name]!;
+
+/// A seed in none of the lists.
+final unlistedSeed = Iterable.generate(1000, (i) => i + 1).firstWhere(
+  (seed) =>
+      difficultyOfSeed(1, seed) == null && difficultyOfSeed(3, seed) == null,
+);
 
 void main() {
   late StatsStore stats;
@@ -435,22 +446,89 @@ void main() {
     },
   );
 
-  test('a game without a seed deals a winnable seed', () {
+  test('a new deal is a seed of the list of its draw count and difficulty', () {
     final game = KlondikeController(stats: stats, saves: saves);
-    expect(winnable(1), contains(game.seed));
+    expect(game.difficulty, medium, reason: 'the default');
+    expect(listOf(1, medium), contains(game.seed));
     expect(game.state.encode(), KlondikeState.deal(game.seed).encode());
 
-    for (final drawCount in [3, 1]) {
-      game.newGame(drawCount: drawCount);
-      expect(winnable(drawCount), contains(game.seed));
-      expect(game.state.encode(), KlondikeState.deal(game.seed).encode());
-      expect(game.state.drawCount, drawCount);
-    }
+    game.newGame(drawCount: 3, difficulty: hard);
+    expect((game.state.drawCount, game.difficulty), (3, hard));
+    expect(listOf(3, hard), contains(game.seed));
+    expect(game.state.encode(), KlondikeState.deal(game.seed).encode());
+
+    game.newGame(drawCount: 1);
+    expect(game.difficulty, hard, reason: 'kept');
+    expect(listOf(1, hard), contains(game.seed));
+
+    final easyGame = KlondikeController(
+      stats: stats,
+      saves: saves,
+      drawCount: 3,
+      difficulty: easy,
+    );
+    expect(listOf(3, easy), contains(easyGame.seed));
+  });
+
+  test('an explicit seed has the difficulty of its list, or none', () {
+    final hardSeed = listOf(1, hard).first;
+    final game = KlondikeController(stats: stats, saves: saves, seed: hardSeed);
+    expect(game.difficulty, hard);
+
+    game.newGame(seed: unlistedSeed);
+    expect(game.difficulty, isNull);
+    game.draw();
+    expect(abandon(game).difficulty, isNull);
+    expect(game.difficulty, medium, reason: 'a new deal without a level');
+  });
+
+  test('records and saves the difficulty', () async {
+    final game = KlondikeController(
+      stats: stats,
+      saves: saves,
+      difficulty: hard,
+      clock: () => now,
+    );
+    game.draw();
+    await flush();
+    final saved = await storedSave(gameId);
+    expect(saved!.data['difficulty'], 'hard');
+    expect(restore(saved).difficulty, hard);
+
+    expect(abandon(game).difficulty, 'hard');
+    await flush();
+    expect((await storedRecords()).single.difficulty, 'hard');
+  });
+
+  test('a save without a difficulty takes it from the seed', () {
+    final json = KlondikeController(
+      stats: stats,
+      saves: saves,
+      seed: listOf(1, easy).first,
+    ).toJson();
+    SavedGame save(Map<String, Object?> data) => SavedGame(
+      gameId: gameId,
+      moves: 0,
+      playTime: Duration.zero,
+      savedAt: now,
+      data: data,
+    );
+
+    expect(restore(save({...json}..remove('difficulty'))).difficulty, easy);
+    final unlisted = KlondikeController(
+      stats: stats,
+      saves: saves,
+      seed: unlistedSeed,
+    ).toJson()..remove('difficulty');
+    final restored = restore(save(unlisted));
+    expect(restored.difficulty, isNull);
+    restored.draw();
+    expect(abandon(restored).difficulty, isNull);
   });
 
   test('newGame skips the seeds played in its draw mode and the deal on '
       'screen', () async {
-    final [a, b, ...played] = winnable(1).toList();
+    final [a, b, ...played] = listOf(1, medium);
     GameRecord recordOf(int seed, String variant) => GameRecord(
       gameId: gameId,
       variant: variant,
@@ -482,7 +560,7 @@ void main() {
     expect(game.seed, b, reason: 'a is now recorded as abandoned');
     game.draw();
     game.newGame();
-    expect(winnable(1), contains(game.seed), reason: 'all played: any seed');
+    expect(listOf(1, medium), contains(game.seed), reason: 'all played');
   });
 
   test('newGame after a move records an abandoned game once', () async {

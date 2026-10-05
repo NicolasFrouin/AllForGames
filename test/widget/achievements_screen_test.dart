@@ -46,7 +46,7 @@ void main() {
     });
     await openAchievements(tester, stores);
 
-    expect(textOf('achievements-count'), '4 / 7 unlocked');
+    expect(textOf('achievements-count'), '4 / 8 unlocked');
     expect(textIn('klondike.wins10', 'progress'), '3 / 10');
     expect(textIn('klondike.wins10', 'unlocked-on'), isNull);
     expect(textIn('klondike.streak3', 'progress'), '3 / 3');
@@ -73,12 +73,12 @@ void main() {
   ) async {
     final stores = await seededStores([record(undos: 1)]);
     await openAchievements(tester, stores);
-    expect(textOf('achievements-count'), '2 / 7 unlocked');
+    expect(textOf('achievements-count'), '2 / 8 unlocked');
 
     await stores.stats.clear('klondike');
     await tester.pumpAndSettle();
 
-    expect(textOf('achievements-count'), '2 / 7 unlocked');
+    expect(textOf('achievements-count'), '2 / 8 unlocked');
     expect(textIn('klondike.firstWin', 'progress'), '1 / 1');
     expect(textIn('klondike.wins10', 'progress'), '0 / 10');
   });

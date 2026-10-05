@@ -10,7 +10,8 @@ import 'widget_test_helpers.dart';
 
 const emptyText = 'No games yet. Play one to see your statistics.';
 
-/// Klondike games in time order, then one FreeCell game.
+/// Klondike games in time order (the last one from a link, without a
+/// difficulty), then one FreeCell game.
 final savedGames = [
   record(
     won: false,
@@ -18,6 +19,7 @@ final savedGames = [
     moves: 20,
     score: 100,
     endedMinute: 1,
+    difficulty: 'easy',
     details: {'stockDraws': 10},
   ),
   record(
@@ -26,6 +28,7 @@ final savedGames = [
     undos: 2,
     score: 500,
     endedMinute: 2,
+    difficulty: 'hard',
     details: {'stockDraws': 20, 'timeToFirstMoveMs': 4000},
   ),
   record(
@@ -35,6 +38,7 @@ final savedGames = [
     undos: 1,
     score: 300,
     endedMinute: 3,
+    difficulty: 'hard',
     details: {'stockDraws': 31, 'timeToFirstMoveMs': 2000},
   ),
   record(
@@ -65,6 +69,11 @@ void expectStats(Map<String, String> expected) {
 
 Future<void> selectVariant(WidgetTester tester, String variant) async {
   await tester.tap(find.byKey(ValueKey('variant-$variant')));
+  await tester.pumpAndSettle();
+}
+
+Future<void> selectDifficulty(WidgetTester tester, String difficulty) async {
+  await tester.tap(find.byKey(ValueKey('difficulty-$difficulty')));
   await tester.pumpAndSettle();
 }
 
@@ -175,6 +184,32 @@ void main() {
     expect(find.text('Won · 2:00'), findsNothing);
     expect(find.textContaining('Abandoned'), findsNothing);
 
+    await selectVariant(tester, 'all');
+    expectStats({'played': '4', 'won': '2'});
+  });
+
+  testWidgets('difficulty chips filter the numbers, with the variant chips', (
+    tester,
+  ) async {
+    await pumpStats(tester, await seededStores(savedGames));
+    expect(find.textContaining('Draw 3 · Hard · 120 moves'), findsOneWidget);
+    expect(find.textContaining('Draw 1 · 5 moves'), findsOneWidget);
+
+    await selectDifficulty(tester, 'hard');
+    expectStats({'played': '2', 'won': '2', 'bestTime': '2:00'});
+    expect(find.textContaining('Abandoned'), findsNothing);
+
+    await selectVariant(tester, 'draw1');
+    expectStats({'played': '1', 'won': '1', 'fewestMoves': '90'});
+
+    await selectDifficulty(tester, 'easy');
+    expectStats({'played': '1', 'won': '0', 'totalMoves': '20'});
+
+    await selectDifficulty(tester, 'medium');
+    expect(find.text(emptyText), findsOneWidget);
+    expect(find.byKey(const ValueKey('difficulty-all')), findsOneWidget);
+
+    await selectDifficulty(tester, 'all');
     await selectVariant(tester, 'all');
     expectStats({'played': '4', 'won': '2'});
   });

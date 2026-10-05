@@ -2,6 +2,8 @@ import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
 import 'klondike/klondike_controller.dart';
+import 'klondike/klondike_difficulty.dart';
+import 'klondike/klondike_difficulty_texts.dart';
 
 /// A text in the language of the app.
 typedef LocalizedText = String Function(AppLocalizations l10n);
@@ -15,6 +17,7 @@ class GameInfo {
     required this.color,
     this.route,
     this.variants = const {},
+    this.difficulties = const {},
     this.detailLabels = const {},
   });
 
@@ -29,6 +32,10 @@ class GameInfo {
 
   /// Variant id (as saved in records) to display name.
   final Map<String, LocalizedText> variants;
+
+  /// Difficulty (as saved in `GameRecord.difficulty`) to display name, from
+  /// the easiest.
+  final Map<String, LocalizedText> difficulties;
 
   /// Labels of the game-specific counters in `GameRecord.details`.
   final Map<String, LocalizedText> detailLabels;
@@ -47,6 +54,10 @@ final gameCatalog = [
     variants: {
       'draw1': (l10n) => l10n.klondikeDraw(1),
       'draw3': (l10n) => l10n.klondikeDraw(3),
+    },
+    difficulties: {
+      for (final difficulty in KlondikeDifficulty.values)
+        difficulty.name: difficulty.label,
     },
     detailLabels: KlondikeStatKeys.labels,
   ),

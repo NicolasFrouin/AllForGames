@@ -9,6 +9,7 @@ import '../../stats/game_record.dart';
 import '../../stats/play_timer.dart';
 import '../../stats/stats_store.dart';
 import 'deal_picker.dart';
+import 'klondike_difficulty.dart';
 import 'klondike_state.dart';
 
 enum MoveInput { tap, drag }
@@ -47,11 +48,17 @@ class KlondikeController extends ChangeNotifier {
     required this._stats,
     required this._saves,
     int drawCount = 1,
+    KlondikeDifficulty difficulty = KlondikeDifficulty.medium,
     int? seed,
     KlondikeState? initialState,
     DateTime Function()? clock,
   }) : _clock = clock ?? DateTime.now {
-    _start(drawCount: drawCount, seed: seed, initialState: initialState);
+    _start(
+      drawCount: drawCount,
+      difficulty: difficulty,
+      seed: seed,
+      initialState: initialState,
+    );
   }
 
   /// Continues a game saved by [toJson]. Throws a [FormatException] when
@@ -85,6 +92,7 @@ class KlondikeController extends ChangeNotifier {
 
   late KlondikeState _state;
   late int _seed;
+  KlondikeDifficulty? _difficulty;
   late DateTime _startedAt;
   late PlayTimer _timer;
   late int _initialFaceDown;
@@ -100,6 +108,10 @@ class KlondikeController extends ChangeNotifier {
 
   KlondikeState get state => _state;
   int get seed => _seed;
+
+  /// The list of `klondikeDeals` that holds the deal, null for a seed in
+  /// none of them (a link to any seed).
+  KlondikeDifficulty? get difficulty => _difficulty;
   int get score => _score;
   int get moves => _moves;
   int get undos => _undos;
@@ -214,16 +226,24 @@ class KlondikeController extends ChangeNotifier {
   /// Deals a new game and saves it. The current game counts as abandoned if
   /// the player made at least one move and did not win it.
   ///
-  /// Without [seed], the deal is a winnable one the player has not played
-  /// yet (see [pickDealSeed]), and never the current deal again.
-  void newGame({int? drawCount, int? seed, KlondikeState? initialState}) {
+  /// Without [seed], the deal is a winnable one of [difficulty] that the
+  /// player has not played yet (see [pickDealSeed]), and never the current
+  /// deal again. [drawCount] and [difficulty] default to those of the current
+  /// game (medium when it has none).
+  void newGame({
+    int? drawCount,
+    KlondikeDifficulty? difficulty,
+    int? seed,
+    KlondikeState? initialState,
+  }) {
     if (!_finished && _moves > 0) {
       unawaited(_stats.add(_record(GameOutcome.abandoned)));
     }
-    drawCount ??= _state.drawCount;
     _start(
-      drawCount: drawCount,
-      seed: seed ?? _pickSeed(drawCount, current: _seed),
+      drawCount: drawCount ?? _state.drawCount,
+      difficulty: difficulty ?? _difficulty ?? KlondikeDifficulty.medium,
+      seed: seed,
+      current: _seed,
       initialState: initialState,
     );
     save();
@@ -235,6 +255,7 @@ class KlondikeController extends ChangeNotifier {
     'version': _saveVersion,
     'seed': _seed,
     'drawCount': _state.drawCount,
+    'difficulty': _difficulty?.name,
     'state': _state.encode(),
     'history': [
       for (final entry in _history) [entry.score, entry.state.encode()],
@@ -261,6 +282,10 @@ class KlondikeController extends ChangeNotifier {
     Duration duration(Object? ms) => Duration(milliseconds: ms as int);
 
     _seed = json['seed'] as int;
+    // Saves before difficulty levels have none: the lists tell it.
+    _difficulty =
+        KlondikeDifficulty.values.asNameMap()[json['difficulty']] ??
+        difficultyOfSeed(drawCount, _seed);
     _state = decode(json['state']);
     _history.addAll([
       for (final entry
@@ -287,10 +312,13 @@ class KlondikeController extends ChangeNotifier {
 
   void _start({
     required int drawCount,
+    required KlondikeDifficulty difficulty,
     int? seed,
+    int? current,
     KlondikeState? initialState,
   }) {
-    _seed = seed ?? _pickSeed(drawCount);
+    _seed = seed ?? _pickSeed(drawCount, difficulty, current: current);
+    _difficulty = difficultyOfSeed(drawCount, _seed);
     _state = initialState ?? KlondikeState.deal(_seed, drawCount: drawCount);
     _initialFaceDown = _state.faceDownCount;
     _startedAt = _clock();
@@ -308,20 +336,22 @@ class KlondikeController extends ChangeNotifier {
     _lastMovedCardIds = const {};
   }
 
-  /// A winnable seed not in the records of [drawCount] games (the abandoned
-  /// game is already there) nor [current], the deal on screen.
-  int _pickSeed(int drawCount, {int? current}) => pickDealSeed(
-    drawCount: drawCount,
-    played: {
-      for (final record in _stats.recordsFor(
-        gameId,
-        variant: _variant(drawCount),
-      ))
-        record.seed,
-      ?current,
-    },
-    random: Random(),
-  );
+  /// A winnable seed of [difficulty] not in the records of [drawCount] games
+  /// (the abandoned game is already there) nor [current], the deal on screen.
+  int _pickSeed(int drawCount, KlondikeDifficulty difficulty, {int? current}) =>
+      pickDealSeed(
+        drawCount: drawCount,
+        difficulty: difficulty,
+        played: {
+          for (final record in _stats.recordsFor(
+            gameId,
+            variant: _variant(drawCount),
+          ))
+            record.seed,
+          ?current,
+        },
+        random: Random(),
+      );
 
   static String _variant(int drawCount) => 'draw$drawCount';
 
@@ -366,6 +396,7 @@ class KlondikeController extends ChangeNotifier {
     moves: _moves,
     undos: _undos,
     score: _score,
+    difficulty: _difficulty?.name,
     details: {
       ..._counters,
       KlondikeStatKeys.cardsToFoundation: _state.foundationCardCount,

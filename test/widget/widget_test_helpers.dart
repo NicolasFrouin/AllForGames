@@ -16,6 +16,7 @@ GameRecord record({
   int undos = 0,
   int score = 500,
   int endedMinute = 0,
+  String? difficulty,
   Map<String, int> details = const {},
 }) => GameRecord(
   gameId: gameId,
@@ -28,6 +29,7 @@ GameRecord record({
   moves: moves,
   undos: undos,
   score: score,
+  difficulty: difficulty,
   details: details,
 );
 

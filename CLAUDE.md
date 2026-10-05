@@ -45,7 +45,8 @@ lib/
   games/game_catalog.dart    GameInfo list shown on the hub (route, localized title/tagline/variants/stat labels)
   games/klondike/            playing_card, klondike_state (immutable rules), klondike_controller (game session,
                              undo, stat counters), klondike_board (cards + drag and drop), klondike_screen, card_view, suit_icon,
-                             deal_random (seeded shuffle), klondike_deals (generated winnable seeds), deal_picker,
+                             deal_random (seeded shuffle), klondike_deals (generated winnable seeds), deal_picker
+                             (pickDealSeed, difficultyOfSeed), klondike_difficulty (enum) + _texts, new_game_sheet,
                              klondike_solver (offline only: the generator and tests)
 test/                        unit (games/, stats/) and widget (widget/) tests; helpers in test/helpers and *_test_helpers.dart
 integration_test/            e2e tests (run on web by scripts/e2e_web.sh, or on a device)
@@ -62,6 +63,8 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   a new game over it (with at least one move). In-progress games live in `GameSaveStore`, never as records.
   Game-specific counters go in `details` (`Map<String, int>`); keys ending with `Ms` are durations in ms.
   Add a label for each new key in the game's `GameInfo.detailLabels` (a text of the ARB files).
+  `GameRecord.difficulty` is optional (null: no levels, an ungraded deal, or an older record); a game with levels
+  lists them in `GameInfo.difficulties`, and the stats page filters by variant and difficulty.
 - **Saved games**: leaving a game (back, app closed, tab closed) saves it; opening it again continues it.
   The controller saves itself after every action, on `pause()` and when the screen closes, and removes the save
   on a win. `toJson()` has a `version`; `restore(json)` throws `FormatException` on bad data, then the screen
@@ -70,7 +73,8 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   list (other tabs and unreadable entries must survive). Keys: `stats.game.<gameId>-<startedAt µs>-<seed>` per
   record (`StatsStore.keyOf`), `save.<gameId>` per game in progress (`GameSaveStore.keyOf`), `settings.<name>`
   per setting (`settings.locale`: `en`/`fr`, absent = device language; `settings.cardBack`: skin id, unknown =
-  classic), `achievements.<id>` per unlocked achievement (UTC ISO date).
+  classic; `settings.klondike.drawCount`: int 1/3, unknown = 1; `settings.klondike.difficulty`:
+  `easy`/`medium`/`hard`, unknown = medium), `achievements.<id>` per unlocked achievement (UTC ISO date).
   Catch storage errors (blocked or full storage must not break the app).
 - **ChangeNotifier stores** notify *after* an `await`, never synchronously in a mutating call:
   screens call them from `dispose()`, when no widget can rebuild.
@@ -89,16 +93,25 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   `achievement_texts.dart` (a test checks every id has them).
 - **Klondike deals**: `KlondikeState.deal(seed)` (`shuffledDeck` with `DealRandom`, the same on VM, JS and Wasm)
   must never change: `klondikeDeals[drawCount][difficulty]` lists seeds proven winnable for these exact deals.
-  New games deal `pickDealSeed`: a listed seed for the draw count, not yet played in that draw mode (records) nor
-  on screen, any listed seed once all were played. An explicit seed (`/klondike?seed=42`, `newGame(seed:)`, for
-  tests and links) deals any seed: only seeds from `klondikeDeals` are guaranteed winnable. After a change of the
-  solver or grading, regenerate the lists with `dart run tool/generate_klondike_deals.dart` (about 1 minute).
+  New games deal `pickDealSeed`: a seed of `klondikeDeals[drawCount][difficulty]`, not yet played in that draw
+  mode (records) nor on screen, any seed of that list once all were played. An explicit seed (`/klondike?seed=42`,
+  `newGame(seed:)`, for tests and links) deals any seed: only seeds from `klondikeDeals` are guaranteed winnable.
+  After a change of the solver or grading, regenerate the lists with `dart run tool/generate_klondike_deals.dart`
+  (about 1 minute). `KlondikeDifficulty` stays pure Dart without imports (the tool runs it outside Flutter); its
+  texts are in `klondike_difficulty_texts.dart`.
+- **Klondike difficulty**: the controller keeps the difficulty of the deal (`difficultyOfSeed`, null for a seed in
+  no list), saves it (optional: a save without it looks it up from the seed) and records it. The new game sheet
+  (`new-game`) opens with the settings (`klondikeDrawCount`, `klondikeDifficulty`); Deal saves them, and confirms
+  the abandon of a game with moves (the sheet says so). A game opened from the hub without a save uses them too
+  (`?draw=` overrides the draw count); Play again keeps the draw count and difficulty.
 - **Card suits** are drawn with `SuitIcon` (vector). Text symbols ♥ ♦ render as color emoji on web.
   Face-down cards are drawn with `CardBackView` and the selected skin.
 - **Keys for tests**: widgets that tests drive have `ValueKey`s (`game-<id>`, `stats-<id>`, `stock`, `waste`,
-  `foundation-<suit>`, `tableau-<i>`, card ids like `hearts-1`, `moves-value`, `undo`, `stat-<id>` like
-  `stat-winRate` or `stat-<detailKey>`, `language-menu`, `language-<code>`, `achievements-button`,
-  `card-backs-button`, `achievement-<id>`, `card-back-<id>`, `unlocked-<id>` in the win dialog, ...).
+  `foundation-<suit>`, `tableau-<i>`, card ids like `hearts-1`, `moves-value`, `difficulty-value`, `undo`,
+  `new-game`, `new-game-draw-<n>`, `new-game-difficulty-<name>`, `new-game-deal`, `stat-<id>` like
+  `stat-winRate` or `stat-<detailKey>`, `variant-<id>`, `difficulty-<name>` (and `-all`) on the stats page,
+  `language-menu`, `language-<code>`, `achievements-button`, `card-backs-button`, `achievement-<id>`,
+  `card-back-<id>`, `unlocked-<id>` in the win dialog, ...).
   Keep them stable. Keys never depend on the language (no `ValueKey('stat-$label')`).
 - Keep code simple: no extra abstraction or packages unless clearly needed. Match the existing style; comments only for the why.
 

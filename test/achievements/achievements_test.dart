@@ -12,6 +12,7 @@ GameRecord game({
   GameOutcome outcome = GameOutcome.won,
   Duration playTime = const Duration(minutes: 10),
   int undos = 1,
+  String? difficulty,
 }) {
   final order = _order++;
   return GameRecord(
@@ -25,6 +26,7 @@ GameRecord game({
     moves: 100,
     undos: undos,
     score: 500,
+    difficulty: difficulty,
   );
 }
 
@@ -33,12 +35,14 @@ GameRecord abandoned({
   String variant = 'draw1',
   Duration playTime = const Duration(minutes: 10),
   int undos = 1,
+  String? difficulty,
 }) => game(
   gameId: gameId,
   variant: variant,
   outcome: GameOutcome.abandoned,
   playTime: playTime,
   undos: undos,
+  difficulty: difficulty,
 );
 
 int progress(String id, List<GameRecord> records) =>
@@ -89,6 +93,19 @@ void main() {
     expect(progress('klondike.noUndoWin', [...records, game(undos: 0)]), 1);
   });
 
+  test('hardWin needs a won Hard game', () {
+    final records = [
+      game(difficulty: 'medium'),
+      game(),
+      abandoned(difficulty: 'hard'),
+    ];
+    expect(progress('klondike.hardWin', records), 0);
+    expect(
+      progress('klondike.hardWin', [...records, game(difficulty: 'hard')]),
+      1,
+    );
+  });
+
   test('streak3 is the best run of wins, broken by an abandoned game', () {
     final records = [game(), game(), abandoned(), game(), game()];
     expect(progress('klondike.streak3', records), 2);
@@ -103,6 +120,7 @@ void main() {
           variant: 'draw3',
           playTime: const Duration(minutes: 1),
           undos: 0,
+          difficulty: 'hard',
         ),
     ];
     for (final achievement in achievements) {

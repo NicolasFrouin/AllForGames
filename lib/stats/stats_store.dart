@@ -41,15 +41,24 @@ class StatsStore extends ChangeNotifier {
 
   List<GameRecord> get records => List.unmodifiable(_records);
 
-  List<GameRecord> recordsFor(String gameId, {String? variant}) => [
+  /// The records of [gameId], only of [variant] and of [difficulty] when
+  /// they are given.
+  List<GameRecord> recordsFor(
+    String gameId, {
+    String? variant,
+    String? difficulty,
+  }) => [
     for (final record in _records)
       if (record.gameId == gameId &&
-          (variant == null || record.variant == variant))
+          (variant == null || record.variant == variant) &&
+          (difficulty == null || record.difficulty == difficulty))
         record,
   ];
 
-  GameStats statsFor(String gameId, {String? variant}) =>
-      GameStats.from(recordsFor(gameId, variant: variant));
+  GameStats statsFor(String gameId, {String? variant, String? difficulty}) =>
+      GameStats.from(
+        recordsFor(gameId, variant: variant, difficulty: difficulty),
+      );
 
   GameStats get overall => GameStats.from(_records);
 

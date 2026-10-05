@@ -12,6 +12,7 @@ String achievementTitle(String id, AppLocalizations l10n) => switch (id) {
   'klondike.fastWin' => l10n.achievementKlondikeFastWinTitle,
   'klondike.noUndoWin' => l10n.achievementKlondikeNoUndoWinTitle,
   'klondike.streak3' => l10n.achievementKlondikeStreak3Title,
+  'klondike.hardWin' => l10n.achievementKlondikeHardWinTitle,
   _ => id,
 };
 
@@ -23,6 +24,7 @@ String achievementDescription(String id, AppLocalizations l10n) => switch (id) {
   'klondike.fastWin' => l10n.achievementKlondikeFastWinDescription,
   'klondike.noUndoWin' => l10n.achievementKlondikeNoUndoWinDescription,
   'klondike.streak3' => l10n.achievementKlondikeStreak3Description,
+  'klondike.hardWin' => l10n.achievementKlondikeHardWinDescription,
   _ => id,
 };
 
@@ -35,5 +37,6 @@ String cardBackName(String id, AppLocalizations l10n) => switch (id) {
   'midnight' => l10n.cardBackMidnight,
   'royal' => l10n.cardBackRoyal,
   'gold' => l10n.cardBackGold,
+  'obsidian' => l10n.cardBackObsidian,
   _ => id,
 };

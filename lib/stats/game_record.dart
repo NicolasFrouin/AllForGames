@@ -16,6 +16,7 @@ class GameRecord {
     required this.moves,
     required this.undos,
     required this.score,
+    this.difficulty,
     this.details = const {},
   });
 
@@ -30,6 +31,7 @@ class GameRecord {
     moves: json['moves'] as int,
     undos: json['undos'] as int,
     score: json['score'] as int,
+    difficulty: json['difficulty'] as String?,
     details: {
       for (final MapEntry(:key, :value)
           in ((json['details'] as Map<String, Object?>?) ?? const {}).entries)
@@ -51,6 +53,10 @@ class GameRecord {
   final int moves;
   final int undos;
   final int score;
+
+  /// Difficulty of the deal (for example `hard`), null when the game has no
+  /// levels or the deal is not graded (older records too).
+  final String? difficulty;
   final Map<String, int> details;
 
   /// Stays the same when a saved game continues, so a game recorded twice
@@ -70,6 +76,7 @@ class GameRecord {
     'moves': moves,
     'undos': undos,
     'score': score,
+    'difficulty': ?difficulty,
     'details': details,
   };
 }

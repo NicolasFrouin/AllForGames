@@ -21,6 +21,7 @@ import 'dart:collection';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'klondike_difficulty.dart';
 import 'klondike_state.dart';
 import 'playing_card.dart';
 
@@ -115,8 +116,6 @@ class SolveResult {
   String toString() =>
       'SolveResult(${status.name}, $nodes nodes, ${solution.length} actions)';
 }
-
-enum KlondikeDifficulty { easy, medium, hard }
 
 /// The rules that grade a deal into a [KlondikeDifficulty].
 ///

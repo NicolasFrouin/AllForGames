@@ -22,6 +22,7 @@ GameRecord game(
   int seed, {
   String variant = 'draw1',
   GameOutcome outcome = GameOutcome.won,
+  String? difficulty,
 }) => GameRecord(
   gameId: 'klondike',
   variant: variant,
@@ -33,6 +34,7 @@ GameRecord game(
   moves: 100,
   undos: 1,
   score: 500,
+  difficulty: difficulty,
 );
 
 /// [count] wins, each after an abandoned game, so they never make a streak.
@@ -207,5 +209,22 @@ void main() {
     store.check(wins(1));
     expect(isCardBackUnlocked(crimson, store), isTrue);
     expect(isCardBackUnlocked(cardBackById('gold'), store), isFalse);
+  });
+
+  test('a Hard win unlocks Expert and the obsidian card back', () async {
+    final store = await createStore();
+    final obsidian = cardBackById('obsidian');
+    expect(obsidian.unlockedBy, 'klondike.hardWin');
+
+    store.check([
+      game(1, difficulty: 'medium'),
+      game(2, difficulty: 'hard', outcome: GameOutcome.abandoned),
+    ]);
+    expect(isCardBackUnlocked(obsidian, store), isFalse);
+
+    expect(ids(store.check([game(3, difficulty: 'hard')])), [
+      'klondike.hardWin',
+    ]);
+    expect(isCardBackUnlocked(obsidian, store), isTrue);
   });
 }

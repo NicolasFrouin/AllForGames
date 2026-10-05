@@ -2,10 +2,14 @@ import 'package:all_for_games/app.dart';
 import 'package:all_for_games/app_stores.dart';
 import 'package:all_for_games/games/game_catalog.dart';
 import 'package:all_for_games/games/klondike/card_view.dart';
+import 'package:all_for_games/games/klondike/deal_picker.dart';
 import 'package:all_for_games/games/klondike/klondike_controller.dart';
+import 'package:all_for_games/games/klondike/klondike_deals.dart';
+import 'package:all_for_games/games/klondike/klondike_difficulty.dart';
 import 'package:all_for_games/games/klondike/klondike_screen.dart';
 import 'package:all_for_games/games/klondike/klondike_state.dart';
 import 'package:all_for_games/hub/hub_screen.dart';
+import 'package:all_for_games/settings/settings_store.dart';
 import 'package:all_for_games/stats/game_record.dart';
 import 'package:all_for_games/stats/stats_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -33,9 +37,10 @@ Future<AppStores> pumpGame(
   WidgetTester tester,
   KlondikeState state, {
   DateTime Function()? clock,
+  Map<String, Object> data = const {},
 }) async {
   useSurface(tester);
-  final stores = await createTestStores();
+  final stores = await createTestStores(data);
   final router = GoRouter(
     initialLocation: '/klondike',
     initialExtra: state,
@@ -149,14 +154,37 @@ void expectTableauTops(WidgetTester tester, KlondikeState state) {
   }
 }
 
-Future<void> chooseNewGame(WidgetTester tester, {required int draw}) async {
+Future<void> openNewGameSheet(WidgetTester tester) async {
   await tester.tap(byKey('new-game'));
   await tester.pumpAndSettle();
-  await tester.tap(find.text('New game · Draw $draw'));
-  await tester.pumpAndSettle();
+  expect(byKey('new-game-deal'), findsOneWidget);
 }
 
-const confirmTitle = 'Start a new game?';
+/// Deals a new game from the new game sheet, with the options chosen in it.
+Future<void> chooseNewGame(
+  WidgetTester tester, {
+  int? draw,
+  KlondikeDifficulty? difficulty,
+}) async {
+  await openNewGameSheet(tester);
+  if (draw != null) await tester.tap(byKey('new-game-draw-$draw'));
+  if (difficulty != null) {
+    await tester.tap(byKey('new-game-difficulty-${difficulty.name}'));
+  }
+  await tester.pumpAndSettle();
+  await tester.tap(byKey('new-game-deal'));
+  await tester.pumpAndSettle();
+  expect(byKey('new-game-deal'), findsNothing);
+}
+
+bool isChosen(WidgetTester tester, String key) =>
+    tester.widget<ChoiceChip>(byKey(key)).selected;
+
+/// The seed of the saved game.
+int savedSeed(AppStores stores) =>
+    stores.saves[KlondikeController.gameId]!.data['seed']! as int;
+
+const abandonsKey = 'new-game-abandons';
 
 void main() {
   testWidgets('tapping the stock turns its top card into the waste', (
@@ -294,8 +322,10 @@ void main() {
       expect(record.moves, 1);
       expect(record.details[KlondikeStatKeys.autoCompleted], 1);
 
+      final difficulty = textOf('difficulty-value');
       await tester.tap(byKey('play-again'));
       await tester.pumpAndSettle();
+      expect(textOf('difficulty-value'), difficulty);
 
       expect(find.text('You won!'), findsNothing);
       expect(textOf('moves-value'), '0');
@@ -519,56 +549,118 @@ void main() {
     },
   );
 
-  testWidgets('new game asks first; cancel keeps the game', (tester) async {
+  testWidgets('the new game sheet says the game counts as abandoned; cancel '
+      'keeps the game', (tester) async {
     final stores = await pumpGame(tester, stockBoard);
     await tapStock(tester);
 
-    await chooseNewGame(tester, draw: 3);
-    expect(find.text(confirmTitle), findsOneWidget);
+    await openNewGameSheet(tester);
+    expect(byKey(abandonsKey), findsOneWidget);
+    await tester.tap(byKey('new-game-draw-3'));
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
 
-    expect(find.text(confirmTitle), findsNothing);
+    expect(byKey('new-game-deal'), findsNothing);
     expect(textOf('moves-value'), '1');
     expect(textOf('draw-value'), 'Draw 1');
     expect(at(tester, 'spades-2'), at(tester, 'waste'));
     expect(stores.stats.records, isEmpty);
+    expect(stores.settings.klondikeDrawCount, 1);
   });
 
-  testWidgets('new game without a move deals again without asking', (
+  testWidgets('without a move, Deal deals again and records nothing', (
     tester,
   ) async {
     final stores = await pumpGame(tester, stockBoard);
 
-    await chooseNewGame(tester, draw: 3);
+    await openNewGameSheet(tester);
+    expect(byKey(abandonsKey), findsNothing);
+    await tester.tap(byKey('new-game-draw-3'));
+    await tester.tap(byKey('new-game-deal'));
+    await tester.pumpAndSettle();
 
-    expect(find.text(confirmTitle), findsNothing);
     expect(textOf('draw-value'), 'Draw 3');
     expect(faceUpCount(tester), 7);
     expect(stores.stats.records, isEmpty);
   });
 
-  testWidgets('new game in Draw 3 deals again and records the old game', (
-    tester,
-  ) async {
+  testWidgets('Deal in Draw 3 Hard deals a Hard deal, records the old game '
+      'and keeps the choice', (tester) async {
     final stores = await pumpGame(tester, stockBoard);
     expect(textOf('draw-value'), 'Draw 1');
     await tapStock(tester);
 
-    await chooseNewGame(tester, draw: 3);
-    await tester.tap(byKey('confirm-new-game'));
+    await openNewGameSheet(tester);
+    // The options of the settings: none saved yet.
+    expect(isChosen(tester, 'new-game-draw-1'), isTrue);
+    expect(isChosen(tester, 'new-game-difficulty-medium'), isTrue);
+    expect(textOf('new-game-hint'), 'Needs some planning.');
+    expect(find.text('Every deal can be won.'), findsOneWidget);
+    await tester.tap(byKey('new-game-draw-3'));
+    await tester.tap(byKey('new-game-difficulty-hard'));
+    await tester.pumpAndSettle();
+    expect(isChosen(tester, 'new-game-draw-3'), isTrue);
+    expect(isChosen(tester, 'new-game-draw-1'), isFalse);
+    expect(textOf('new-game-hint'), 'Needs careful planning and backtracking.');
+    await tester.tap(byKey('new-game-deal'));
     await tester.pumpAndSettle();
 
     expect(textOf('draw-value'), 'Draw 3');
+    expect(textOf('difficulty-value'), 'Hard');
     expect(textOf('moves-value'), '0');
+    expect(klondikeDeals[3]!['hard'], contains(savedSeed(stores)));
     final record = stores.stats.records.single;
     expect(record.outcome, GameOutcome.abandoned);
     expect(record.variant, 'draw1');
     expect(stores.saves[KlondikeController.gameId]!.moves, 0);
+    final settings = await SettingsStore.load();
+    expect(settings.klondikeDrawCount, 3);
+    expect(settings.klondikeDifficulty, KlondikeDifficulty.hard);
 
     // A new deal shows the 7 tableau tops; a draw then turns 3 cards.
     expect(faceUpCount(tester), 7);
     await tapStock(tester);
     expect(faceUpCount(tester), 10);
+
+    // The next time, the sheet opens with the last choice.
+    await openNewGameSheet(tester);
+    expect(isChosen(tester, 'new-game-draw-3'), isTrue);
+    expect(isChosen(tester, 'new-game-difficulty-hard'), isTrue);
+  });
+
+  testWidgets('a game opened from the hub has the options of the settings', (
+    tester,
+  ) async {
+    useSurface(tester);
+    final stores = await createTestStores({
+      SettingsStore.klondikeDrawCountKey: 3,
+      SettingsStore.klondikeDifficultyKey: 'easy',
+    });
+    await tester.pumpWidget(AllForGamesApp(stores: stores));
+    await tester.pumpAndSettle();
+    await openFromHub(tester);
+
+    expect(textOf('draw-value'), 'Draw 3');
+    expect(textOf('difficulty-value'), 'Easy');
+    await leaveGame(tester);
+    expect(klondikeDeals[3]!['easy'], contains(savedSeed(stores)));
+
+    // A link with a draw count keeps the difficulty of the settings.
+    GoRouter.of(tester.element(find.byType(HubScreen))).go('/klondike?draw=1');
+    await tester.pumpAndSettle();
+    expect(textOf('draw-value'), 'Draw 1');
+    expect(textOf('difficulty-value'), 'Easy');
+    expect(klondikeDeals[1]!['easy'], contains(savedSeed(stores)));
+  });
+
+  testWidgets('a link to an unlisted seed shows no difficulty', (tester) async {
+    useSurface(tester);
+    final stores = await createTestStores();
+    await tester.pumpWidget(
+      AllForGamesApp(stores: stores, initialLocation: '/klondike?seed=13'),
+    );
+    await tester.pumpAndSettle();
+    expect(difficultyOfSeed(1, 13), isNull);
+    expect(byKey('difficulty-value'), findsNothing);
   });
 }
