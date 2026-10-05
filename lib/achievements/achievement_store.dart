@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../skins/card_backs.dart';
+import '../skins/tile_styles.dart';
 import '../stats/game_record.dart';
 import 'achievements.dart';
 
@@ -95,5 +96,10 @@ class AchievementStore extends ChangeNotifier {
 
 bool isCardBackUnlocked(CardBackSkin skin, AchievementStore store) {
   final id = skin.unlockedBy;
+  return id == null || store.isUnlocked(id);
+}
+
+bool isTileStyleUnlocked(TileStyle style, AchievementStore store) {
+  final id = style.unlockedBy;
   return id == null || store.isUnlocked(id);
 }

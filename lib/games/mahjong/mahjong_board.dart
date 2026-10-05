@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../cards/confetti.dart';
 import '../../l10n/app_localizations.dart';
+import '../../skins/tile_styles.dart';
 import 'mahjong_controller.dart';
 import 'mahjong_layout.dart';
 import 'mahjong_motion.dart';
@@ -139,9 +140,15 @@ class _PaintOrder extends ChangeNotifier {
 /// tile widgets are built when an action changes them, and the tile layer
 /// when the paint order changes.
 class MahjongBoard extends StatefulWidget {
-  const MahjongBoard({super.key, required this.controller, this.onCelebrated});
+  const MahjongBoard({
+    super.key,
+    required this.controller,
+    this.tileStyle = classicTileStyle,
+    this.onCelebrated,
+  });
 
   final MahjongController controller;
+  final TileStyle tileStyle;
 
   /// Called once after a win, when the celebration has played (at once with
   /// reduced motion): time for the win dialog.
@@ -200,6 +207,7 @@ class _MahjongBoardState extends State<MahjongBoard>
   final _tileWidgets = <int, (_TileLook, Widget)>{};
   AppLocalizations? _tileL10n;
   bool? _tileAnimate;
+  TileStyle? _tileStyle;
 
   /// The win celebration: its confetti, and when to call `onCelebrated`.
   Confetti? _confetti;
@@ -544,10 +552,13 @@ class _MahjongBoardState extends State<MahjongBoard>
     AppLocalizations l10n, {
     required bool animate,
   }) {
-    if (l10n != _tileL10n || animate != _tileAnimate) {
+    if (l10n != _tileL10n ||
+        animate != _tileAnimate ||
+        widget.tileStyle != _tileStyle) {
       _tileWidgets.clear();
       _tileL10n = l10n;
       _tileAnimate = animate;
+      _tileStyle = widget.tileStyle;
     }
     final hint = _controller.hintPair;
     final tiles = <int, Widget>{};
@@ -618,6 +629,7 @@ class _MahjongBoardState extends State<MahjongBoard>
                           face: target.face,
                           faceSize: faceSize,
                           depth: geometry.depth,
+                          style: widget.tileStyle,
                           selected: selected,
                           dimmed: dimmed,
                         ),

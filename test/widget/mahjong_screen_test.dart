@@ -9,6 +9,7 @@ import 'package:all_for_games/games/mahjong/mahjong_state.dart';
 import 'package:all_for_games/games/mahjong/mahjong_tile_view.dart';
 import 'package:all_for_games/hub/hub_screen.dart';
 import 'package:all_for_games/settings/settings_store.dart';
+import 'package:all_for_games/skins/tile_styles.dart';
 import 'package:all_for_games/stats/game_record.dart';
 import 'package:all_for_games/stats/stats_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -442,6 +443,28 @@ void main() {
 
       expect(savedData(stores)['transposed'], isFalse);
     });
+  });
+
+  testWidgets('the tiles take the style of the settings, and its changes', (
+    tester,
+  ) async {
+    final stores = await pumpGame(
+      tester,
+      state: rowBoard,
+      data: {SettingsStore.tileStyleKey: 'jade'},
+    );
+    for (final id in [0, 1, 2, 3]) {
+      expect(viewOf(tester, id).style, same(tileStyleById('jade')));
+    }
+
+    await tapTile(tester, 0);
+    await stores.settings.setTileStyle('ebony');
+    await tester.pumpAndSettle();
+
+    for (final id in [0, 1, 2, 3]) {
+      expect(viewOf(tester, id).style, same(tileStyleById('ebony')));
+    }
+    expect(viewOf(tester, 0).selected, isTrue);
   });
 
   testWidgets('the hub opens Mahjong, with a deal from a link too', (

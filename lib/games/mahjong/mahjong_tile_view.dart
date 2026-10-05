@@ -3,24 +3,21 @@ import 'dart:math';
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../skins/tile_styles.dart';
 import 'mahjong_tiles.dart';
-
-/// Ink of the tile faces.
-const _blue = Color(0xFF1C4E9E);
-const _green = Color(0xFF23803A);
-const _red = Color(0xFFC62828);
-const _ink = Color(0xFF1B2440);
 
 /// The hint's rim and halo, apart from the gold of a selected tile.
 const _hintColor = Color(0xFF26C6DA);
 
-/// Flowers and seasons only match their own kind: a colored band and corner
-/// number tell them apart.
-const _flowerInk = Color(0xFFC2185B);
-const _seasonInk = Color(0xFF1565C0);
+/// The inks of the coins and sticks, resolved by the [TileStyle].
+enum _Hue { red, green, blue }
 
-/// A Mahjong tile seen from above, a little from the bottom right: an ivory
-/// face, and its thickness (ivory, then the jade back) below and to the
+const _r = _Hue.red;
+const _g = _Hue.green;
+const _b = _Hue.blue;
+
+/// A Mahjong tile seen from above, a little from the bottom right: a face
+/// in [style], and its thickness (the body, then the back) below and to the
 /// right of it. Drawn with vector shapes, Material icons and Latin letters
 /// only: no emoji and no CJK font, which the web does not always have.
 ///
@@ -33,6 +30,7 @@ class MahjongTileView extends StatelessWidget {
     required this.face,
     required this.faceSize,
     required this.depth,
+    required this.style,
     this.selected = false,
     this.dimmed = false,
   });
@@ -40,6 +38,7 @@ class MahjongTileView extends StatelessWidget {
   final TileFace face;
   final Size faceSize;
   final double depth;
+  final TileStyle style;
 
   /// Picked by the player: a warm face and a golden rim.
   final bool selected;
@@ -49,27 +48,32 @@ class MahjongTileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     return CustomPaint(
       size: Size(faceSize.width + depth, faceSize.height + depth),
       painter: _TilePainter(
         face: face,
         faceSize: faceSize,
         depth: depth,
+        style: style,
         selected: selected,
         dimmed: dimmed,
         windLetter: switch (face.suit) {
-          TileSuit.winds => [
-            l10n.mahjongWindEastLetter,
-            l10n.mahjongWindSouthLetter,
-            l10n.mahjongWindWestLetter,
-            l10n.mahjongWindNorthLetter,
-          ][face.rank - 1],
+          TileSuit.winds => _windLetter(
+            AppLocalizations.of(context),
+            face.rank,
+          ),
           _ => '',
         },
       ),
     );
   }
+
+  static String _windLetter(AppLocalizations l10n, int rank) => [
+    l10n.mahjongWindEastLetter,
+    l10n.mahjongWindSouthLetter,
+    l10n.mahjongWindWestLetter,
+    l10n.mahjongWindNorthLetter,
+  ][rank - 1];
 }
 
 /// The name of [face] for screen readers.
@@ -140,6 +144,7 @@ class _TilePainter extends CustomPainter {
     required this.face,
     required this.faceSize,
     required this.depth,
+    required this.style,
     required this.selected,
     required this.dimmed,
     required this.windLetter,
@@ -148,6 +153,7 @@ class _TilePainter extends CustomPainter {
   final TileFace face;
   final Size faceSize;
   final double depth;
+  final TileStyle style;
   final bool selected;
   final bool dimmed;
   final String windLetter;
@@ -163,18 +169,6 @@ class _TilePainter extends CustomPainter {
     Icons.wb_sunny,
     Icons.eco,
     Icons.ac_unit,
-  ];
-  static const _flowerColors = [
-    Color(0xFFD81B60),
-    Color(0xFF8E24AA),
-    Color(0xFFEF8F00),
-    Color(0xFF2E7D32),
-  ];
-  static const _seasonColors = [
-    Color(0xFF43A047),
-    Color(0xFFF57C00),
-    Color(0xFFB5541C),
-    Color(0xFF1E88E5),
   ];
 
   @override
@@ -193,24 +187,18 @@ class _TilePainter extends CustomPainter {
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, depth * 0.9 + 1),
     );
 
-    // The thickness: the jade back, then the ivory front, step by step.
+    // The thickness: the back, then the body, step by step.
     final steps = max(2, (depth / 1.5).ceil());
+    final [back, backTop] = style.backColors;
+    final [body, bodyTop] = style.bodyColors;
     for (var i = steps; i > 0; i--) {
       final t = i / steps;
       canvas.drawRRect(
         at(depth * t),
         Paint()
           ..color = t > 0.55
-              ? Color.lerp(
-                  const Color(0xFF0E5E4E),
-                  const Color(0xFF14806A),
-                  (1 - t) / 0.45,
-                )!
-              : Color.lerp(
-                  const Color(0xFFCDBB8E),
-                  const Color(0xFFE2D4AE),
-                  1 - t / 0.55,
-                )!,
+              ? Color.lerp(back, backTop, (1 - t) / 0.45)!
+              : Color.lerp(body, bodyTop, 1 - t / 0.55)!,
       );
     }
 
@@ -221,17 +209,24 @@ class _TilePainter extends CustomPainter {
         ..shader = LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: selected
-              ? const [Color(0xFFFFF4C9), Color(0xFFFFD970)]
-              : const [Color(0xFFFFFDF4), Color(0xFFF0E6CC)],
+          colors: selected ? style.selectedFaceColors : style.faceColors,
         ).createShader(faceRect),
     );
+    if (style.rimColor case final rim?) {
+      canvas.drawRRect(
+        faceRRect.deflate(max(1.5, w * 0.055)),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = max(0.8, w * 0.025)
+          ..color = rim,
+      );
+    }
     canvas.drawRRect(
       faceRRect.deflate(0.5),
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = selected ? max(1.5, w * 0.05) : max(0.8, w * 0.02)
-        ..color = selected ? const Color(0xFFE0A100) : const Color(0xFFBFAE84),
+        ..color = selected ? style.selectedEdgeColor : style.edgeColor,
     );
 
     final art = Rect.fromLTRB(
@@ -246,9 +241,17 @@ class _TilePainter extends CustomPainter {
     canvas.restore();
 
     if (dimmed && !selected) {
-      canvas.drawRRect(faceRRect, Paint()..color = const Color(0x1A1B2440));
+      canvas.drawRRect(faceRRect, Paint()..color = style.dimColor);
     }
   }
+
+  TileInk get _ink => style.ink;
+
+  Color _color(_Hue hue) => switch (hue) {
+    _Hue.red => _ink.red,
+    _Hue.green => _ink.green,
+    _Hue.blue => _ink.blue,
+  };
 
   void _paintFace(Canvas canvas, Rect art) {
     switch (face.suit) {
@@ -264,7 +267,7 @@ class _TilePainter extends CustomPainter {
           windLetter,
           art.center,
           art.height * 0.62,
-          _ink,
+          _ink.black,
           weight: FontWeight.w900,
         );
       case TileSuit.dragons:
@@ -275,8 +278,8 @@ class _TilePainter extends CustomPainter {
           art,
           face.rank,
           _flowerIcons[face.rank - 1],
-          _flowerColors[face.rank - 1],
-          _flowerInk,
+          _ink.flowers[face.rank - 1],
+          _ink.flowerMark,
         );
       case TileSuit.seasons:
         _paintFlowerOrSeason(
@@ -284,8 +287,8 @@ class _TilePainter extends CustomPainter {
           art,
           face.rank,
           _seasonIcons[face.rank - 1],
-          _seasonColors[face.rank - 1],
-          _seasonInk,
+          _ink.seasons[face.rank - 1],
+          _ink.seasonMark,
         );
     }
   }
@@ -294,60 +297,55 @@ class _TilePainter extends CustomPainter {
   static Offset _in(Rect art, double x, double y) =>
       Offset(art.left + art.width * x, art.top + art.height * y);
 
-  static const _dotLayouts = <List<(double, double, Color)>>[
-    [(0.5, 0.5, _red)],
-    [(0.5, 0.26, _green), (0.5, 0.74, _blue)],
-    [(0.2, 0.18, _blue), (0.5, 0.5, _red), (0.8, 0.82, _green)],
+  static const _dotLayouts = <List<(double, double, _Hue)>>[
+    [(0.5, 0.5, _r)],
+    [(0.5, 0.26, _g), (0.5, 0.74, _b)],
+    [(0.2, 0.18, _b), (0.5, 0.5, _r), (0.8, 0.82, _g)],
+    [(0.27, 0.27, _b), (0.73, 0.27, _g), (0.27, 0.73, _g), (0.73, 0.73, _b)],
     [
-      (0.27, 0.27, _blue),
-      (0.73, 0.27, _green),
-      (0.27, 0.73, _green),
-      (0.73, 0.73, _blue),
+      (0.24, 0.2, _b),
+      (0.76, 0.2, _g),
+      (0.5, 0.5, _r),
+      (0.24, 0.8, _g),
+      (0.76, 0.8, _b),
     ],
     [
-      (0.24, 0.2, _blue),
-      (0.76, 0.2, _green),
-      (0.5, 0.5, _red),
-      (0.24, 0.8, _green),
-      (0.76, 0.8, _blue),
+      (0.28, 0.17, _g),
+      (0.72, 0.17, _g),
+      (0.28, 0.5, _r),
+      (0.72, 0.5, _r),
+      (0.28, 0.83, _r),
+      (0.72, 0.83, _r),
     ],
     [
-      (0.28, 0.17, _green),
-      (0.72, 0.17, _green),
-      (0.28, 0.5, _red),
-      (0.72, 0.5, _red),
-      (0.28, 0.83, _red),
-      (0.72, 0.83, _red),
+      (0.18, 0.1, _g),
+      (0.5, 0.21, _g),
+      (0.82, 0.32, _g),
+      (0.3, 0.6, _r),
+      (0.7, 0.6, _r),
+      (0.3, 0.88, _r),
+      (0.7, 0.88, _r),
     ],
     [
-      (0.18, 0.1, _green),
-      (0.5, 0.21, _green),
-      (0.82, 0.32, _green),
-      (0.3, 0.6, _red),
-      (0.7, 0.6, _red),
-      (0.3, 0.88, _red),
-      (0.7, 0.88, _red),
+      (0.28, 0.12, _b),
+      (0.72, 0.12, _b),
+      (0.28, 0.37, _b),
+      (0.72, 0.37, _b),
+      (0.28, 0.63, _b),
+      (0.72, 0.63, _b),
+      (0.28, 0.88, _b),
+      (0.72, 0.88, _b),
     ],
     [
-      (0.28, 0.12, _blue),
-      (0.72, 0.12, _blue),
-      (0.28, 0.37, _blue),
-      (0.72, 0.37, _blue),
-      (0.28, 0.63, _blue),
-      (0.72, 0.63, _blue),
-      (0.28, 0.88, _blue),
-      (0.72, 0.88, _blue),
-    ],
-    [
-      (0.18, 0.17, _blue),
-      (0.5, 0.17, _blue),
-      (0.82, 0.17, _blue),
-      (0.18, 0.5, _red),
-      (0.5, 0.5, _red),
-      (0.82, 0.5, _red),
-      (0.18, 0.83, _green),
-      (0.5, 0.83, _green),
-      (0.82, 0.83, _green),
+      (0.18, 0.17, _b),
+      (0.5, 0.17, _b),
+      (0.82, 0.17, _b),
+      (0.18, 0.5, _r),
+      (0.5, 0.5, _r),
+      (0.82, 0.5, _r),
+      (0.18, 0.83, _g),
+      (0.5, 0.83, _g),
+      (0.82, 0.83, _g),
     ],
   ];
 
@@ -364,22 +362,22 @@ class _TilePainter extends CustomPainter {
   ];
 
   /// Coins: a colored ring, a white ring, and a colored heart.
-  static void _paintDots(Canvas canvas, Rect art, int rank) {
+  void _paintDots(Canvas canvas, Rect art, int rank) {
     final unit = min(art.width, art.height / 1.15);
     final radius = unit * _dotSizes[rank - 1];
-    for (final (x, y, color) in _dotLayouts[rank - 1]) {
+    for (final (x, y, hue) in _dotLayouts[rank - 1]) {
       final center = _in(art, x, y);
       if (rank == 1) {
-        _coin(canvas, center, radius, _green);
-        _coin(canvas, center, radius * 0.62, _red);
-        _coin(canvas, center, radius * 0.3, _blue);
+        _coin(canvas, center, radius, _ink.green);
+        _coin(canvas, center, radius * 0.62, _ink.red);
+        _coin(canvas, center, radius * 0.3, _ink.blue);
       } else {
-        _coin(canvas, center, radius, color);
+        _coin(canvas, center, radius, _color(hue));
       }
     }
   }
 
-  static void _coin(Canvas canvas, Offset center, double radius, Color color) {
+  void _coin(Canvas canvas, Offset center, double radius, Color color) {
     canvas.drawCircle(center, radius, Paint()..color = color);
     canvas.drawCircle(
       center,
@@ -387,84 +385,75 @@ class _TilePainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = radius * 0.16
-        ..color = const Color(0xFFFFFDF4),
+        ..color = _ink.hollow,
     );
-    canvas.drawCircle(
-      center,
-      radius * 0.28,
-      Paint()..color = const Color(0xFFFFFDF4),
-    );
+    canvas.drawCircle(center, radius * 0.28, Paint()..color = _ink.hollow);
   }
 
-  static const _bambooLayouts = <List<(double, double, Color)>>[
-    [(0.5, 0.5, _green)],
-    [(0.5, 0.27, _green), (0.5, 0.73, _blue)],
-    [(0.5, 0.27, _green), (0.3, 0.73, _blue), (0.7, 0.73, _blue)],
+  static const _bambooLayouts = <List<(double, double, _Hue)>>[
+    [(0.5, 0.5, _g)],
+    [(0.5, 0.27, _g), (0.5, 0.73, _b)],
+    [(0.5, 0.27, _g), (0.3, 0.73, _b), (0.7, 0.73, _b)],
+    [(0.3, 0.27, _g), (0.7, 0.27, _b), (0.3, 0.73, _b), (0.7, 0.73, _g)],
     [
-      (0.3, 0.27, _green),
-      (0.7, 0.27, _blue),
-      (0.3, 0.73, _blue),
-      (0.7, 0.73, _green),
+      (0.22, 0.27, _g),
+      (0.78, 0.27, _b),
+      (0.5, 0.5, _r),
+      (0.22, 0.73, _b),
+      (0.78, 0.73, _g),
     ],
     [
-      (0.22, 0.27, _green),
-      (0.78, 0.27, _blue),
-      (0.5, 0.5, _red),
-      (0.22, 0.73, _blue),
-      (0.78, 0.73, _green),
+      (0.2, 0.27, _g),
+      (0.5, 0.27, _g),
+      (0.8, 0.27, _g),
+      (0.2, 0.73, _b),
+      (0.5, 0.73, _b),
+      (0.8, 0.73, _b),
     ],
     [
-      (0.2, 0.27, _green),
-      (0.5, 0.27, _green),
-      (0.8, 0.27, _green),
-      (0.2, 0.73, _blue),
-      (0.5, 0.73, _blue),
-      (0.8, 0.73, _blue),
+      (0.5, 0.15, _r),
+      (0.2, 0.5, _g),
+      (0.5, 0.5, _g),
+      (0.8, 0.5, _g),
+      (0.2, 0.85, _g),
+      (0.5, 0.85, _g),
+      (0.8, 0.85, _g),
     ],
     [
-      (0.5, 0.15, _red),
-      (0.2, 0.5, _green),
-      (0.5, 0.5, _green),
-      (0.8, 0.5, _green),
-      (0.2, 0.85, _green),
-      (0.5, 0.85, _green),
-      (0.8, 0.85, _green),
+      (0.14, 0.27, _g),
+      (0.38, 0.27, _g),
+      (0.62, 0.27, _g),
+      (0.86, 0.27, _g),
+      (0.14, 0.73, _b),
+      (0.38, 0.73, _b),
+      (0.62, 0.73, _b),
+      (0.86, 0.73, _b),
     ],
     [
-      (0.14, 0.27, _green),
-      (0.38, 0.27, _green),
-      (0.62, 0.27, _green),
-      (0.86, 0.27, _green),
-      (0.14, 0.73, _blue),
-      (0.38, 0.73, _blue),
-      (0.62, 0.73, _blue),
-      (0.86, 0.73, _blue),
-    ],
-    [
-      (0.2, 0.17, _green),
-      (0.5, 0.17, _red),
-      (0.8, 0.17, _blue),
-      (0.2, 0.5, _green),
-      (0.5, 0.5, _red),
-      (0.8, 0.5, _blue),
-      (0.2, 0.83, _green),
-      (0.5, 0.83, _red),
-      (0.8, 0.83, _blue),
+      (0.2, 0.17, _g),
+      (0.5, 0.17, _r),
+      (0.8, 0.17, _b),
+      (0.2, 0.5, _g),
+      (0.5, 0.5, _r),
+      (0.8, 0.5, _b),
+      (0.2, 0.83, _g),
+      (0.5, 0.83, _r),
+      (0.8, 0.83, _b),
     ],
   ];
 
   /// Sticks with joints. The one of bamboo 1 is big, with leaves.
-  static void _paintBamboo(Canvas canvas, Rect art, int rank) {
+  void _paintBamboo(Canvas canvas, Rect art, int rank) {
     final rows = rank == 7 || rank == 9 ? 3 : (rank == 1 ? 1 : 2);
     final height = rank == 1 ? art.height * 0.78 : art.height / rows * 0.82;
     final width = rank == 1
         ? art.width * 0.24
         : min(art.width * (rank == 8 ? 0.15 : 0.18), height * 0.42);
-    for (final (x, y, color) in _bambooLayouts[rank - 1]) {
-      _stick(canvas, _in(art, x, y), width, height, color);
+    for (final (x, y, hue) in _bambooLayouts[rank - 1]) {
+      _stick(canvas, _in(art, x, y), width, height, _color(hue));
     }
     if (rank == 1) {
-      final leaf = Paint()..color = _green;
+      final leaf = Paint()..color = _ink.green;
       for (final side in [-1.0, 1.0]) {
         final base = _in(art, 0.5 + side * 0.1, 0.42);
         final path = Path()
@@ -486,7 +475,7 @@ class _TilePainter extends CustomPainter {
     }
   }
 
-  static void _stick(
+  void _stick(
     Canvas canvas,
     Offset center,
     double width,
@@ -509,7 +498,7 @@ class _TilePainter extends CustomPainter {
       light,
     );
     final joint = Paint()
-      ..color = const Color(0xCCFFFDF4)
+      ..color = _ink.hollow.withValues(alpha: 0.8)
       ..strokeWidth = max(0.8, height * 0.05);
     for (final t in [0.5]) {
       final y = rect.top + rect.height * t;
@@ -524,7 +513,7 @@ class _TilePainter extends CustomPainter {
       '$rank',
       _in(art, 0.5, 0.27),
       art.height * 0.5,
-      _red,
+      _ink.red,
       weight: FontWeight.w900,
     );
     final mark = Rect.fromLTRB(
@@ -534,7 +523,7 @@ class _TilePainter extends CustomPainter {
       art.bottom - art.height * 0.02,
     );
     final ink = Paint()
-      ..color = _ink
+      ..color = _ink.black
       ..style = PaintingStyle.stroke
       ..strokeWidth = max(1.0, art.width * 0.075)
       ..strokeCap = StrokeCap.round
@@ -566,12 +555,12 @@ class _TilePainter extends CustomPainter {
 
   /// Red: a box with a stroke through it. Green: a leaf in a ring. White: a
   /// blue frame.
-  static void _paintDragon(Canvas canvas, Rect art, int rank) {
+  void _paintDragon(Canvas canvas, Rect art, int rank) {
     final unit = art.width;
     switch (rank) {
       case 1:
         final stroke = Paint()
-          ..color = _red
+          ..color = _ink.red
           ..style = PaintingStyle.stroke
           ..strokeWidth = unit * 0.13
           ..strokeJoin = StrokeJoin.round;
@@ -598,7 +587,7 @@ class _TilePainter extends CustomPainter {
           center,
           radius,
           Paint()
-            ..color = _green
+            ..color = _ink.green
             ..style = PaintingStyle.stroke
             ..strokeWidth = unit * 0.09,
         );
@@ -618,12 +607,12 @@ class _TilePainter extends CustomPainter {
             top.dx,
             top.dy,
           );
-        canvas.drawPath(leaf, Paint()..color = _green);
+        canvas.drawPath(leaf, Paint()..color = _ink.green);
         canvas.drawLine(
           top.translate(0, radius * 0.2),
           bottom.translate(0, -radius * 0.2),
           Paint()
-            ..color = const Color(0xFFFFFDF4)
+            ..color = _ink.hollow
             ..strokeWidth = unit * 0.05
             ..strokeCap = StrokeCap.round,
         );
@@ -634,7 +623,7 @@ class _TilePainter extends CustomPainter {
           height: art.height * 0.84,
         );
         final paint = Paint()
-          ..color = _blue
+          ..color = _ink.blue
           ..style = PaintingStyle.stroke
           ..strokeWidth = unit * 0.07;
         canvas.drawRRect(
@@ -728,6 +717,7 @@ class _TilePainter extends CustomPainter {
       old.face != face ||
       old.faceSize != faceSize ||
       old.depth != depth ||
+      old.style != style ||
       old.selected != selected ||
       old.dimmed != dimmed ||
       old.windLetter != windLetter;

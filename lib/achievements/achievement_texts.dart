@@ -1,7 +1,7 @@
 import '../l10n/app_localizations.dart';
 
 // Ids are strings, so a switch cannot be checked for every id at compile
-// time: a test checks that each achievement and card back has its texts.
+// time: a test checks that each achievement and skin has its texts.
 // An id without texts shows the id itself.
 
 String achievementTitle(String id, AppLocalizations l10n) => switch (id) {
@@ -13,6 +13,27 @@ String achievementTitle(String id, AppLocalizations l10n) => switch (id) {
   'klondike.noUndoWin' => l10n.achievementKlondikeNoUndoWinTitle,
   'klondike.streak3' => l10n.achievementKlondikeStreak3Title,
   'klondike.hardWin' => l10n.achievementKlondikeHardWinTitle,
+  'freecell.firstWin' => l10n.achievementFreecellFirstWinTitle,
+  'freecell.wins10' => l10n.achievementFreecellWins10Title,
+  'freecell.hardWin' => l10n.achievementFreecellHardWinTitle,
+  'freecell.noUndoWin' => l10n.achievementFreecellNoUndoWinTitle,
+  'freecell.oneCellWin' => l10n.achievementFreecellOneCellWinTitle,
+  'freecell.fastWin' => l10n.achievementFreecellFastWinTitle,
+  'spider.firstWin' => l10n.achievementSpiderFirstWinTitle,
+  'spider.twoSuitsWin' => l10n.achievementSpiderTwoSuitsWinTitle,
+  'spider.fourSuitsWin' => l10n.achievementSpiderFourSuitsWinTitle,
+  'spider.wins10' => l10n.achievementSpiderWins10Title,
+  'spider.noUndoWin' => l10n.achievementSpiderNoUndoWinTitle,
+  'spider.streak3' => l10n.achievementSpiderStreak3Title,
+  'mahjong.firstWin' => l10n.achievementMahjongFirstWinTitle,
+  'mahjong.turtleWin' => l10n.achievementMahjongTurtleWinTitle,
+  'mahjong.hardWin' => l10n.achievementMahjongHardWinTitle,
+  'mahjong.noHintWin' => l10n.achievementMahjongNoHintWinTitle,
+  'mahjong.combo10' => l10n.achievementMahjongCombo10Title,
+  'mahjong.wins10' => l10n.achievementMahjongWins10Title,
+  'all.everyGame' => l10n.achievementAllEveryGameTitle,
+  'all.wins100' => l10n.achievementAllWins100Title,
+  'all.hours10' => l10n.achievementAllHours10Title,
   _ => id,
 };
 
@@ -25,6 +46,27 @@ String achievementDescription(String id, AppLocalizations l10n) => switch (id) {
   'klondike.noUndoWin' => l10n.achievementKlondikeNoUndoWinDescription,
   'klondike.streak3' => l10n.achievementKlondikeStreak3Description,
   'klondike.hardWin' => l10n.achievementKlondikeHardWinDescription,
+  'freecell.firstWin' => l10n.achievementFreecellFirstWinDescription,
+  'freecell.wins10' => l10n.achievementFreecellWins10Description,
+  'freecell.hardWin' => l10n.achievementFreecellHardWinDescription,
+  'freecell.noUndoWin' => l10n.achievementFreecellNoUndoWinDescription,
+  'freecell.oneCellWin' => l10n.achievementFreecellOneCellWinDescription,
+  'freecell.fastWin' => l10n.achievementFreecellFastWinDescription,
+  'spider.firstWin' => l10n.achievementSpiderFirstWinDescription,
+  'spider.twoSuitsWin' => l10n.achievementSpiderTwoSuitsWinDescription,
+  'spider.fourSuitsWin' => l10n.achievementSpiderFourSuitsWinDescription,
+  'spider.wins10' => l10n.achievementSpiderWins10Description,
+  'spider.noUndoWin' => l10n.achievementSpiderNoUndoWinDescription,
+  'spider.streak3' => l10n.achievementSpiderStreak3Description,
+  'mahjong.firstWin' => l10n.achievementMahjongFirstWinDescription,
+  'mahjong.turtleWin' => l10n.achievementMahjongTurtleWinDescription,
+  'mahjong.hardWin' => l10n.achievementMahjongHardWinDescription,
+  'mahjong.noHintWin' => l10n.achievementMahjongNoHintWinDescription,
+  'mahjong.combo10' => l10n.achievementMahjongCombo10Description,
+  'mahjong.wins10' => l10n.achievementMahjongWins10Description,
+  'all.everyGame' => l10n.achievementAllEveryGameDescription,
+  'all.wins100' => l10n.achievementAllWins100Description,
+  'all.hours10' => l10n.achievementAllHours10Description,
   _ => id,
 };
 
@@ -38,5 +80,31 @@ String cardBackName(String id, AppLocalizations l10n) => switch (id) {
   'royal' => l10n.cardBackRoyal,
   'gold' => l10n.cardBackGold,
   'obsidian' => l10n.cardBackObsidian,
+  'azure' => l10n.cardBackAzure,
+  'circuit' => l10n.cardBackCircuit,
+  'labyrinth' => l10n.cardBackLabyrinth,
+  'ivory' => l10n.cardBackIvory,
+  'zen' => l10n.cardBackZen,
+  'lightning' => l10n.cardBackLightning,
+  'web' => l10n.cardBackWeb,
+  'twilight' => l10n.cardBackTwilight,
+  'venom' => l10n.cardBackVenom,
+  'silk' => l10n.cardBackSilk,
+  'steel' => l10n.cardBackSteel,
+  'amber' => l10n.cardBackAmber,
+  'prism' => l10n.cardBackPrism,
+  'platinum' => l10n.cardBackPlatinum,
+  'cosmos' => l10n.cardBackCosmos,
+  _ => id,
+};
+
+String tileStyleName(String id, AppLocalizations l10n) => switch (id) {
+  'classic' => l10n.tileStyleClassic,
+  'jade' => l10n.tileStyleJade,
+  'bamboo' => l10n.tileStyleBamboo,
+  'ebony' => l10n.tileStyleEbony,
+  'coral' => l10n.tileStyleCoral,
+  'sapphire' => l10n.tileStyleSapphire,
+  'golden' => l10n.tileStyleGolden,
   _ => id,
 };

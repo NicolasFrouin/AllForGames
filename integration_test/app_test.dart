@@ -165,7 +165,7 @@ void main() {
   ) async {
     await startApp(tester, records: [wonGame()]);
 
-    await tester.tap(find.byKey(const ValueKey('card-backs-button')));
+    await tester.tap(find.byKey(const ValueKey('skins-button')));
     await tester.pumpAndSettle();
     final crimson = find.byKey(const ValueKey('card-back-crimson'));
     await tester.tap(crimson);

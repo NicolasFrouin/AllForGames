@@ -2,6 +2,7 @@ import 'package:all_for_games/achievements/achievement_texts.dart';
 import 'package:all_for_games/achievements/achievements.dart';
 import 'package:all_for_games/l10n/app_localizations.dart';
 import 'package:all_for_games/skins/card_backs.dart';
+import 'package:all_for_games/skins/tile_styles.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Not empty, and not the id that an id without texts shows.
@@ -22,6 +23,12 @@ void main() {
     test('every card back has a name in $language', () {
       for (final CardBackSkin(:id) in cardBacks) {
         expect(cardBackName(id, l10n), isTextOf(id), reason: id);
+      }
+    });
+
+    test('every tile style has a name in $language', () {
+      for (final TileStyle(:id) in tileStyles) {
+        expect(tileStyleName(id, l10n), isTextOf(id), reason: id);
       }
     });
   }

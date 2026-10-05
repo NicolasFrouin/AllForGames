@@ -28,8 +28,8 @@ void main() {
     '/stats/spider': Size(360, 640),
     '/stats/klondike': Size(360, 640),
     '/stats/freecell': Size(360, 640),
-    '/achievements': Size(360, 5000),
-    '/card-backs': Size(360, 1600),
+    '/achievements': Size(360, 19500),
+    '/skins': Size(360, 7500),
   };
   for (final MapEntry(key: location, value: size) in pages.entries) {
     for (final language in ['en', 'fr']) {
@@ -53,8 +53,8 @@ void main() {
                 ),
               ]),
               SettingsStore.localeKey: language,
-              // The win unlocks it: the card backs page shows a selected,
-              // an unlocked and a locked back.
+              // The win unlocks it: the skins page shows a selected, an
+              // unlocked and a locked back.
               SettingsStore.cardBackKey: 'crimson',
             });
             await tester.pumpWidget(

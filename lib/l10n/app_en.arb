@@ -641,6 +641,10 @@
       }
     }
   },
+  "achievementsAllGames": "All games",
+  "@achievementsAllGames": {
+    "description": "Achievements page: title of the group of the achievements reached with any game."
+  },
   "achievementUnlocked": "Achievement unlocked!",
   "@achievementUnlocked": {
     "description": "Heading of an achievement that the game just won unlocked, in the win dialog."
@@ -665,6 +669,16 @@
       }
     }
   },
+  "achievementRewardTiles": "Reward: {name} tiles",
+  "@achievementRewardTiles": {
+    "description": "Achievements page: the Mahjong tile style that an achievement unlocks.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Jade"
+      }
+    }
+  },
   "newCardBack": "New card back: {name}",
   "@newCardBack": {
     "description": "Win dialog: the card back that a just unlocked achievement gives.",
@@ -675,21 +689,39 @@
       }
     }
   },
+  "newTileStyle": "New tile style: {name}",
+  "@newTileStyle": {
+    "description": "Win dialog: the Mahjong tile style that a just unlocked achievement gives.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Jade"
+      }
+    }
+  },
   "cardBacks": "Card backs",
   "@cardBacks": {
-    "description": "Title of the card backs page, and tooltip of its button on the hub."
+    "description": "Skins page: title of the section of the card backs."
   },
-  "cardBackSelected": "Selected",
-  "@cardBackSelected": {
-    "description": "Card backs page: label of the card back the games use."
+  "skins": "Skins",
+  "@skins": {
+    "description": "Title of the skins page (card backs and Mahjong tiles), and tooltip of its button on the hub."
   },
-  "cardBackLocked": "Locked",
-  "@cardBackLocked": {
-    "description": "Card backs page: screen reader label of the lock on a card back not unlocked yet."
+  "mahjongTileStyles": "Mahjong tiles",
+  "@mahjongTileStyles": {
+    "description": "Skins page: title of the section of the Mahjong tile styles."
   },
-  "cardBackUnlockWith": "Unlock it with: {achievement}",
-  "@cardBackUnlockWith": {
-    "description": "Card backs page: the achievement that unlocks a locked card back.",
+  "skinSelected": "Selected",
+  "@skinSelected": {
+    "description": "Skins page: label of the card back or tile style the games use."
+  },
+  "skinLocked": "Locked",
+  "@skinLocked": {
+    "description": "Skins page: screen reader label of the lock on a skin not unlocked yet."
+  },
+  "skinUnlockWith": "Unlock it with: {achievement}",
+  "@skinUnlockWith": {
+    "description": "Skins page: the achievement that unlocks a locked skin.",
     "placeholders": {
       "achievement": {
         "type": "String",
@@ -732,6 +764,94 @@
   "cardBackObsidian": "Obsidian",
   "@cardBackObsidian": {
     "description": "Name of a card back design, shown on the card backs page and as a reward."
+  },
+  "cardBackAzure": "Azure",
+  "@cardBackAzure": {
+    "description": "Name of a card back design, shown on the skins page and as a reward."
+  },
+  "cardBackCircuit": "Circuit",
+  "@cardBackCircuit": {
+    "description": "Name of a card back design, shown on the skins page and as a reward."
+  },
+  "cardBackLabyrinth": "Labyrinth",
+  "@cardBackLabyrinth": {
+    "description": "Name of a card back design, shown on the skins page and as a reward."
+  },
+  "cardBackIvory": "Ivory",
+  "@cardBackIvory": {
+    "description": "Name of a card back design, shown on the skins page and as a reward."
+  },
+  "cardBackZen": "Zen",
+  "@cardBackZen": {
+    "description": "Name of a card back design, shown on the skins page and as a reward."
+  },
+  "cardBackLightning": "Lightning",
+  "@cardBackLightning": {
+    "description": "Name of a card back design, shown on the skins page and as a reward."
+  },
+  "cardBackWeb": "Web",
+  "@cardBackWeb": {
+    "description": "Name of a card back design, shown on the skins page and as a reward."
+  },
+  "cardBackTwilight": "Twilight",
+  "@cardBackTwilight": {
+    "description": "Name of a card back design, shown on the skins page and as a reward."
+  },
+  "cardBackVenom": "Venom",
+  "@cardBackVenom": {
+    "description": "Name of a card back design, shown on the skins page and as a reward."
+  },
+  "cardBackSilk": "Silk",
+  "@cardBackSilk": {
+    "description": "Name of a card back design, shown on the skins page and as a reward."
+  },
+  "cardBackSteel": "Steel",
+  "@cardBackSteel": {
+    "description": "Name of a card back design, shown on the skins page and as a reward."
+  },
+  "cardBackAmber": "Amber",
+  "@cardBackAmber": {
+    "description": "Name of a card back design, shown on the skins page and as a reward."
+  },
+  "cardBackPrism": "Prism",
+  "@cardBackPrism": {
+    "description": "Name of a card back design, shown on the skins page and as a reward."
+  },
+  "cardBackPlatinum": "Platinum",
+  "@cardBackPlatinum": {
+    "description": "Name of a card back design, shown on the skins page and as a reward."
+  },
+  "cardBackCosmos": "Cosmos",
+  "@cardBackCosmos": {
+    "description": "Name of a card back design, shown on the skins page and as a reward."
+  },
+  "tileStyleClassic": "Classic",
+  "@tileStyleClassic": {
+    "description": "Name of a Mahjong tile style, shown on the skins page and as a reward."
+  },
+  "tileStyleJade": "Jade",
+  "@tileStyleJade": {
+    "description": "Name of a Mahjong tile style, shown on the skins page and as a reward."
+  },
+  "tileStyleBamboo": "Bamboo",
+  "@tileStyleBamboo": {
+    "description": "Name of a Mahjong tile style, shown on the skins page and as a reward."
+  },
+  "tileStyleEbony": "Ebony",
+  "@tileStyleEbony": {
+    "description": "Name of a Mahjong tile style, shown on the skins page and as a reward."
+  },
+  "tileStyleCoral": "Coral",
+  "@tileStyleCoral": {
+    "description": "Name of a Mahjong tile style, shown on the skins page and as a reward."
+  },
+  "tileStyleSapphire": "Sapphire",
+  "@tileStyleSapphire": {
+    "description": "Name of a Mahjong tile style, shown on the skins page and as a reward."
+  },
+  "tileStyleGolden": "Golden",
+  "@tileStyleGolden": {
+    "description": "Name of a Mahjong tile style, shown on the skins page and as a reward."
   },
   "achievementKlondikeFirstWinTitle": "First win",
   "@achievementKlondikeFirstWinTitle": {
@@ -796,6 +916,174 @@
   "achievementKlondikeHardWinDescription": "Win a Hard game.",
   "@achievementKlondikeHardWinDescription": {
     "description": "How to unlock the Klondike achievement for a won Hard game."
+  },
+  "achievementFreecellFirstWinTitle": "Breaking free",
+  "@achievementFreecellFirstWinTitle": {
+    "description": "Title of the FreeCell achievement for the first won game."
+  },
+  "achievementFreecellFirstWinDescription": "Win a game of FreeCell.",
+  "@achievementFreecellFirstWinDescription": {
+    "description": "How to unlock the FreeCell achievement for the first won game."
+  },
+  "achievementFreecellWins10Title": "Cell master",
+  "@achievementFreecellWins10Title": {
+    "description": "Title of the FreeCell achievement for 10 won games."
+  },
+  "achievementFreecellWins10Description": "Win 10 games of FreeCell.",
+  "@achievementFreecellWins10Description": {
+    "description": "How to unlock the FreeCell achievement for 10 won games."
+  },
+  "achievementFreecellHardWinTitle": "Mastermind",
+  "@achievementFreecellHardWinTitle": {
+    "description": "Title of the FreeCell achievement for a won Hard game."
+  },
+  "achievementFreecellHardWinDescription": "Win a Hard FreeCell game.",
+  "@achievementFreecellHardWinDescription": {
+    "description": "How to unlock the FreeCell achievement for a won Hard game."
+  },
+  "achievementFreecellNoUndoWinTitle": "Clean sweep",
+  "@achievementFreecellNoUndoWinTitle": {
+    "description": "Title of the FreeCell achievement for a game won without undo."
+  },
+  "achievementFreecellNoUndoWinDescription": "Win a FreeCell game without any undo.",
+  "@achievementFreecellNoUndoWinDescription": {
+    "description": "How to unlock the FreeCell achievement for a game won without undo."
+  },
+  "achievementFreecellOneCellWinTitle": "Minimalist",
+  "@achievementFreecellOneCellWinTitle": {
+    "description": "Title of the FreeCell achievement for a game won with at most one free cell used at a time."
+  },
+  "achievementFreecellOneCellWinDescription": "Win a FreeCell game using at most one free cell at a time.",
+  "@achievementFreecellOneCellWinDescription": {
+    "description": "How to unlock the FreeCell achievement for a game won with at most one free cell used at a time."
+  },
+  "achievementFreecellFastWinTitle": "Quick thinker",
+  "@achievementFreecellFastWinTitle": {
+    "description": "Title of the FreeCell achievement for a game won in under 4 minutes."
+  },
+  "achievementFreecellFastWinDescription": "Win a FreeCell game in under 4 minutes.",
+  "@achievementFreecellFastWinDescription": {
+    "description": "How to unlock the FreeCell achievement for a game won in under 4 minutes."
+  },
+  "achievementSpiderFirstWinTitle": "Web weaver",
+  "@achievementSpiderFirstWinTitle": {
+    "description": "Title of the Spider achievement for the first won game."
+  },
+  "achievementSpiderFirstWinDescription": "Win a game of Spider.",
+  "@achievementSpiderFirstWinDescription": {
+    "description": "How to unlock the Spider achievement for the first won game."
+  },
+  "achievementSpiderTwoSuitsWinTitle": "Two-tone",
+  "@achievementSpiderTwoSuitsWinTitle": {
+    "description": "Title of the Spider achievement for a won 2-suit game."
+  },
+  "achievementSpiderTwoSuitsWinDescription": "Win a 2-suit Spider game.",
+  "@achievementSpiderTwoSuitsWinDescription": {
+    "description": "How to unlock the Spider achievement for a won 2-suit game."
+  },
+  "achievementSpiderFourSuitsWinTitle": "Arachnid",
+  "@achievementSpiderFourSuitsWinTitle": {
+    "description": "Title of the Spider achievement for a won 4-suit game."
+  },
+  "achievementSpiderFourSuitsWinDescription": "Win a 4-suit Spider game.",
+  "@achievementSpiderFourSuitsWinDescription": {
+    "description": "How to unlock the Spider achievement for a won 4-suit game."
+  },
+  "achievementSpiderWins10Title": "Silk road",
+  "@achievementSpiderWins10Title": {
+    "description": "Title of the Spider achievement for 10 won games."
+  },
+  "achievementSpiderWins10Description": "Win 10 games of Spider.",
+  "@achievementSpiderWins10Description": {
+    "description": "How to unlock the Spider achievement for 10 won games."
+  },
+  "achievementSpiderNoUndoWinTitle": "Steady hands",
+  "@achievementSpiderNoUndoWinTitle": {
+    "description": "Title of the Spider achievement for a game won without undo."
+  },
+  "achievementSpiderNoUndoWinDescription": "Win a Spider game without any undo.",
+  "@achievementSpiderNoUndoWinDescription": {
+    "description": "How to unlock the Spider achievement for a game won without undo."
+  },
+  "achievementSpiderStreak3Title": "Triple thread",
+  "@achievementSpiderStreak3Title": {
+    "description": "Title of the Spider achievement for 3 games won in a row."
+  },
+  "achievementSpiderStreak3Description": "Win 3 Spider games in a row.",
+  "@achievementSpiderStreak3Description": {
+    "description": "How to unlock the Spider achievement for 3 games won in a row."
+  },
+  "achievementMahjongFirstWinTitle": "Clean table",
+  "@achievementMahjongFirstWinTitle": {
+    "description": "Title of the Mahjong achievement for the first won game."
+  },
+  "achievementMahjongFirstWinDescription": "Win a game of Mahjong.",
+  "@achievementMahjongFirstWinDescription": {
+    "description": "How to unlock the Mahjong achievement for the first won game."
+  },
+  "achievementMahjongTurtleWinTitle": "Turtle power",
+  "@achievementMahjongTurtleWinTitle": {
+    "description": "Title of the Mahjong achievement for a game won on the Turtle layout."
+  },
+  "achievementMahjongTurtleWinDescription": "Win a game on the Turtle.",
+  "@achievementMahjongTurtleWinDescription": {
+    "description": "How to unlock the Mahjong achievement for a game won on the Turtle layout."
+  },
+  "achievementMahjongHardWinTitle": "Dragon tamer",
+  "@achievementMahjongHardWinTitle": {
+    "description": "Title of the Mahjong achievement for a won Hard game."
+  },
+  "achievementMahjongHardWinDescription": "Win a Hard Mahjong game.",
+  "@achievementMahjongHardWinDescription": {
+    "description": "How to unlock the Mahjong achievement for a won Hard game."
+  },
+  "achievementMahjongNoHintWinTitle": "Sharp eyes",
+  "@achievementMahjongNoHintWinTitle": {
+    "description": "Title of the Mahjong achievement for a game won without hints."
+  },
+  "achievementMahjongNoHintWinDescription": "Win a Mahjong game without hints.",
+  "@achievementMahjongNoHintWinDescription": {
+    "description": "How to unlock the Mahjong achievement for a game won without hints."
+  },
+  "achievementMahjongCombo10Title": "Combo master",
+  "@achievementMahjongCombo10Title": {
+    "description": "Title of the Mahjong achievement for a combo of 10 pairs."
+  },
+  "achievementMahjongCombo10Description": "Match 10 pairs in a row in one game.",
+  "@achievementMahjongCombo10Description": {
+    "description": "How to unlock the Mahjong achievement for a combo of 10 pairs."
+  },
+  "achievementMahjongWins10Title": "Tile master",
+  "@achievementMahjongWins10Title": {
+    "description": "Title of the Mahjong achievement for 10 won games."
+  },
+  "achievementMahjongWins10Description": "Win 10 games of Mahjong.",
+  "@achievementMahjongWins10Description": {
+    "description": "How to unlock the Mahjong achievement for 10 won games."
+  },
+  "achievementAllEveryGameTitle": "Collector",
+  "@achievementAllEveryGameTitle": {
+    "description": "Title of the cross-game achievement for a win in each game."
+  },
+  "achievementAllEveryGameDescription": "Win a game of each of the 4 games.",
+  "@achievementAllEveryGameDescription": {
+    "description": "How to unlock the cross-game achievement for a win in each game."
+  },
+  "achievementAllWins100Title": "Centurion",
+  "@achievementAllWins100Title": {
+    "description": "Title of the cross-game achievement for 100 won games, all games together."
+  },
+  "achievementAllWins100Description": "Win 100 games.",
+  "@achievementAllWins100Description": {
+    "description": "How to unlock the cross-game achievement for 100 won games, all games together."
+  },
+  "achievementAllHours10Title": "Devoted",
+  "@achievementAllHours10Title": {
+    "description": "Title of the cross-game achievement for 10 hours of play, all games together."
+  },
+  "achievementAllHours10Description": "Play for 10 hours in total.",
+  "@achievementAllHours10Description": {
+    "description": "How to unlock the cross-game achievement for 10 hours of play, all games together."
   },
   "hint": "Hint",
   "@hint": {

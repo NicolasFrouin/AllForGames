@@ -250,7 +250,7 @@ class _Header extends StatelessWidget {
   }
 }
 
-/// Achievements, card backs and language, at the top right.
+/// Achievements, skins and language, at the top right.
 class _HeaderActions extends StatelessWidget {
   const _HeaderActions({required this.settings});
 
@@ -270,10 +270,10 @@ class _HeaderActions extends StatelessWidget {
           icon: const Icon(Icons.emoji_events_outlined),
         ),
         IconButton(
-          key: const ValueKey('card-backs-button'),
-          tooltip: l10n.cardBacks,
+          key: const ValueKey('skins-button'),
+          tooltip: l10n.skins,
           color: Colors.white70,
-          onPressed: () => context.go('/card-backs'),
+          onPressed: () => context.go('/skins'),
           icon: const Icon(Icons.palette_outlined),
         ),
         _LanguageMenu(settings: settings),

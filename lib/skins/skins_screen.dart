@@ -9,10 +9,12 @@ import '../app_stores.dart';
 import '../l10n/app_localizations.dart';
 import '../stats/game_record.dart';
 import 'card_backs.dart';
+import 'tile_styles.dart';
 
-/// Every card back: tapping an unlocked one selects it for the games.
-class CardBacksScreen extends StatelessWidget {
-  const CardBacksScreen({super.key, required this.stores});
+/// Every card back and Mahjong tile style: tapping an unlocked one selects
+/// it for the games.
+class SkinsScreen extends StatelessWidget {
+  const SkinsScreen({super.key, required this.stores});
 
   final AppStores stores;
 
@@ -20,23 +22,27 @@ class CardBacksScreen extends StatelessWidget {
   static const _spacing = 12.0;
   static const _minTileWidth = 160.0;
 
-  void _select(BuildContext context, CardBackSkin skin) {
-    if (isCardBackUnlocked(skin, stores.achievements)) {
-      stores.settings.setCardBack(skin.id);
+  void _select(
+    BuildContext context, {
+    required String? unlockedBy,
+    required VoidCallback select,
+  }) {
+    if (unlockedBy == null || stores.achievements.isUnlocked(unlockedBy)) {
+      select();
       return;
     }
     final l10n = AppLocalizations.of(context);
-    final title = achievementTitle(skin.unlockedBy!, l10n);
+    final title = achievementTitle(unlockedBy, l10n);
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(l10n.cardBackUnlockWith(title))));
+      ..showSnackBar(SnackBar(content: Text(l10n.skinUnlockWith(title))));
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.cardBacks)),
+      appBar: AppBar(title: Text(l10n.skins)),
       body: SafeArea(
         child: ListenableBuilder(
           listenable: Listenable.merge([
@@ -45,14 +51,46 @@ class CardBacksScreen extends StatelessWidget {
             stores.stats,
           ]),
           builder: (context, _) {
-            final tiles = [
+            final settings = stores.settings;
+            final achievementStore = stores.achievements;
+            final records = stores.stats.records;
+            final cardBackTiles = [
               for (final skin in cardBacks)
-                _CardBackTile(
-                  skin: skin,
-                  selected: skin.id == stores.settings.cardBackId,
-                  store: stores.achievements,
-                  records: stores.stats.records,
-                  onTap: () => _select(context, skin),
+                _SkinTile(
+                  key: ValueKey('card-back-${skin.id}'),
+                  name: cardBackName(skin.id, l10n),
+                  preview: _CardBackPreview(skin),
+                  selected: skin.id == settings.cardBackId,
+                  unlocked: isCardBackUnlocked(skin, achievementStore),
+                  unlockedBy: skin.unlockedBy,
+                  records: records,
+                  onTap: () => _select(
+                    context,
+                    unlockedBy: skin.unlockedBy,
+                    select: () => settings.setCardBack(skin.id),
+                  ),
+                ),
+            ];
+            final tileStyleTiles = [
+              for (final style in tileStyles)
+                _SkinTile(
+                  key: ValueKey('tile-style-${style.id}'),
+                  name: tileStyleName(style.id, l10n),
+                  preview: Center(
+                    child: TileStylePreview(
+                      style: style,
+                      width: _SkinPreview.width,
+                    ),
+                  ),
+                  selected: style.id == settings.tileStyleId,
+                  unlocked: isTileStyleUnlocked(style, achievementStore),
+                  unlockedBy: style.unlockedBy,
+                  records: records,
+                  onTap: () => _select(
+                    context,
+                    unlockedBy: style.unlockedBy,
+                    select: () => settings.setTileStyle(style.id),
+                  ),
                 ),
             ];
             return Center(
@@ -66,31 +104,18 @@ class CardBacksScreen extends StatelessWidget {
                               (_minTileWidth + _spacing))
                           .floor(),
                     );
-                    // Each row is as tall as its tallest tile, so no text
-                    // size can overflow a tile.
+                    final rows = [
+                      _SectionTitle(l10n.cardBacks),
+                      ..._rows(cardBackTiles, columns),
+                      _SectionTitle(l10n.mahjongTileStyles),
+                      ..._rows(tileStyleTiles, columns),
+                    ];
                     return ListView.separated(
                       padding: const EdgeInsets.all(_padding),
-                      itemCount: (tiles.length / columns).ceil(),
+                      itemCount: rows.length,
                       separatorBuilder: (context, _) =>
                           const SizedBox(height: _spacing),
-                      itemBuilder: (context, row) => IntrinsicHeight(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          spacing: _spacing,
-                          children: [
-                            for (
-                              var i = row * columns;
-                              i < (row + 1) * columns;
-                              i++
-                            )
-                              Expanded(
-                                child: i < tiles.length
-                                    ? tiles[i]
-                                    : const SizedBox(),
-                              ),
-                          ],
-                        ),
-                      ),
+                      itemBuilder: (context, index) => rows[index],
                     );
                   },
                 ),
@@ -101,20 +126,62 @@ class CardBacksScreen extends StatelessWidget {
       ),
     );
   }
+
+  /// [tiles] in rows of [columns]. Each row is as tall as its tallest tile,
+  /// so no text size can overflow a tile.
+  static Iterable<Widget> _rows(List<Widget> tiles, int columns) sync* {
+    for (var start = 0; start < tiles.length; start += columns) {
+      yield IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: _spacing,
+          children: [
+            for (var i = start; i < start + columns; i++)
+              Expanded(child: i < tiles.length ? tiles[i] : const SizedBox()),
+          ],
+        ),
+      );
+    }
+  }
 }
 
-class _CardBackTile extends StatelessWidget {
-  const _CardBackTile({
-    required this.skin,
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.titleLarge
+            ?.copyWith(fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+}
+
+class _SkinTile extends StatelessWidget {
+  const _SkinTile({
+    super.key,
+    required this.name,
+    required this.preview,
     required this.selected,
-    required this.store,
+    required this.unlocked,
+    required this.unlockedBy,
     required this.records,
     required this.onTap,
   });
 
-  final CardBackSkin skin;
+  final String name;
+  final Widget preview;
   final bool selected;
-  final AchievementStore store;
+  final bool unlocked;
+
+  /// Id of the achievement that unlocks the skin, null when it is free.
+  final String? unlockedBy;
   final List<GameRecord> records;
   final VoidCallback onTap;
 
@@ -123,10 +190,8 @@ class _CardBackTile extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    final unlocked = isCardBackUnlocked(skin, store);
-    final achievement = unlocked ? null : achievementById(skin.unlockedBy!);
+    final achievement = unlocked ? null : achievementById(unlockedBy!);
     return Semantics(
-      key: ValueKey('card-back-${skin.id}'),
       selected: selected,
       child: Material(
         color: selected ? colors.primaryContainer : colors.surfaceContainerHigh,
@@ -143,10 +208,14 @@ class _CardBackTile extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             child: Column(
               children: [
-                _Preview(skin: skin, selected: selected, unlocked: unlocked),
+                _SkinPreview(
+                  selected: selected,
+                  unlocked: unlocked,
+                  child: preview,
+                ),
                 const SizedBox(height: 10),
                 Text(
-                  cardBackName(skin.id, l10n),
+                  name,
                   textAlign: TextAlign.center,
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w700,
@@ -157,7 +226,7 @@ class _CardBackTile extends StatelessWidget {
                   _Line(
                     icon: Icons.check_circle,
                     color: colors.primary,
-                    text: l10n.cardBackSelected,
+                    text: l10n.skinSelected,
                   )
                 else if (achievement != null) ...[
                   _Line(
@@ -181,46 +250,54 @@ class _CardBackTile extends StatelessWidget {
   }
 }
 
-/// The card back, dimmed under a lock until it is unlocked.
-class _Preview extends StatelessWidget {
-  const _Preview({
-    required this.skin,
+class _CardBackPreview extends StatelessWidget {
+  const _CardBackPreview(this.skin);
+
+  final CardBackSkin skin;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(_SkinPreview.width * 0.1),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x66000000),
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: CardBackView(skin: skin, width: _SkinPreview.width),
+    );
+  }
+}
+
+/// A skin, dimmed under a lock until it is unlocked.
+class _SkinPreview extends StatelessWidget {
+  const _SkinPreview({
+    required this.child,
     required this.selected,
     required this.unlocked,
   });
 
-  final CardBackSkin skin;
+  final Widget child;
   final bool selected;
   final bool unlocked;
 
-  static const _width = 90.0;
+  static const width = 90.0;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return SizedBox(
-      width: _width,
-      height: _width * 1.4,
+      width: width,
+      height: width * 1.4,
       child: Stack(
         clipBehavior: Clip.none,
         fit: StackFit.expand,
         children: [
-          DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(_width * 0.1),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x66000000),
-                  blurRadius: 6,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Opacity(
-              opacity: unlocked ? 1 : 0.35,
-              child: CardBackView(skin: skin, width: _width),
-            ),
-          ),
+          Opacity(opacity: unlocked ? 1 : 0.35, child: child),
           if (!unlocked)
             Center(
               child: Container(
@@ -233,7 +310,7 @@ class _Preview extends StatelessWidget {
                   Icons.lock,
                   color: Colors.white,
                   size: 26,
-                  semanticLabel: AppLocalizations.of(context).cardBackLocked,
+                  semanticLabel: AppLocalizations.of(context).skinLocked,
                 ),
               ),
             ),

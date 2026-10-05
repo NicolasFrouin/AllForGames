@@ -9,6 +9,7 @@ import '../games/mahjong/mahjong_difficulty.dart';
 import '../games/spider/spider_difficulty.dart';
 import '../l10n/app_localizations.dart';
 import '../skins/card_backs.dart';
+import '../skins/tile_styles.dart';
 
 /// The player's settings, one storage key per setting.
 class SettingsStore extends ChangeNotifier {
@@ -16,6 +17,7 @@ class SettingsStore extends ChangeNotifier {
     this._prefs,
     this._locale,
     this._cardBackId,
+    this._tileStyleId,
     this._klondikeDrawCount,
     this._klondikeDifficulty,
     this._mahjongDifficulty,
@@ -25,6 +27,7 @@ class SettingsStore extends ChangeNotifier {
 
   static const localeKey = 'settings.locale';
   static const cardBackKey = 'settings.cardBack';
+  static const tileStyleKey = 'settings.tileStyle';
   static const klondikeDrawCountKey = 'settings.klondike.drawCount';
   static const klondikeDifficultyKey = 'settings.klondike.difficulty';
   static const mahjongDifficultyKey = 'settings.mahjong.difficulty';
@@ -37,6 +40,7 @@ class SettingsStore extends ChangeNotifier {
   final SharedPreferencesAsync _prefs;
   Locale? _locale;
   String _cardBackId;
+  String _tileStyleId;
   int _klondikeDrawCount;
   KlondikeDifficulty _klondikeDifficulty;
   MahjongDifficulty _mahjongDifficulty;
@@ -47,6 +51,7 @@ class SettingsStore extends ChangeNotifier {
     prefs ??= SharedPreferencesAsync();
     Locale? locale;
     var cardBackId = classicCardBack.id;
+    var tileStyleId = classicTileStyle.id;
     var drawCount = _defaultDrawCount;
     var difficulty = _defaultDifficulty;
     var mahjongDifficulty = MahjongDifficulty.medium;
@@ -55,6 +60,7 @@ class SettingsStore extends ChangeNotifier {
     try {
       locale = _supportedLocale(await prefs.getString(localeKey));
       cardBackId = _knownCardBack(await prefs.getString(cardBackKey));
+      tileStyleId = _knownTileStyle(await prefs.getString(tileStyleKey));
       drawCount = _knownDrawCount(await prefs.getInt(klondikeDrawCountKey));
       difficulty = _knownDifficulty(
         await prefs.getString(klondikeDifficultyKey),
@@ -83,6 +89,7 @@ class SettingsStore extends ChangeNotifier {
       prefs,
       locale,
       cardBackId,
+      tileStyleId,
       drawCount,
       difficulty,
       mahjongDifficulty,
@@ -96,6 +103,9 @@ class SettingsStore extends ChangeNotifier {
 
   /// Id of the card back the games draw face-down cards with.
   String get cardBackId => _cardBackId;
+
+  /// Id of the style Mahjong draws its tiles with.
+  String get tileStyleId => _tileStyleId;
 
   /// Options of the last new Klondike game the player dealt, for the next
   /// one: 1 or 3 cards drawn at a time, and the difficulty.
@@ -134,6 +144,17 @@ class SettingsStore extends ChangeNotifier {
     await _guard(
       'save the card back',
       () => _prefs.setString(cardBackKey, _cardBackId),
+    );
+    notifyListeners();
+  }
+
+  /// Selects the Mahjong tile style [id] (classic for an unknown id). The
+  /// caller checks that the player has unlocked it.
+  Future<void> setTileStyle(String id) async {
+    _tileStyleId = _knownTileStyle(id);
+    await _guard(
+      'save the tile style',
+      () => _prefs.setString(tileStyleKey, _tileStyleId),
     );
     notifyListeners();
   }
@@ -191,6 +212,9 @@ class SettingsStore extends ChangeNotifier {
 
   /// Classic for a card back the app does not have.
   static String _knownCardBack(String? id) => cardBackById(id ?? '').id;
+
+  /// Classic for a tile style the app does not have.
+  static String _knownTileStyle(String? id) => tileStyleById(id ?? '').id;
 
   static int _knownDrawCount(int? drawCount) =>
       drawCount == 3 ? 3 : _defaultDrawCount;

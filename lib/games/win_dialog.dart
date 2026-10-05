@@ -5,7 +5,7 @@ import '../achievements/achievements.dart';
 import '../app_stores.dart';
 import '../common/format.dart';
 import '../l10n/app_localizations.dart';
-import '../skins/card_backs.dart';
+import '../skins/skin_rewards.dart';
 import '../stats/game_record.dart';
 import '../stats/game_stats.dart';
 
@@ -138,7 +138,7 @@ class _Trophy extends StatelessWidget {
   }
 }
 
-/// An achievement that the win just unlocked, with the card back it gives.
+/// An achievement that the win just unlocked, with the skin it gives.
 class _UnlockedRow extends StatelessWidget {
   const _UnlockedRow(this.achievement);
 
@@ -148,7 +148,7 @@ class _UnlockedRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final reward = cardBackUnlockedBy(achievement.id);
+    final reward = skinRewardOf(achievement.id);
     return Container(
       key: ValueKey('unlocked-${achievement.id}'),
       padding: const EdgeInsets.all(10),
@@ -174,7 +174,7 @@ class _UnlockedRow extends StatelessWidget {
                 ),
                 if (reward != null)
                   Text(
-                    l10n.newCardBack(cardBackName(reward.id, l10n)),
+                    reward.unlockedText(l10n),
                     style: theme.textTheme.bodySmall,
                   ),
               ],
@@ -182,11 +182,7 @@ class _UnlockedRow extends StatelessWidget {
           ),
           if (reward != null) ...[
             const SizedBox(width: 12),
-            SizedBox(
-              width: 30,
-              height: 42,
-              child: CardBackView(skin: reward, width: 30),
-            ),
+            reward.preview(30),
           ],
         ],
       ),

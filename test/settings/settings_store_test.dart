@@ -73,6 +73,35 @@ void main() {
     expect(await storedCardBackId(), 'classic');
   });
 
+  test('the tile style is classic without a saved choice', () async {
+    final store = await createStore();
+    expect(store.tileStyleId, 'classic');
+  });
+
+  test('keeps the chosen tile style after a reload', () async {
+    final store = await createStore();
+
+    final saving = store.setTileStyle('ebony');
+    expect(store.tileStyleId, 'ebony');
+    await saving;
+    expect((await SettingsStore.load()).tileStyleId, 'ebony');
+    expect(await SharedPreferencesAsync().getAll(), {
+      SettingsStore.tileStyleKey: 'ebony',
+    });
+
+    await store.setTileStyle('classic');
+    expect((await SettingsStore.load()).tileStyleId, 'classic');
+  });
+
+  test('a tile style the app does not have is classic', () async {
+    final store = await createStore({SettingsStore.tileStyleKey: 'neon'});
+    expect(store.tileStyleId, 'classic');
+
+    await store.setTileStyle('neon');
+    expect(store.tileStyleId, 'classic');
+    expect((await SettingsStore.load()).tileStyleId, 'classic');
+  });
+
   test(
     'a new Klondike game is Draw 1, Medium without a saved choice',
     () async {
@@ -217,6 +246,12 @@ void main() {
     expect(store.klondikeDrawCount, 3);
     await savingOptions;
     expect(notified, 3);
+
+    final savingStyle = store.setTileStyle('jade');
+    expect(notified, 3);
+    expect(store.tileStyleId, 'jade');
+    await savingStyle;
+    expect(notified, 4);
   });
 
   test('blocked storage still gives a working store', () async {
@@ -230,6 +265,8 @@ void main() {
     expect(store.locale, isNull);
     await store.setCardBack('crimson');
     expect(store.cardBackId, 'crimson');
+    await store.setTileStyle('golden');
+    expect(store.tileStyleId, 'golden');
     expect(store.klondikeDifficulty, KlondikeDifficulty.medium);
     await store.setKlondikeNewGame(
       drawCount: 3,

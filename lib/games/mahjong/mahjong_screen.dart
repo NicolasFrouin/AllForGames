@@ -7,6 +7,7 @@ import '../../app_stores.dart';
 import '../win_dialog.dart';
 import '../../common/format.dart';
 import '../../l10n/app_localizations.dart';
+import '../../skins/tile_styles.dart';
 import 'mahjong_board.dart';
 import 'mahjong_controller.dart';
 import 'mahjong_difficulty.dart';
@@ -272,9 +273,15 @@ class _MahjongScreenState extends State<MahjongScreen> {
                     Positioned.fill(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(8, 4, 8, 12),
-                        child: MahjongBoard(
-                          controller: controller,
-                          onCelebrated: _showWinDialog,
+                        child: ListenableBuilder(
+                          listenable: widget.stores.settings,
+                          builder: (context, _) => MahjongBoard(
+                            controller: controller,
+                            tileStyle: tileStyleById(
+                              widget.stores.settings.tileStyleId,
+                            ),
+                            onCelebrated: _showWinDialog,
+                          ),
                         ),
                       ),
                     ),

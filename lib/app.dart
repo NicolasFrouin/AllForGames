@@ -13,7 +13,7 @@ import 'games/spider/spider_difficulty.dart';
 import 'games/spider/spider_screen.dart';
 import 'hub/hub_screen.dart';
 import 'l10n/app_localizations.dart';
-import 'skins/card_backs_screen.dart';
+import 'skins/skins_screen.dart';
 import 'stats/stats_screen.dart';
 
 /// The texts of the app, then the Material, Cupertino and widgets texts.
@@ -120,8 +120,8 @@ class _AllForGamesAppState extends State<AllForGamesApp> {
                 AchievementsScreen(stores: widget.stores),
           ),
           GoRoute(
-            path: 'card-backs',
-            builder: (context, state) => CardBacksScreen(stores: widget.stores),
+            path: 'skins',
+            builder: (context, state) => SkinsScreen(stores: widget.stores),
           ),
         ],
       ),
