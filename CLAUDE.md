@@ -4,7 +4,7 @@ Guide for AI agents working on this repo. Read it fully before you change code.
 
 ## Project
 
-All For Games: one Flutter app with a hub of classic games (Klondike, Mahjong; FreeCell and Spider next).
+All For Games: one Flutter app with a hub of classic games: Klondike, FreeCell, Spider and Mahjong.
 Targets: web and Android first, then iOS and desktop, from one codebase.
 Product priorities: rich player statistics, a polished hub, good unit + widget + e2e tests.
 
@@ -20,6 +20,8 @@ flutter test                                  # unit + widget tests (fast)
 flutter test test/games/klondike              # one folder or file: prefer narrow runs
 scripts/e2e_web.sh                            # e2e in headless Chrome (--no-headless to watch)
 dart run tool/generate_klondike_deals.dart    # regenerates klondike_deals.dart (about 1 minute)
+dart run tool/generate_freecell_deals.dart    # regenerates freecell_deals.dart (about 1 minute; --stats N)
+dart run tool/generate_spider_deals.dart      # regenerates spider_deals.dart (about 3 minutes; --stats N [--level hard])
 dart run tool/mahjong_difficulty.dart [deals] # win rates of simulated players per Mahjong level
 flutter build web --release --wasm            # release web build in build/web
 ```
@@ -42,6 +44,7 @@ build): drop it when a Flutter upgrade removes it.
 ```
 lib/
   main.dart, app.dart        loads the stores, routes (go_router): /, /klondike?draw=3&seed=42,
+                             /freecell?difficulty=hard&seed=42, /spider?difficulty=hard&seed=42,
                              /mahjong?difficulty=easy&seed=42, /stats/:gameId, /achievements, /card-backs
                              (without params, a game route continues the saved game)
   app_stores.dart            AppStores: every store (stats, saves, settings, achievements), loaded once, given to
@@ -69,10 +72,17 @@ lib/
   games/mahjong/             pure Dart: mahjong_tiles, mahjong_layout, mahjong_state (rules), mahjong_generator
                              (solvable by construction), mahjong_solver (hints), mahjong_difficulty, mahjong_motion,
                              mahjong_players (offline only); Flutter: mahjong_controller, mahjong_board,
-                             mahjong_tile_view (vector tile art), mahjong_screen, mahjong_new_game_sheet, _texts
+                             mahjong_tile_view (vector tile art), mahjong_moving_tile (per-frame transforms),
+                             mahjong_screen, mahjong_new_game_sheet, _texts
+  games/freecell/            freecell_state (rules), freecell_solver (offline), freecell_deals (generated), deal
+                             picker, freecell_controller, freecell_board (adapter on CardTable), screen, sheet, texts
+  games/spider/              spider_state (rules, two decks), spider_solver (offline), spider_deals (generated),
+                             spider_deal_picker, spider_controller, spider_board (adapter on CardTable), screen, sheet
+  games/win_dialog.dart      showWinDialog: the win dialog of every game (extra rows per game)
 test/                        unit (games/, stats/) and widget (widget/) tests; helpers in test/helpers and *_test_helpers.dart
 integration_test/            e2e tests (run on web by scripts/e2e_web.sh, or on a device)
 tool/                        generate_klondike_deals.dart (solves and grades deals, writes klondike_deals.dart),
+                             generate_freecell_deals.dart, generate_spider_deals.dart (same idea per game),
                              mahjong_difficulty.dart (simulated win rates per Mahjong level)
 ```
 
@@ -134,18 +144,26 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   shakes, `canDrop`, `onDrop`, `onSlotTap`) and, once won, the `celebration` piles whose top cards hop, plus
   `onCelebrated`. The engine plans a `CardMotion` per changed card (fly on an arc, 3D flip, hop, shake; pure and
   unit-tested); drop glide, snap back on a refused drop, shake, resize glide, confetti and reduced motion are
-  built in. Card ids must be unique on a table.
+  built in. Card ids must be unique on a table: with several decks, `PlayingCard.deck` gives them (ids of deck 0
+  stay `<suit>-<rank>`). Two-step actions (`TableAction.stops`, `thenIds`, `thenStyle`): cards land somewhere
+  first, then fly on (a completed Spider run; FreeCell's automatic moves after the player's move).
 - **Animations stay cheap**: one clock (`ValueNotifier<double>`, driven by a `Ticker`) and no `setState` per frame.
   `MovingCard` moves a card by repainting its own layer (fixed-blur shadow, listens only while it moves),
   `TurningCardView` swaps the face once at mid-flip, card faces sit in `RepaintBoundary`s, the card layer
   rebuilds only when the paint order changes (a card takes off or lands), confetti is one `drawVertices` call.
-  `test/widget/klondike_board_rebuilds_test.dart` guards it (`debugOnRebuildDirtyWidget`): keep it passing.
+  The `*_board_rebuilds_test.dart` widget tests (Klondike, Spider, Mahjong) guard it with
+  `debugOnRebuildDirtyWidget`: keep them passing. The Mahjong board follows the same rules (`MovingTile`).
   A new batch shifts running motions, so moves chain without jumps. Paint order: cards on the table by pile (a
   waiting card keeps its old pile), then cards in the air. Reduced motion (`MediaQuery.disableAnimationsOf`)
   moves cards at once. No endless animation anywhere: tests rely on `pumpAndSettle`.
   A win plays on the same timeline: the cascade (one card after the other), then the top cards of the
   celebration piles hop with confetti bursts (drawn in an `OverlayPortal` above the app bar); the table then calls
   `onCelebrated` and the screen opens the win dialog (at once with reduced motion).
+- **FreeCell / Spider deals**: like Klondike, `FreeCellState.deal(seed)` and `SpiderState.deal(seed, difficulty)`
+  must never change: `freecellDeals[difficulty]` and `spiderDeals[difficulty]` list seeds proven winnable (each
+  solution replayed on the rules). FreeCell levels: Easy = a greedy player wins, Medium = solvable with 2 free
+  cells, Hard = needs more. Spider levels are suit counts (1, 2, 4): records use variants `suits1/2/4` and no
+  difficulty. `test/cards/deals_on_web_test.dart` (run in Wasm by CI) checks every game's seed-1 deal.
 - **Mahjong**: deals are built at runtime from the seed (`DealRandom`), solvable by construction (removing pairs
   of free places from the full layout gives a clearing order). A level is a layout plus a trap rate, checked by
   `tool/mahjong_difficulty.dart` and a unit test that keeps the levels ordered. On a tall screen the layout is
@@ -159,7 +177,8 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   `stat-winRate` or `stat-<detailKey>`, `variant-<id>`, `difficulty-<name>` (and `-all`) on the stats page,
   `language-menu`, `language-<code>`, `achievements-button`, `card-backs-button`, `achievement-<id>`,
   `card-back-<id>`, `unlocked-<id>` in the win dialog; Mahjong: `tile-<id>`, `hint`, `shuffle`, `stuck-banner`,
-  `tiles-value`, `pairs-value`, ...).
+  `tiles-value`, `pairs-value`; FreeCell: `freecell-<i>`, `cascade-<i>`, `foundation-<i>`, `auto-complete`;
+  Spider: `stock`, `column-<i>`, `foundation-<i>`, `deals-left`, card ids like `spades-1-7`, ...).
   Keep them stable. Keys never depend on the language (no `ValueKey('stat-$label')`).
 - Keep code simple: no extra abstraction or packages unless clearly needed. Match the existing style; comments only for the why.
 
