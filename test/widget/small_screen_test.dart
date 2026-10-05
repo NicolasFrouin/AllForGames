@@ -20,6 +20,9 @@ void main() {
   const pages = {
     '/': Size(360, 1400),
     '/klondike?seed=1': Size(360, 640),
+    '/mahjong?seed=1': Size(360, 640),
+    '/mahjong?seed=1&difficulty=easy': Size(360, 640),
+    '/stats/mahjong': Size(360, 640),
     '/stats/klondike': Size(360, 640),
     '/achievements': Size(360, 5000),
     '/card-backs': Size(360, 1600),

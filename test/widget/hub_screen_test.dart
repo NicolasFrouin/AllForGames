@@ -9,7 +9,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'widget_test_helpers.dart';
 
-const comingSoon = ['freecell', 'spider', 'mahjong'];
+const comingSoon = ['freecell', 'spider'];
 
 Future<void> pumpHub(WidgetTester tester, AppStores stores) async {
   useSurface(tester);

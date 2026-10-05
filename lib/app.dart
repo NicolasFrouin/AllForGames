@@ -5,6 +5,8 @@ import 'achievements/achievements_screen.dart';
 import 'app_stores.dart';
 import 'games/game_catalog.dart';
 import 'games/klondike/klondike_screen.dart';
+import 'games/mahjong/mahjong_difficulty.dart';
+import 'games/mahjong/mahjong_screen.dart';
 import 'hub/hub_screen.dart';
 import 'l10n/app_localizations.dart';
 import 'skins/card_backs_screen.dart';
@@ -53,6 +55,20 @@ class _AllForGamesAppState extends State<AllForGamesApp> {
                   '3' => 3,
                   _ => 1,
                 },
+                seed: int.tryParse(query['seed'] ?? ''),
+              );
+            },
+          ),
+          GoRoute(
+            path: 'mahjong',
+            // Query parameters start a given deal: /mahjong?difficulty=hard&
+            // seed=42. Without them, the saved game continues.
+            builder: (context, state) {
+              final query = state.uri.queryParameters;
+              return MahjongScreen(
+                stores: widget.stores,
+                difficulty: MahjongDifficulty.values
+                    .asNameMap()[query['difficulty']],
                 seed: int.tryParse(query['seed'] ?? ''),
               );
             },

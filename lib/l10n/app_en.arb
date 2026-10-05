@@ -666,5 +666,176 @@
   "achievementKlondikeHardWinDescription": "Win a Hard game.",
   "@achievementKlondikeHardWinDescription": {
     "description": "How to unlock the Klondike achievement for a won Hard game."
+  },
+  "hint": "Hint",
+  "@hint": {
+    "description": "Tooltip of the button that shows a pair of tiles to match."
+  },
+  "mahjongLayoutPyramid": "Pyramid",
+  "@mahjongLayoutPyramid": {
+    "description": "Mahjong layout (variant): a small pyramid of 72 tiles."
+  },
+  "mahjongLayoutTurtle": "Turtle",
+  "@mahjongLayoutTurtle": {
+    "description": "Mahjong layout (variant): the classic Turtle of 144 tiles."
+  },
+  "mahjongEasyHint": "A small pyramid of 72 tiles, with few traps.",
+  "@mahjongEasyHint": {
+    "description": "New game sheet: what an Easy Mahjong deal is."
+  },
+  "mahjongMediumHint": "The classic Turtle of 144 tiles.",
+  "@mahjongMediumHint": {
+    "description": "New game sheet: what a Medium Mahjong deal is."
+  },
+  "mahjongHardHint": "The Turtle with many traps: choose your pairs with care.",
+  "@mahjongHardHint": {
+    "description": "New game sheet: what a Hard Mahjong deal is."
+  },
+  "mahjongTiles": "Tiles",
+  "@mahjongTiles": {
+    "description": "Mahjong status bar: label of the number of tiles left on the board."
+  },
+  "mahjongOpenPairs": "Open pairs",
+  "@mahjongOpenPairs": {
+    "description": "Mahjong status bar: label of the number of pairs of free tiles that match."
+  },
+  "mahjongStuck": "No more pairs to match. Shuffle the tiles, or undo some moves.",
+  "@mahjongStuck": {
+    "description": "Mahjong: message shown when no free tiles match."
+  },
+  "mahjongShuffle": "Shuffle",
+  "@mahjongShuffle": {
+    "description": "Mahjong: button that moves the tiles left to new places, so that the game can go on."
+  },
+  "mahjongPairsMatched": "Pairs matched",
+  "@mahjongPairsMatched": {
+    "description": "Mahjong statistic: pairs of tiles removed from the board."
+  },
+  "mahjongHints": "Hints",
+  "@mahjongHints": {
+    "description": "Mahjong statistic: hints asked for."
+  },
+  "mahjongShuffles": "Shuffles",
+  "@mahjongShuffles": {
+    "description": "Mahjong statistic: shuffles of the tiles when stuck."
+  },
+  "mahjongTilesLeft": "Tiles left",
+  "@mahjongTilesLeft": {
+    "description": "Mahjong statistic: tiles still on the board at the end of the game."
+  },
+  "mahjongBestCombo": "Best combo",
+  "@mahjongBestCombo": {
+    "description": "Mahjong statistic: most pairs matched in a row, each a few seconds after the one before."
+  },
+  "mahjongTimeToFirstMatch": "Time to first match",
+  "@mahjongTimeToFirstMatch": {
+    "description": "Mahjong statistic: play time before the first pair was matched."
+  },
+  "mahjongLongestThink": "Longest think time",
+  "@mahjongLongestThink": {
+    "description": "Mahjong statistic: longest time between two actions."
+  },
+  "mahjongWindEastLetter": "E",
+  "@mahjongWindEastLetter": {
+    "description": "Letter drawn on the East wind Mahjong tile."
+  },
+  "mahjongWindSouthLetter": "S",
+  "@mahjongWindSouthLetter": {
+    "description": "Letter drawn on the South wind Mahjong tile."
+  },
+  "mahjongWindWestLetter": "W",
+  "@mahjongWindWestLetter": {
+    "description": "Letter drawn on the West wind Mahjong tile."
+  },
+  "mahjongWindNorthLetter": "N",
+  "@mahjongWindNorthLetter": {
+    "description": "Letter drawn on the North wind Mahjong tile."
+  },
+  "mahjongTileDots": "Dots {rank}",
+  "@mahjongTileDots": {
+    "description": "Name of a Mahjong tile, for screen readers: a dots tile.",
+    "placeholders": {
+      "rank": {
+        "type": "int"
+      }
+    }
+  },
+  "mahjongTileBamboo": "Bamboo {rank}",
+  "@mahjongTileBamboo": {
+    "description": "Name of a Mahjong tile, for screen readers: a bamboo tile.",
+    "placeholders": {
+      "rank": {
+        "type": "int"
+      }
+    }
+  },
+  "mahjongTileCharacters": "Characters {rank}",
+  "@mahjongTileCharacters": {
+    "description": "Name of a Mahjong tile, for screen readers: a characters tile.",
+    "placeholders": {
+      "rank": {
+        "type": "int"
+      }
+    }
+  },
+  "mahjongTileEastWind": "East wind",
+  "@mahjongTileEastWind": {
+    "description": "Name of a Mahjong tile, for screen readers."
+  },
+  "mahjongTileSouthWind": "South wind",
+  "@mahjongTileSouthWind": {
+    "description": "Name of a Mahjong tile, for screen readers."
+  },
+  "mahjongTileWestWind": "West wind",
+  "@mahjongTileWestWind": {
+    "description": "Name of a Mahjong tile, for screen readers."
+  },
+  "mahjongTileNorthWind": "North wind",
+  "@mahjongTileNorthWind": {
+    "description": "Name of a Mahjong tile, for screen readers."
+  },
+  "mahjongTileRedDragon": "Red dragon",
+  "@mahjongTileRedDragon": {
+    "description": "Name of a Mahjong tile, for screen readers."
+  },
+  "mahjongTileGreenDragon": "Green dragon",
+  "@mahjongTileGreenDragon": {
+    "description": "Name of a Mahjong tile, for screen readers."
+  },
+  "mahjongTileWhiteDragon": "White dragon",
+  "@mahjongTileWhiteDragon": {
+    "description": "Name of a Mahjong tile, for screen readers."
+  },
+  "mahjongTilePlum": "Plum flower",
+  "@mahjongTilePlum": {
+    "description": "Name of a Mahjong flower tile, for screen readers."
+  },
+  "mahjongTileOrchid": "Orchid flower",
+  "@mahjongTileOrchid": {
+    "description": "Name of a Mahjong flower tile, for screen readers."
+  },
+  "mahjongTileChrysanthemum": "Chrysanthemum flower",
+  "@mahjongTileChrysanthemum": {
+    "description": "Name of a Mahjong flower tile, for screen readers."
+  },
+  "mahjongTileBambooFlower": "Bamboo flower",
+  "@mahjongTileBambooFlower": {
+    "description": "Name of a Mahjong flower tile, for screen readers."
+  },
+  "mahjongTileSpring": "Spring",
+  "@mahjongTileSpring": {
+    "description": "Name of a Mahjong season tile, for screen readers."
+  },
+  "mahjongTileSummer": "Summer",
+  "@mahjongTileSummer": {
+    "description": "Name of a Mahjong season tile, for screen readers."
+  },
+  "mahjongTileAutumn": "Autumn",
+  "@mahjongTileAutumn": {
+    "description": "Name of a Mahjong season tile, for screen readers."
+  },
+  "mahjongTileWinter": "Winter",
+  "@mahjongTileWinter": {
+    "description": "Name of a Mahjong season tile, for screen readers."
   }
 }

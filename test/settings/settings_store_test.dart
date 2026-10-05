@@ -1,6 +1,7 @@
 import 'dart:ui' show Locale;
 
 import 'package:all_for_games/games/klondike/klondike_difficulty.dart';
+import 'package:all_for_games/games/mahjong/mahjong_difficulty.dart';
 import 'package:all_for_games/settings/settings_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -114,6 +115,31 @@ void main() {
     expect((await SettingsStore.load()).klondikeDrawCount, 1);
   });
 
+  test('keeps the difficulty of the last new Mahjong game', () async {
+    final store = await createStore();
+    expect(store.mahjongDifficulty, MahjongDifficulty.medium);
+
+    final saving = store.setMahjongDifficulty(MahjongDifficulty.hard);
+    expect(store.mahjongDifficulty, MahjongDifficulty.hard);
+    await saving;
+
+    expect(
+      (await SettingsStore.load()).mahjongDifficulty,
+      MahjongDifficulty.hard,
+    );
+    expect(await SharedPreferencesAsync().getAll(), {
+      SettingsStore.mahjongDifficultyKey: 'hard',
+    });
+  });
+
+  test('an unknown Mahjong difficulty is Medium', () async {
+    final store = await createStore({
+      SettingsStore.mahjongDifficultyKey: 'extreme',
+    });
+
+    expect(store.mahjongDifficulty, MahjongDifficulty.medium);
+  });
+
   test('listeners are told after the write, not during the call', () async {
     final store = await createStore();
     var notified = 0;
@@ -159,5 +185,7 @@ void main() {
     );
     expect(store.klondikeDrawCount, 3);
     expect(store.klondikeDifficulty, KlondikeDifficulty.hard);
+    await store.setMahjongDifficulty(MahjongDifficulty.easy);
+    expect(store.mahjongDifficulty, MahjongDifficulty.easy);
   });
 }

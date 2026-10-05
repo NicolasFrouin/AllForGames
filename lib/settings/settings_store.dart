@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../games/klondike/klondike_difficulty.dart';
+import '../games/mahjong/mahjong_difficulty.dart';
 import '../l10n/app_localizations.dart';
 import '../skins/card_backs.dart';
 
@@ -15,12 +16,14 @@ class SettingsStore extends ChangeNotifier {
     this._cardBackId,
     this._klondikeDrawCount,
     this._klondikeDifficulty,
+    this._mahjongDifficulty,
   );
 
   static const localeKey = 'settings.locale';
   static const cardBackKey = 'settings.cardBack';
   static const klondikeDrawCountKey = 'settings.klondike.drawCount';
   static const klondikeDifficultyKey = 'settings.klondike.difficulty';
+  static const mahjongDifficultyKey = 'settings.mahjong.difficulty';
 
   static const _defaultDrawCount = 1;
   static const _defaultDifficulty = KlondikeDifficulty.medium;
@@ -30,6 +33,7 @@ class SettingsStore extends ChangeNotifier {
   String _cardBackId;
   int _klondikeDrawCount;
   KlondikeDifficulty _klondikeDifficulty;
+  MahjongDifficulty _mahjongDifficulty;
 
   static Future<SettingsStore> load([SharedPreferencesAsync? prefs]) async {
     prefs ??= SharedPreferencesAsync();
@@ -37,6 +41,7 @@ class SettingsStore extends ChangeNotifier {
     var cardBackId = classicCardBack.id;
     var drawCount = _defaultDrawCount;
     var difficulty = _defaultDifficulty;
+    var mahjongDifficulty = MahjongDifficulty.medium;
     try {
       locale = _supportedLocale(await prefs.getString(localeKey));
       cardBackId = _knownCardBack(await prefs.getString(cardBackKey));
@@ -44,12 +49,24 @@ class SettingsStore extends ChangeNotifier {
       difficulty = _knownDifficulty(
         await prefs.getString(klondikeDifficultyKey),
       );
+      mahjongDifficulty =
+          MahjongDifficulty.values.asNameMap()[await prefs.getString(
+            mahjongDifficultyKey,
+          )] ??
+          MahjongDifficulty.medium;
     } on Object catch (error) {
       // Storage can be blocked (for example site data off in the browser).
       // The app still works, it only keeps the settings of this session.
       debugPrint('SettingsStore: cannot read settings: $error');
     }
-    return SettingsStore._(prefs, locale, cardBackId, drawCount, difficulty);
+    return SettingsStore._(
+      prefs,
+      locale,
+      cardBackId,
+      drawCount,
+      difficulty,
+      mahjongDifficulty,
+    );
   }
 
   /// The language chosen by the player. Null follows the device language.
@@ -62,6 +79,10 @@ class SettingsStore extends ChangeNotifier {
   /// one: 1 or 3 cards drawn at a time, and the difficulty.
   int get klondikeDrawCount => _klondikeDrawCount;
   KlondikeDifficulty get klondikeDifficulty => _klondikeDifficulty;
+
+  /// Difficulty of the last new Mahjong game the player dealt, for the next
+  /// one.
+  MahjongDifficulty get mahjongDifficulty => _mahjongDifficulty;
 
   /// Listeners are told after the write, never during the call, like the
   /// other stores.
@@ -99,6 +120,15 @@ class SettingsStore extends ChangeNotifier {
       await _prefs.setInt(klondikeDrawCountKey, _klondikeDrawCount);
       await _prefs.setString(klondikeDifficultyKey, difficulty.name);
     });
+    notifyListeners();
+  }
+
+  Future<void> setMahjongDifficulty(MahjongDifficulty difficulty) async {
+    _mahjongDifficulty = difficulty;
+    await _guard(
+      'save the Mahjong difficulty',
+      () => _prefs.setString(mahjongDifficultyKey, difficulty.name),
+    );
     notifyListeners();
   }
 

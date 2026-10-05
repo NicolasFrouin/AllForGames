@@ -4,6 +4,9 @@ import '../l10n/app_localizations.dart';
 import 'klondike/klondike_controller.dart';
 import 'klondike/klondike_difficulty.dart';
 import 'klondike/klondike_difficulty_texts.dart';
+import 'mahjong/mahjong_controller.dart';
+import 'mahjong/mahjong_difficulty.dart';
+import 'mahjong/mahjong_difficulty_texts.dart';
 
 /// A text in the language of the app.
 typedef LocalizedText = String Function(AppLocalizations l10n);
@@ -76,11 +79,18 @@ final gameCatalog = [
     color: const Color(0xFF6A1B9A),
   ),
   GameInfo(
-    id: 'mahjong',
+    id: MahjongController.gameId,
     title: (l10n) => l10n.mahjongTitle,
     tagline: (l10n) => l10n.mahjongTagline,
     icon: Icons.grid_view,
     color: const Color(0xFFC62828),
+    route: '/mahjong',
+    variants: mahjongLayoutNames,
+    difficulties: {
+      for (final difficulty in MahjongDifficulty.values)
+        difficulty.name: difficulty.label,
+    },
+    detailLabels: MahjongStatKeys.labels,
   ),
 ];
 
