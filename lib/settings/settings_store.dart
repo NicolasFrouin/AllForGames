@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../games/freecell/freecell_difficulty.dart';
 import '../games/klondike/klondike_difficulty.dart';
 import '../games/mahjong/mahjong_difficulty.dart';
+import '../games/spider/spider_difficulty.dart';
 import '../l10n/app_localizations.dart';
 import '../skins/card_backs.dart';
 
@@ -19,6 +20,7 @@ class SettingsStore extends ChangeNotifier {
     this._klondikeDifficulty,
     this._mahjongDifficulty,
     this._freecellDifficulty,
+    this._spiderDifficulty,
   );
 
   static const localeKey = 'settings.locale';
@@ -27,6 +29,7 @@ class SettingsStore extends ChangeNotifier {
   static const klondikeDifficultyKey = 'settings.klondike.difficulty';
   static const mahjongDifficultyKey = 'settings.mahjong.difficulty';
   static const freecellDifficultyKey = 'settings.freecell.difficulty';
+  static const spiderDifficultyKey = 'settings.spider.difficulty';
 
   static const _defaultDrawCount = 1;
   static const _defaultDifficulty = KlondikeDifficulty.medium;
@@ -38,6 +41,7 @@ class SettingsStore extends ChangeNotifier {
   KlondikeDifficulty _klondikeDifficulty;
   MahjongDifficulty _mahjongDifficulty;
   FreeCellDifficulty _freecellDifficulty;
+  SpiderDifficulty _spiderDifficulty;
 
   static Future<SettingsStore> load([SharedPreferencesAsync? prefs]) async {
     prefs ??= SharedPreferencesAsync();
@@ -47,6 +51,7 @@ class SettingsStore extends ChangeNotifier {
     var difficulty = _defaultDifficulty;
     var mahjongDifficulty = MahjongDifficulty.medium;
     var freecellDifficulty = FreeCellDifficulty.medium;
+    var spiderDifficulty = SpiderDifficulty.medium;
     try {
       locale = _supportedLocale(await prefs.getString(localeKey));
       cardBackId = _knownCardBack(await prefs.getString(cardBackKey));
@@ -64,6 +69,11 @@ class SettingsStore extends ChangeNotifier {
             freecellDifficultyKey,
           )] ??
           FreeCellDifficulty.medium;
+      spiderDifficulty =
+          SpiderDifficulty.values.asNameMap()[await prefs.getString(
+            spiderDifficultyKey,
+          )] ??
+          SpiderDifficulty.medium;
     } on Object catch (error) {
       // Storage can be blocked (for example site data off in the browser).
       // The app still works, it only keeps the settings of this session.
@@ -77,6 +87,7 @@ class SettingsStore extends ChangeNotifier {
       difficulty,
       mahjongDifficulty,
       freecellDifficulty,
+      spiderDifficulty,
     );
   }
 
@@ -98,6 +109,10 @@ class SettingsStore extends ChangeNotifier {
   /// Difficulty of the last new FreeCell game the player dealt, for the
   /// next one.
   FreeCellDifficulty get freecellDifficulty => _freecellDifficulty;
+
+  /// Difficulty (number of suits) of the last new Spider game the player
+  /// dealt, for the next one.
+  SpiderDifficulty get spiderDifficulty => _spiderDifficulty;
 
   /// Listeners are told after the write, never during the call, like the
   /// other stores.
@@ -152,6 +167,15 @@ class SettingsStore extends ChangeNotifier {
     await _guard(
       'save the FreeCell difficulty',
       () => _prefs.setString(freecellDifficultyKey, difficulty.name),
+    );
+    notifyListeners();
+  }
+
+  Future<void> setSpiderDifficulty(SpiderDifficulty difficulty) async {
+    _spiderDifficulty = difficulty;
+    await _guard(
+      'save the Spider difficulty',
+      () => _prefs.setString(spiderDifficultyKey, difficulty.name),
     );
     notifyListeners();
   }

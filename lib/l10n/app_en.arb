@@ -325,6 +325,76 @@
   "@spiderTagline": {
     "description": "One-line description of Spider on its hub tile."
   },
+  "spiderSuits": "{count, plural, =1{1 suit} other{{count} suits}}",
+  "@spiderSuits": {
+    "description": "Spider level and record variant: the number of suits among the cards.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "spiderEasyHint": "One suit, spades only: the gentlest Spider.",
+  "@spiderEasyHint": {
+    "description": "New game sheet: what an Easy Spider deal is, under the difficulty choice."
+  },
+  "spiderMediumHint": "Two suits, spades and hearts: runs need some care.",
+  "@spiderMediumHint": {
+    "description": "New game sheet: what a Medium Spider deal is, under the difficulty choice."
+  },
+  "spiderHardHint": "All four suits: the classic challenge.",
+  "@spiderHardHint": {
+    "description": "New game sheet: what a Hard Spider deal is, under the difficulty choice."
+  },
+  "spiderDealsLeft": "{count, plural, =0{No deals left} =1{1 deal left} other{{count} deals left}}",
+  "@spiderDealsLeft": {
+    "description": "Spider: how many times the stock can still deal a row of cards (on the stock).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "spiderDealNeedsCards": "Every column needs a card before a deal.",
+  "@spiderDealNeedsCards": {
+    "description": "Spider: message when the player taps the stock while a column is empty."
+  },
+  "spiderStockDeals": "Stock deals",
+  "@spiderStockDeals": {
+    "description": "Spider statistic: rows of cards dealt from the stock."
+  },
+  "spiderRunsCompleted": "Runs completed",
+  "@spiderRunsCompleted": {
+    "description": "Spider statistic: King-to-Ace runs of one suit completed."
+  },
+  "spiderCardsRevealed": "Cards revealed",
+  "@spiderCardsRevealed": {
+    "description": "Spider statistic: face-down cards turned face up."
+  },
+  "spiderEmptyColumnUses": "Moves to empty columns",
+  "@spiderEmptyColumnUses": {
+    "description": "Spider statistic: moves onto an empty column."
+  },
+  "spiderLongestRunMoved": "Longest run moved",
+  "@spiderLongestRunMoved": {
+    "description": "Spider statistic: most cards moved together in one move."
+  },
+  "spiderTapMoves": "Tap moves",
+  "@spiderTapMoves": {
+    "description": "Spider statistic: moves made by tapping a card."
+  },
+  "spiderDragMoves": "Drag moves",
+  "@spiderDragMoves": {
+    "description": "Spider statistic: moves made by dragging cards."
+  },
+  "spiderTimeToFirstMove": "Time to first move",
+  "@spiderTimeToFirstMove": {
+    "description": "Spider statistic: time from the deal to the first move."
+  },
+  "spiderLongestThink": "Longest think time",
+  "@spiderLongestThink": {
+    "description": "Spider statistic: longest time between two moves."
+  },
   "mahjongTitle": "Mahjong",
   "@mahjongTitle": {
     "description": "Name of the Mahjong solitaire game."

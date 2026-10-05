@@ -16,10 +16,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'freecell_flows.dart';
 import 'mahjong_flows.dart';
+import 'spider_flows.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   mahjongFlows();
+  spiderFlows();
   freecellFlows();
 
   testWidgets('a game left continues; a new game records it as abandoned', (

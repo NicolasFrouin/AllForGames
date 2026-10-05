@@ -10,6 +10,8 @@ import 'klondike/klondike_difficulty_texts.dart';
 import 'mahjong/mahjong_controller.dart';
 import 'mahjong/mahjong_difficulty.dart';
 import 'mahjong/mahjong_difficulty_texts.dart';
+import 'spider/spider_controller.dart';
+import 'spider/spider_difficulty_texts.dart';
 
 /// A text in the language of the app.
 typedef LocalizedText = String Function(AppLocalizations l10n);
@@ -82,11 +84,15 @@ final gameCatalog = [
     detailLabels: FreeCellStatKeys.labels,
   ),
   GameInfo(
-    id: 'spider',
+    id: SpiderController.gameId,
     title: (l10n) => l10n.spiderTitle,
     tagline: (l10n) => l10n.spiderTagline,
     icon: Icons.layers,
     color: const Color(0xFF6A1B9A),
+    route: '/spider',
+    // The levels are the suit counts: the variants of the records.
+    variants: spiderVariantNames,
+    detailLabels: SpiderStatKeys.labels,
   ),
   GameInfo(
     id: MahjongController.gameId,

@@ -3,6 +3,7 @@ import 'dart:ui' show Locale;
 import 'package:all_for_games/games/freecell/freecell_difficulty.dart';
 import 'package:all_for_games/games/klondike/klondike_difficulty.dart';
 import 'package:all_for_games/games/mahjong/mahjong_difficulty.dart';
+import 'package:all_for_games/games/spider/spider_difficulty.dart';
 import 'package:all_for_games/settings/settings_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -166,6 +167,31 @@ void main() {
     expect(store.freecellDifficulty, FreeCellDifficulty.medium);
   });
 
+  test('keeps the difficulty of the last new Spider game', () async {
+    final store = await createStore();
+    expect(store.spiderDifficulty, SpiderDifficulty.medium);
+
+    final saving = store.setSpiderDifficulty(SpiderDifficulty.hard);
+    expect(store.spiderDifficulty, SpiderDifficulty.hard);
+    await saving;
+
+    expect(
+      (await SettingsStore.load()).spiderDifficulty,
+      SpiderDifficulty.hard,
+    );
+    expect(await SharedPreferencesAsync().getAll(), {
+      SettingsStore.spiderDifficultyKey: 'hard',
+    });
+  });
+
+  test('an unknown Spider difficulty is Medium', () async {
+    final store = await createStore({
+      SettingsStore.spiderDifficultyKey: 'extreme',
+    });
+
+    expect(store.spiderDifficulty, SpiderDifficulty.medium);
+  });
+
   test('listeners are told after the write, not during the call', () async {
     final store = await createStore();
     var notified = 0;
@@ -215,5 +241,7 @@ void main() {
     expect(store.mahjongDifficulty, MahjongDifficulty.easy);
     await store.setFreecellDifficulty(FreeCellDifficulty.easy);
     expect(store.freecellDifficulty, FreeCellDifficulty.easy);
+    await store.setSpiderDifficulty(SpiderDifficulty.easy);
+    expect(store.spiderDifficulty, SpiderDifficulty.easy);
   });
 }
