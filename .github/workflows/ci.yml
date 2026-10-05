@@ -97,9 +97,10 @@ jobs:
           echo $! >"$RUNNER_TEMP/e2e.pid"
 
       - run: flutter analyze --no-pub
-      # The runner reports 8 CPUs but has a quota of 4: two test processes (the default is half the
-      # CPUs) leave room for the e2e build, which the quota would otherwise slow down.
-      - run: flutter test --no-pub --concurrency=2
+      # Every test file in one process: one compile instead of one per file, which took most of
+      # the time on this 4-CPU runner (the e2e build runs beside it).
+      - name: Unit and widget tests
+        run: scripts/test_bundle.sh --no-pub
 
       # Deals come from seeds: they must be the same on the VM, JavaScript and WebAssembly.
       # The e2e tests check deals in the JavaScript app; this checks the deal of every game in
