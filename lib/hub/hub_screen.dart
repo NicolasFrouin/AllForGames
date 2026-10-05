@@ -112,13 +112,44 @@ class _GameGrid extends StatelessWidget {
               children: [
                 for (var i = row * columns; i < (row + 1) * columns; i++)
                   Expanded(
-                    child: i < tiles.length ? tiles[i] : const SizedBox(),
+                    child: i < tiles.length
+                        ? _Entrance(index: i, child: tiles[i])
+                        : const SizedBox(),
                   ),
               ],
             ),
           ),
         );
       },
+    );
+  }
+}
+
+/// Tiles rise and fade in one after the other when the hub opens.
+class _Entrance extends StatelessWidget {
+  const _Entrance({required this.index, required this.child});
+
+  final int index;
+  final Widget child;
+
+  static const _step = 70;
+  static const _rise = 420;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = _rise + index * _step;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: Duration(milliseconds: total),
+      curve: Interval(index * _step / total, 1, curve: Curves.easeOutCubic),
+      builder: (context, t, child) => Opacity(
+        opacity: t,
+        child: Transform.translate(
+          offset: Offset(0, 28 * (1 - t)),
+          child: child,
+        ),
+      ),
+      child: child,
     );
   }
 }
@@ -377,7 +408,7 @@ class _OverallChip extends StatelessWidget {
   }
 }
 
-class GameTile extends StatelessWidget {
+class GameTile extends StatefulWidget {
   const GameTile({
     super.key,
     required this.game,
@@ -392,134 +423,160 @@ class GameTile extends StatelessWidget {
   final SavedGame? saved;
 
   @override
+  State<GameTile> createState() => _GameTileState();
+}
+
+/// A playable tile grows a little under the pointer and sinks when pressed.
+class _GameTileState extends State<GameTile> {
+  bool _hovered = false;
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
+    final game = widget.game;
+    final stats = widget.stats;
+    final saved = widget.saved;
     final textTheme = Theme.of(context).textTheme;
     final l10n = AppLocalizations.of(context);
     final title = game.title(l10n);
     final route = game.route;
     return Opacity(
       opacity: game.isAvailable ? 1 : 0.55,
-      child: Card(
-        key: ValueKey('game-${game.id}'),
-        clipBehavior: Clip.antiAlias,
-        elevation: 6,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: InkWell(
-          onTap: route == null ? null : () => context.go(route),
-          child: Ink(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  game.color,
-                  Color.lerp(game.color, Colors.black, 0.55)!,
-                ],
-              ),
-            ),
-            padding: const EdgeInsets.all(18),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 190),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    spacing: 12,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: const Color(0x26FFFFFF),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Icon(game.icon, color: Colors.white, size: 30),
-                      ),
-                      if (game.isAvailable)
-                        IconButton(
-                          key: ValueKey('stats-${game.id}'),
-                          tooltip: l10n.gameStatistics(title),
-                          color: Colors.white,
-                          onPressed: () => context.go('/stats/${game.id}'),
-                          icon: const Icon(Icons.bar_chart),
-                        )
-                      else
-                        Flexible(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.black26,
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Text(
-                              l10n.hubComingSoon,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: textTheme.labelMedium?.copyWith(
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const Spacer(),
-                  Text(
-                    title,
-                    style: textTheme.titleLarge?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    game.tagline(l10n),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: Colors.white70,
-                    ),
-                  ),
-                  if (game.isAvailable) ...[
-                    const SizedBox(height: 12),
-                    if (saved case SavedGame(:final moves, :final playTime)
-                        when moves > 0) ...[
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.play_circle_outline,
-                            color: Colors.white,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              l10n.hubContinue(moves, formatClock(playTime)),
-                              key: ValueKey('resume-${game.id}'),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: textTheme.labelLarge?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                    ],
-                    Text(
-                      _summary(stats, l10n),
-                      key: ValueKey('summary-${game.id}'),
-                      style: textTheme.labelLarge?.copyWith(
-                        color: Colors.white,
-                      ),
-                    ),
+      child: AnimatedScale(
+        scale: _pressed
+            ? 0.97
+            : _hovered
+            ? 1.03
+            : 1,
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOutCubic,
+        child: Card(
+          key: ValueKey('game-${game.id}'),
+          clipBehavior: Clip.antiAlias,
+          // The card's Material animates the change of its shadow.
+          elevation: _hovered ? 12 : 6,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: InkWell(
+            onTap: route == null ? null : () => context.go(route),
+            onHover: (hovered) => setState(() => _hovered = hovered),
+            onHighlightChanged: (pressed) => setState(() => _pressed = pressed),
+            child: Ink(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    game.color,
+                    Color.lerp(game.color, Colors.black, 0.55)!,
                   ],
-                ],
+                ),
+              ),
+              padding: const EdgeInsets.all(18),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 190),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      spacing: 12,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0x26FFFFFF),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Icon(game.icon, color: Colors.white, size: 30),
+                        ),
+                        if (game.isAvailable)
+                          IconButton(
+                            key: ValueKey('stats-${game.id}'),
+                            tooltip: l10n.gameStatistics(title),
+                            color: Colors.white,
+                            onPressed: () => context.go('/stats/${game.id}'),
+                            icon: const Icon(Icons.bar_chart),
+                          )
+                        else
+                          Flexible(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.black26,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                l10n.hubComingSoon,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: textTheme.labelMedium?.copyWith(
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const Spacer(),
+                    Text(
+                      title,
+                      style: textTheme.titleLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      game.tagline(l10n),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: Colors.white70,
+                      ),
+                    ),
+                    if (game.isAvailable) ...[
+                      const SizedBox(height: 12),
+                      if (saved case SavedGame(:final moves, :final playTime)
+                          when moves > 0) ...[
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.play_circle_outline,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                l10n.hubContinue(moves, formatClock(playTime)),
+                                key: ValueKey('resume-${game.id}'),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: textTheme.labelLarge?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                      ],
+                      Text(
+                        _summary(stats, l10n),
+                        key: ValueKey('summary-${game.id}'),
+                        style: textTheme.labelLarge?.copyWith(
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
           ),

@@ -131,11 +131,20 @@ class _AchievementTile extends StatelessWidget {
                 Row(
                   children: [
                     Expanded(
-                      child: LinearProgressIndicator(
-                        value: progress / achievement.goal,
-                        minHeight: 6,
-                        borderRadius: BorderRadius.circular(3),
-                        color: unlocked ? Colors.amber : null,
+                      // The bar fills up when the page opens.
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(
+                          begin: 0,
+                          end: progress / achievement.goal,
+                        ),
+                        duration: const Duration(milliseconds: 900),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, value, _) => LinearProgressIndicator(
+                          value: value,
+                          minHeight: 6,
+                          borderRadius: BorderRadius.circular(3),
+                          color: unlocked ? Colors.amber : null,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 10),
