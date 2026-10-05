@@ -102,11 +102,12 @@ jobs:
       - run: flutter test --no-pub --concurrency=2
 
       # Deals come from seeds: they must be the same on the VM, JavaScript and WebAssembly.
-      # The e2e tests check a deal in the JavaScript app; this checks WebAssembly (release builds).
+      # The e2e tests check deals in the JavaScript app; this checks the deal of every game in
+      # WebAssembly (release builds), in one compile.
       - name: Deals are the same in WebAssembly
         env:
           CHROME_EXECUTABLE: ${{ steps.chrome.outputs.chrome-path }}
-        run: flutter test --no-pub --platform chrome --wasm test/games/klondike/klondike_state_test.dart
+        run: flutter test --no-pub --platform chrome --wasm test/cards/deals_on_web_test.dart
 
       - name: End-to-end tests (Chrome)
         run: |
