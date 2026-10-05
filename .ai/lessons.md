@@ -8,3 +8,7 @@ Project conventions live in `CLAUDE.md`. Add here only lessons learned that appl
 - Seeding browser storage for a manual check: `SharedPreferencesAsync` keys on web have no `flutter.` prefix and
   values are JSON-encoded. Leave the game screen first: a game saves itself when the page hides (reload) and
   would overwrite the seeded save.
+- `timeDilation` set in a test must be reset inside the test body (try/finally): flutter_test checks it before the
+  tear-down callbacks run.
+- The dev shell is zsh: `$VAR` holding several paths is not split into words. Use bash arrays (`bash -c`) for
+  multi-file commands, and check a chain stopped where you think before going on.

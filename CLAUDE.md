@@ -29,7 +29,9 @@ flutter build web --release --wasm            # release web build in build/web
 
 Toolchain: Flutter 3.47.6 / Dart 3.13 (Homebrew cask). CI (`.github/workflows/ci.yml`) runs format, analyze, tests,
 the deal test in Chrome with Wasm (the e2e tests check a deal in JS) and web e2e. The e2e tests run in the background
-beside the other checks: about 2 minutes. Docs-only changes (`**/*.md`, `.ai/**`) skip CI.
+beside the other checks: about 3 minutes. Unit and widget tests run as one bundle (`scripts/test_bundle.sh`: one
+compile instead of one per test file); the e2e flows run in a 1024x768 window (the runner has no GPU: Chrome draws in
+software). Docs-only changes (`**/*.md`, `.ai/**`) skip CI.
 
 **CI runs only on the self-hosted runner** (Coolify, Linux x64): every job uses `runs-on: [self-hosted, Linux, X64]`.
 Never use GitHub-hosted runners (`ubuntu-latest`, ...). The runner is a persistent container (4 CPUs although `nproc`
