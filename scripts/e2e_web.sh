@@ -59,12 +59,16 @@ for _ in {1..50}; do
   sleep 0.2
 done
 
+# --no-web-experimental-hot-reload: the older module format builds the debug app in about half
+# the time (and from the build/ cache), and the tests need no hot reload. The flag is deprecated:
+# drop it if a newer Flutter removes it.
 flutter drive \
   --driver=test_driver/integration_test.dart \
   --target=integration_test/app_test.dart \
   -d web-server \
   --browser-name=chrome \
   --headless \
+  --no-web-experimental-hot-reload \
   --driver-port="$port" \
   ${CHROME_EXECUTABLE:+--chrome-binary="$CHROME_EXECUTABLE"} \
   "$@"
