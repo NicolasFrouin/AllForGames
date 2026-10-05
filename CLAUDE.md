@@ -4,7 +4,7 @@ Guide for AI agents working on this repo. Read it fully before you change code.
 
 ## Project
 
-All For Games: one Flutter app with a hub of classic games (Klondike now; FreeCell, Spider, Mahjong later).
+All For Games: one Flutter app with a hub of classic games (Klondike, Mahjong; FreeCell and Spider next).
 Targets: web and Android first, then iOS and desktop, from one codebase.
 Product priorities: rich player statistics, a polished hub, good unit + widget + e2e tests.
 
@@ -20,23 +20,30 @@ flutter test                                  # unit + widget tests (fast)
 flutter test test/games/klondike              # one folder or file: prefer narrow runs
 scripts/e2e_web.sh                            # e2e in headless Chrome (--no-headless to watch)
 dart run tool/generate_klondike_deals.dart    # regenerates klondike_deals.dart (about 1 minute)
+dart run tool/mahjong_difficulty.dart [deals] # win rates of simulated players per Mahjong level
 flutter build web --release --wasm            # release web build in build/web
 ```
 
 Toolchain: Flutter 3.47.6 / Dart 3.13 (Homebrew cask). CI (`.github/workflows/ci.yml`) runs format, analyze, tests,
-the deal tests in Chrome (JS and Wasm) and web e2e.
+the deal test in Chrome with Wasm (the e2e tests check a deal in JS) and web e2e. The e2e tests run in the background
+beside the other checks: about 2 minutes. Docs-only changes (`**/*.md`, `.ai/**`) skip CI.
 
 **CI runs only on the self-hosted runner** (Coolify, Linux x64): every job uses `runs-on: [self-hosted, Linux, X64]`.
-Never use GitHub-hosted runners (`ubuntu-latest`, ...). The runner has no preinstalled Chrome or Flutter: the
-workflow installs them (`subosito/flutter-action`, `browser-actions/setup-chrome`) and passes `CHROME_EXECUTABLE`
-and `CHROMEDRIVER` to `scripts/e2e_web.sh`. A new tool needed by CI must be installed by the workflow too.
+Never use GitHub-hosted runners (`ubuntu-latest`, ...). The runner is a persistent container (4 CPUs although `nproc`
+says 8, 6 GB): the Flutter SDK, pub cache and Chrome stay on its disk, so the workflow restores no cache archives (on
+a new container, flutter-action and setup-chrome download them once). The checkout keeps `build/` and `.dart_tool/`
+(incremental compiler caches). Flutter commands that run in parallel take `--no-pub`. The workflow passes
+`CHROME_EXECUTABLE` and `CHROMEDRIVER` to `scripts/e2e_web.sh`. A new tool needed by CI must be installed by the
+workflow too. `scripts/e2e_web.sh` uses the deprecated `--no-web-experimental-hot-reload` (a twice-as-fast debug
+build): drop it when a Flutter upgrade removes it.
 
 ## Layout
 
 ```
 lib/
-  main.dart, app.dart        loads the stores, routes (go_router): /, /klondike?draw=3&seed=42, /stats/:gameId,
-                             /achievements, /card-backs
+  main.dart, app.dart        loads the stores, routes (go_router): /, /klondike?draw=3&seed=42,
+                             /mahjong?difficulty=easy&seed=42, /stats/:gameId, /achievements, /card-backs
+                             (without params, a game route continues the saved game)
   app_stores.dart            AppStores: every store (stats, saves, settings, achievements), loaded once, given to
                              the screens; its constructor keeps the achievements in sync with the stats
   l10n/                      app_en.arb (template) + app_fr.arb; app_localizations*.dart are generated (git-ignored)
@@ -49,14 +56,24 @@ lib/
   stats/                     GameRecord (one finished game), GameStats (aggregates), StatsStore, PlayTimer, stats page
   common/format.dart         duration/date/percent formatting, in the app language
   games/game_catalog.dart    GameInfo list shown on the hub (route, localized title/tagline/variants/stat labels)
-  games/klondike/            playing_card, klondike_state (immutable rules), klondike_controller (game session,
-                             undo, stat counters), klondike_board (cards + drag and drop), klondike_screen, card_view, suit_icon,
-                             deal_random (seeded shuffle), klondike_deals (generated winnable seeds), deal_picker
-                             (pickDealSeed, difficultyOfSeed), klondike_difficulty (enum) + _texts, new_game_sheet,
+  cards/                     shared by card games: playing_card (Suit, PlayingCard), deal_random (seeded shuffle, the
+                             same on VM/JS/Wasm; Mahjong uses it too), card_view (CardView, compact face below
+                             56 px), suit_icon, card_motion (CardMotion: pure motion math), confetti, card_table
+                             (CardTable engine: TablePile, TableAction, MotionStyle, CardSlot), moving_card
+                             (MovingCard, TurningCardView: per-frame transforms)
+  games/klondike/            klondike_state (immutable rules), klondike_controller (game session, undo, stat
+                             counters), klondike_board (adapter on CardTable: layout, rules callbacks, MotionStyles),
+                             klondike_screen, klondike_deals (generated winnable seeds), deal_picker (pickDealSeed,
+                             difficultyOfSeed), klondike_difficulty (enum) + _texts, new_game_sheet,
                              klondike_solver (offline only: the generator and tests)
+  games/mahjong/             pure Dart: mahjong_tiles, mahjong_layout, mahjong_state (rules), mahjong_generator
+                             (solvable by construction), mahjong_solver (hints), mahjong_difficulty, mahjong_motion,
+                             mahjong_players (offline only); Flutter: mahjong_controller, mahjong_board,
+                             mahjong_tile_view (vector tile art), mahjong_screen, mahjong_new_game_sheet, _texts
 test/                        unit (games/, stats/) and widget (widget/) tests; helpers in test/helpers and *_test_helpers.dart
 integration_test/            e2e tests (run on web by scripts/e2e_web.sh, or on a device)
-tool/                        generate_klondike_deals.dart (solves and grades deals, writes klondike_deals.dart)
+tool/                        generate_klondike_deals.dart (solves and grades deals, writes klondike_deals.dart),
+                             mahjong_difficulty.dart (simulated win rates per Mahjong level)
 ```
 
 ## Conventions
@@ -79,7 +96,7 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   list (other tabs and unreadable entries must survive). Keys: `stats.game.<gameId>-<startedAt µs>-<seed>` per
   record (`StatsStore.keyOf`), `save.<gameId>` per game in progress (`GameSaveStore.keyOf`), `settings.<name>`
   per setting (`settings.locale`: `en`/`fr`, absent = device language; `settings.cardBack`: skin id, unknown =
-  classic; `settings.klondike.drawCount`: int 1/3, unknown = 1; `settings.klondike.difficulty`:
+  classic; `settings.klondike.drawCount`: int 1/3, unknown = 1; `settings.<game>.difficulty`:
   `easy`/`medium`/`hard`, unknown = medium), `achievements.<id>` per unlocked achievement (UTC ISO date).
   Catch storage errors (blocked or full storage must not break the app).
 - **ChangeNotifier stores** notify *after* an `await`, never synchronously in a mutating call:
@@ -97,7 +114,7 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   A card back is free or names the achievement that unlocks it (`unlockedBy`); the card backs page only selects
   unlocked ones. A new achievement or card back needs its texts in both ARB files and a case in
   `achievement_texts.dart` (a test checks every id has them).
-- **Klondike deals**: `KlondikeState.deal(seed)` (`shuffledDeck` with `DealRandom`, the same on VM, JS and Wasm)
+- **Klondike deals**: `KlondikeState.deal(seed)` (`shuffledDeck` with `DealRandom` from `lib/cards/`, the same on VM, JS and Wasm)
   must never change: `klondikeDeals[drawCount][difficulty]` lists seeds proven winnable for these exact deals.
   New games deal `pickDealSeed`: a seed of `klondikeDeals[drawCount][difficulty]`, not yet played in that draw
   mode (records) nor on screen, any seed of that list once all were played. An explicit seed (`/klondike?seed=42`,
@@ -110,23 +127,39 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   (`new-game`) opens with the settings (`klondikeDrawCount`, `klondikeDifficulty`); Deal saves them, and confirms
   the abandon of a game with moves (the sheet says so). A game opened from the hub without a save uses them too
   (`?draw=` overrides the draw count); Play again keeps the draw count and difficulty.
-- **Animations** (Klondike board): one timeline (a `Ticker` in `klondike_board.dart`) moves every card. On each
-  action (`controller.lastAction` / `actionSerial`, cards in `lastMovedCardIds` order) the board plans a
-  `CardMotion` per changed card (`card_motion.dart`: fly on an arc, 3D flip, hop, shake; pure and unit-tested).
-  A new batch shifts the running motions, so moves chain without jumps. Paint order: cards on the table by pile
-  (a waiting card keeps its old pile), then cards in the air. Reduced motion (`MediaQuery.disableAnimationsOf`)
+- **Card games build on `CardTable`** (`lib/cards/card_table.dart`). The game gives the piles in paint order
+  (`TablePile`: id, cards, top-left offset of each card, rect, drop rect, an optional `CardSlot` with its test
+  key), the card width and back, the last action (`TableAction`: serial, moved card ids in stagger order,
+  `MotionStyle` with stagger/duration/curve/arc, `dealFrom` pile), callbacks (`canDrag`, `canTap`, `onTap` → false
+  shakes, `canDrop`, `onDrop`, `onSlotTap`) and, once won, the `celebration` piles whose top cards hop, plus
+  `onCelebrated`. The engine plans a `CardMotion` per changed card (fly on an arc, 3D flip, hop, shake; pure and
+  unit-tested); drop glide, snap back on a refused drop, shake, resize glide, confetti and reduced motion are
+  built in. Card ids must be unique on a table.
+- **Animations stay cheap**: one clock (`ValueNotifier<double>`, driven by a `Ticker`) and no `setState` per frame.
+  `MovingCard` moves a card by repainting its own layer (fixed-blur shadow, listens only while it moves),
+  `TurningCardView` swaps the face once at mid-flip, card faces sit in `RepaintBoundary`s, the card layer
+  rebuilds only when the paint order changes (a card takes off or lands), confetti is one `drawVertices` call.
+  `test/widget/klondike_board_rebuilds_test.dart` guards it (`debugOnRebuildDirtyWidget`): keep it passing.
+  A new batch shifts running motions, so moves chain without jumps. Paint order: cards on the table by pile (a
+  waiting card keeps its old pile), then cards in the air. Reduced motion (`MediaQuery.disableAnimationsOf`)
   moves cards at once. No endless animation anywhere: tests rely on `pumpAndSettle`.
-  A win plays on the same timeline: the auto-complete cascade (one card after the other, in foundation order),
-  then the kings hop with confetti bursts (`confetti.dart`, drawn in an `OverlayPortal` above the app bar); the
-  board then calls `onCelebrated` and the screen opens the win dialog (at once with reduced motion).
-- **Card suits** are drawn with `SuitIcon` (vector). Text symbols ♥ ♦ render as color emoji on web.
+  A win plays on the same timeline: the cascade (one card after the other), then the top cards of the
+  celebration piles hop with confetti bursts (drawn in an `OverlayPortal` above the app bar); the table then calls
+  `onCelebrated` and the screen opens the win dialog (at once with reduced motion).
+- **Mahjong**: deals are built at runtime from the seed (`DealRandom`), solvable by construction (removing pairs
+  of free places from the full layout gives a clearing order). A level is a layout plus a trap rate, checked by
+  `tool/mahjong_difficulty.dart` and a unit test that keeps the levels ordered. On a tall screen the layout is
+  dealt with rows and columns swapped (chosen at deal time, saved with the game). Tile art is vector (no emoji,
+  no CJK font).
+- **Card suits** are drawn with `SuitIcon` (`lib/cards/`, vector). Text symbols ♥ ♦ render as color emoji on web.
   Face-down cards are drawn with `CardBackView` and the selected skin.
 - **Keys for tests**: widgets that tests drive have `ValueKey`s (`game-<id>`, `stats-<id>`, `stock`, `waste`,
   `foundation-<suit>`, `tableau-<i>`, card ids like `hearts-1`, `moves-value`, `difficulty-value`, `undo`,
   `new-game`, `new-game-draw-<n>`, `new-game-difficulty-<name>`, `new-game-deal`, `stat-<id>` like
   `stat-winRate` or `stat-<detailKey>`, `variant-<id>`, `difficulty-<name>` (and `-all`) on the stats page,
   `language-menu`, `language-<code>`, `achievements-button`, `card-backs-button`, `achievement-<id>`,
-  `card-back-<id>`, `unlocked-<id>` in the win dialog, ...).
+  `card-back-<id>`, `unlocked-<id>` in the win dialog; Mahjong: `tile-<id>`, `hint`, `shuffle`, `stuck-banner`,
+  `tiles-value`, `pairs-value`, ...).
   Keep them stable. Keys never depend on the language (no `ValueKey('stat-$label')`).
 - Keep code simple: no extra abstraction or packages unless clearly needed. Match the existing style; comments only for the why.
 
@@ -145,12 +178,14 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
 
 ## Adding a game
 
-1. Rules + controller in `lib/games/<game>/` with unit tests.
-2. Screen and route in `lib/app.dart`; entry in `game_catalog.dart` (route, variants, detail labels); its texts
-   in both ARB files.
+1. Rules (pure Dart) + controller in `lib/games/<game>/` with unit tests. Every deal must be winnable: prove it
+   (solver offline + generated seed list, like Klondike, or solvable by construction, like Mahjong).
+2. Screen and route in `lib/app.dart`; entry in `game_catalog.dart` (route, variants, difficulties, detail
+   labels); its texts in both ARB files. A card game's board is an adapter on `CardTable`.
 3. Record finished games with `StatsStore.add`; save the game in progress in `GameSaveStore` (controller
    `toJson`/`restore`, remove on a win). The hub and stats page then work without changes.
-4. Widget tests + one e2e flow.
+4. Widget tests (+ the small screen test pages) + e2e flows in `integration_test/<game>_flows.dart`, called from
+   `integration_test/app_test.dart`.
 
 ## Workflow
 

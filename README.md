@@ -8,7 +8,8 @@ Classic games in one app: pick a game on the hub, play, and follow detailed stat
 - Statistics for every game: time, moves, undos, score, streaks, records and more
 - Achievements, with progress, that unlock new card backs to pick for the games
 - English and French
-- FreeCell, Spider and Mahjong are coming
+- **Mahjong** solitaire (Pyramid and Turtle layouts), with hints, shuffle and undo
+- FreeCell and Spider are coming
 
 Built with [Flutter](https://flutter.dev): one codebase for Web, Android, iOS, Windows, macOS and Linux.
 
