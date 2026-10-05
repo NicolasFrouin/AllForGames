@@ -11,8 +11,9 @@ enum Suit {
 }
 
 class PlayingCard {
-  const PlayingCard(this.suit, this.rank, {this.faceUp = false})
-    : assert(rank >= 1 && rank <= 13);
+  const PlayingCard(this.suit, this.rank, {this.faceUp = false, this.deck = 0})
+    : assert(rank >= 1 && rank <= 13),
+      assert(deck >= 0);
 
   /// Reads a [code]. Throws a [FormatException] for anything else.
   factory PlayingCard.fromCode(String code) {
@@ -41,8 +42,14 @@ class PlayingCard {
   final int rank;
   final bool faceUp;
 
-  /// Stable across face changes, so widgets keep their identity when a card flips.
-  String get id => '${suit.name}-$rank';
+  /// Which copy of the card, in games with several decks (Spider): the
+  /// cards of deck 0 are the cards of a single-deck game.
+  final int deck;
+
+  /// Stable across face changes, so widgets keep their identity when a card
+  /// flips. Unique among several decks: `hearts-12` (deck 0), `hearts-12-3`.
+  String get id =>
+      deck == 0 ? '${suit.name}-$rank' : '${suit.name}-$rank-$deck';
 
   /// Two letters for saves: rank then suit, with an uppercase suit letter for
   /// a face-up card. `TH` is the face-up 10 of hearts, `Kc` the face-down
@@ -61,17 +68,18 @@ class PlayingCard {
   };
 
   PlayingCard turned({required bool faceUp}) =>
-      PlayingCard(suit, rank, faceUp: faceUp);
+      PlayingCard(suit, rank, faceUp: faceUp, deck: deck);
 
   @override
   bool operator ==(Object other) =>
       other is PlayingCard &&
       other.suit == suit &&
       other.rank == rank &&
-      other.faceUp == faceUp;
+      other.faceUp == faceUp &&
+      other.deck == deck;
 
   @override
-  int get hashCode => Object.hash(suit, rank, faceUp);
+  int get hashCode => Object.hash(suit, rank, faceUp, deck);
 
   @override
   String toString() => '$rankLabel${suit.symbol}${faceUp ? '' : '?'}';

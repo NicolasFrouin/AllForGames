@@ -80,6 +80,9 @@ class TableAction<P> {
     this.cardIds = const [],
     this.style = const MotionStyle(),
     this.dealFrom,
+    this.stops = const {},
+    this.thenIds = const [],
+    this.thenStyle = const MotionStyle(),
   });
 
   final int serial;
@@ -92,6 +95,26 @@ class TableAction<P> {
   /// pile one after the other, and turn over where they land. The other
   /// cards are placed at once.
   final P? dealFrom;
+
+  /// For an action in two steps, such as a Spider run that a move completes:
+  /// it lands on its column, then leaves for the foundations. The cards of
+  /// [stops] first go to their stop, with the other cards of [cardIds]; once
+  /// these landed, the cards of [thenIds] go on to their places one after
+  /// the other, with [thenStyle]. A card of [thenIds] without a stop waits
+  /// where it was, and one that stays in place turns over then.
+  final Map<String, CardStop<P>> stops;
+  final List<String> thenIds;
+  final MotionStyle thenStyle;
+}
+
+/// Where a card waits between the two steps of a [TableAction]: at [offset],
+/// drawn as the card [index] of [pile].
+class CardStop<P> {
+  const CardStop(this.pile, this.index, this.offset);
+
+  final P pile;
+  final int index;
+  final Offset offset;
 }
 
 /// A card table: draws piles of cards and moves every card on one timeline.
@@ -244,6 +267,9 @@ class _CardTableState<P extends Object> extends State<CardTable<P>>
 
   /// Paint order of a card that waits before its motion: its old pile.
   final _waitZ = <String, double>{};
+
+  /// Paint order of a card that waits at a [CardStop] between two steps.
+  final _stopZ = <String, double>{};
   final _paintOrder = _PaintOrder();
 
   /// The win celebration: its confetti, and when to call `onCelebrated`.
@@ -315,6 +341,7 @@ class _CardTableState<P extends Object> extends State<CardTable<P>>
     _ticker.stop();
     _motions.clear();
     _waitZ.clear();
+    _stopZ.clear();
     _confetti = null;
   }
 
@@ -449,7 +476,11 @@ class _CardTableState<P extends Object> extends State<CardTable<P>>
     if (previous.isEmpty) return;
 
     final moved = action?.cardIds ?? const <String>[];
+    final stops = action?.stops ?? const {};
+    final thenIds = action?.thenIds ?? const <String>[];
     final added = <String, CardMotion>{};
+    // Where and how each card of the second step starts it.
+    final origins = <String, (Offset, bool)>{};
     for (final MapEntry(key: id, value: place) in _places.entries) {
       final before = previous[id];
       if (before == null) continue;
@@ -457,11 +488,20 @@ class _CardTableState<P extends Object> extends State<CardTable<P>>
       final flips = before.card.faceUp != place.card.faceUp;
       if (!moves && !flips) continue;
       final pose = _motions[id]?.poseAt(_now);
+      _stopZ.remove(id);
+      final from = dropStarts?[id] ?? pose?.position ?? before.offset;
+      final faceFrom = pose?.faceUp ?? before.card.faceUp;
+      final stop = stops[id];
+      if (stop == null && thenIds.contains(id)) {
+        // Waits for the second step.
+        origins[id] = (from, faceFrom);
+        continue;
+      }
       final motion = _motionFor(
         action,
-        from: dropStarts?[id] ?? pose?.position ?? before.offset,
-        to: place.offset,
-        faceFrom: pose?.faceUp ?? before.card.faceUp,
+        from: from,
+        to: stop?.offset ?? place.offset,
+        faceFrom: faceFrom,
         faceTo: place.card.faceUp,
         order: max(0, moved.indexOf(id)),
         orderCount: moved.length,
@@ -473,6 +513,16 @@ class _CardTableState<P extends Object> extends State<CardTable<P>>
         _waitZ.remove(id);
       }
       added[id] = motion;
+      if (stop != null) {
+        origins[id] = (stop.offset, place.card.faceUp);
+        final pile = _pile(stop.pile);
+        if (pile != null) {
+          _stopZ[id] = widget.piles.indexOf(pile) * 1000.0 + stop.index;
+        }
+      }
+    }
+    if (action != null && thenIds.isNotEmpty) {
+      _planThen(action, origins, added, previous);
     }
     if (won) {
       _celebrate(added);
@@ -522,6 +572,56 @@ class _CardTableState<P extends Object> extends State<CardTable<P>>
       flipStart: moving ? start : 110,
       flipDuration: moving ? max(duration, _flip) : _flip,
     );
+  }
+
+  /// The second step of [action]: after the first one landed, the cards of
+  /// [TableAction.thenIds] leave their stop (or their old place) one after
+  /// the other.
+  void _planThen(
+    TableAction<P> action,
+    Map<String, (Offset, bool)> origins,
+    Map<String, CardMotion> added,
+    Map<String, _Place<P>> previous,
+  ) {
+    const pause = 80.0;
+    final landed = added.values.fold(
+      0.0,
+      (end, motion) => max(end, motion.start + motion.duration),
+    );
+    final style = action.thenStyle;
+    for (final (i, id) in action.thenIds.indexed) {
+      final place = _places[id];
+      final origin = origins[id];
+      if (place == null || origin == null) continue;
+      final (from, faceFrom) = origin;
+      final start = landed + pause + i * style.stagger;
+      final distance = (place.offset - from).distance;
+      final moving = distance > 0;
+      final duration = moving
+          ? style.duration ?? (170 + distance * 0.5).clamp(200.0, 420.0)
+          : 0.0;
+      final motion = CardMotion(
+        kind: CardMotionKind.fly,
+        from: from,
+        to: place.offset,
+        start: start,
+        duration: duration,
+        height: distance > _cardHeight * 0.6
+            ? min(distance * style.arc, _cardHeight * style.maxArc)
+            : 0,
+        curve: style.curve ?? Curves.easeInOutCubic,
+        faceFrom: faceFrom,
+        faceTo: place.card.faceUp,
+        flipStart: start,
+        flipDuration: moving ? max(duration, _flip) : _flip,
+      );
+      if (added[id] case final first?) {
+        added[id] = first.followedBy(motion);
+      } else {
+        added[id] = motion;
+        _waitZ[id] = previous[id]?.z ?? place.z;
+      }
+    }
   }
 
   /// The dealt cards fly from the pile one by one, in the order of the
@@ -686,6 +786,10 @@ class _CardTableState<P extends Object> extends State<CardTable<P>>
       }
       if (motion != null && motion.isWaitingAt(t)) {
         return (0, _waitZ[id] ?? place.z, place.z);
+      }
+      if (_stopZ[id] case final z?
+          when motion != null && t <= (motion.next?.start ?? 0)) {
+        return (0, z, place.z);
       }
       return (0, place.z, place.z);
     }

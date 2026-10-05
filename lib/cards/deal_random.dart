@@ -80,3 +80,22 @@ List<PlayingCard> shuffledDeck(int seed) {
   }
   return deck;
 }
+
+/// A copy of [cards] shuffled by [seed], for games that deal something else
+/// than one 52-card deck (Spider deals two decks). It shuffles a list of any
+/// type, at most 65536 items.
+///
+/// Fisher-Yates from the last item, like [shuffledDeck], with a new
+/// [DealRandom] of [seed]. Must never change: the seed lists of the games that
+/// use it were proven winnable for the exact deals it gives today.
+List<T> shuffledCards<T>(int seed, List<T> cards) {
+  final shuffled = [...cards];
+  final random = DealRandom(seed);
+  for (var i = shuffled.length - 1; i > 0; i--) {
+    final j = random.nextInt(i + 1);
+    final card = shuffled[i];
+    shuffled[i] = shuffled[j];
+    shuffled[j] = card;
+  }
+  return shuffled;
+}
