@@ -257,6 +257,66 @@
   "@freecellTagline": {
     "description": "One-line description of FreeCell on its hub tile."
   },
+  "freecellClassic": "Classic",
+  "@freecellClassic": {
+    "description": "FreeCell game mode: the standard rules, 4 free cells and 8 columns (statistics filter, recent games)."
+  },
+  "freecellEasyHint": "Moves that look good are enough.",
+  "@freecellEasyHint": {
+    "description": "New game sheet: what an Easy FreeCell deal needs, under the difficulty choice."
+  },
+  "freecellMediumHint": "Needs some planning: two free cells could do.",
+  "@freecellMediumHint": {
+    "description": "New game sheet: what a Medium FreeCell deal needs, under the difficulty choice."
+  },
+  "freecellHardHint": "Needs careful planning and most of the free cells.",
+  "@freecellHardHint": {
+    "description": "New game sheet: what a Hard FreeCell deal needs, under the difficulty choice."
+  },
+  "freecellCardsToFoundation": "Cards on foundations",
+  "@freecellCardsToFoundation": {
+    "description": "FreeCell statistic: cards played to the foundations."
+  },
+  "freecellAutoMoves": "Cards moved automatically",
+  "@freecellAutoMoves": {
+    "description": "FreeCell statistic: cards that went to the foundations by themselves after a move."
+  },
+  "freecellFreeCellUses": "Cards put in free cells",
+  "@freecellFreeCellUses": {
+    "description": "FreeCell statistic: moves of a card into a free cell."
+  },
+  "freecellMostFreeCellsUsed": "Most free cells used at once",
+  "@freecellMostFreeCellsUsed": {
+    "description": "FreeCell statistic and win dialog: the most free cells holding a card at the same time."
+  },
+  "freecellSupermoves": "Multi-card moves",
+  "@freecellSupermoves": {
+    "description": "FreeCell statistic: moves of a sequence of two cards or more."
+  },
+  "freecellEmptyColumnUses": "Moves to an empty column",
+  "@freecellEmptyColumnUses": {
+    "description": "FreeCell statistic: moves into an empty column."
+  },
+  "freecellTapMoves": "Tap moves",
+  "@freecellTapMoves": {
+    "description": "FreeCell statistic: moves made by tapping a card."
+  },
+  "freecellDragMoves": "Drag moves",
+  "@freecellDragMoves": {
+    "description": "FreeCell statistic: moves made by dragging cards."
+  },
+  "freecellAutoFinished": "Auto-finished",
+  "@freecellAutoFinished": {
+    "description": "FreeCell statistic: games finished with the Finish button."
+  },
+  "freecellTimeToFirstMove": "Time to first move",
+  "@freecellTimeToFirstMove": {
+    "description": "FreeCell statistic: time from the deal to the first move."
+  },
+  "freecellLongestThink": "Longest think time",
+  "@freecellLongestThink": {
+    "description": "FreeCell statistic: longest time between two moves."
+  },
   "spiderTitle": "Spider",
   "@spiderTitle": {
     "description": "Name of the Spider solitaire game."

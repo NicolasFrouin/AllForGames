@@ -14,11 +14,13 @@ import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'freecell_flows.dart';
 import 'mahjong_flows.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   mahjongFlows();
+  freecellFlows();
 
   testWidgets('a game left continues; a new game records it as abandoned', (
     tester,

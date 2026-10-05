@@ -1,5 +1,6 @@
 import 'dart:ui' show Locale;
 
+import 'package:all_for_games/games/freecell/freecell_difficulty.dart';
 import 'package:all_for_games/games/klondike/klondike_difficulty.dart';
 import 'package:all_for_games/games/mahjong/mahjong_difficulty.dart';
 import 'package:all_for_games/settings/settings_store.dart';
@@ -140,6 +141,31 @@ void main() {
     expect(store.mahjongDifficulty, MahjongDifficulty.medium);
   });
 
+  test('keeps the difficulty of the last new FreeCell game', () async {
+    final store = await createStore();
+    expect(store.freecellDifficulty, FreeCellDifficulty.medium);
+
+    final saving = store.setFreecellDifficulty(FreeCellDifficulty.hard);
+    expect(store.freecellDifficulty, FreeCellDifficulty.hard);
+    await saving;
+
+    expect(
+      (await SettingsStore.load()).freecellDifficulty,
+      FreeCellDifficulty.hard,
+    );
+    expect(await SharedPreferencesAsync().getAll(), {
+      SettingsStore.freecellDifficultyKey: 'hard',
+    });
+  });
+
+  test('an unknown FreeCell difficulty is Medium', () async {
+    final store = await createStore({
+      SettingsStore.freecellDifficultyKey: 'extreme',
+    });
+
+    expect(store.freecellDifficulty, FreeCellDifficulty.medium);
+  });
+
   test('listeners are told after the write, not during the call', () async {
     final store = await createStore();
     var notified = 0;
@@ -187,5 +213,7 @@ void main() {
     expect(store.klondikeDifficulty, KlondikeDifficulty.hard);
     await store.setMahjongDifficulty(MahjongDifficulty.easy);
     expect(store.mahjongDifficulty, MahjongDifficulty.easy);
+    await store.setFreecellDifficulty(FreeCellDifficulty.easy);
+    expect(store.freecellDifficulty, FreeCellDifficulty.easy);
   });
 }

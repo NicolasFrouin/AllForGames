@@ -1,6 +1,9 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
+import 'freecell/freecell_controller.dart';
+import 'freecell/freecell_difficulty.dart';
+import 'freecell/freecell_difficulty_texts.dart';
 import 'klondike/klondike_controller.dart';
 import 'klondike/klondike_difficulty.dart';
 import 'klondike/klondike_difficulty_texts.dart';
@@ -65,11 +68,18 @@ final gameCatalog = [
     detailLabels: KlondikeStatKeys.labels,
   ),
   GameInfo(
-    id: 'freecell',
+    id: FreeCellController.gameId,
     title: (l10n) => l10n.freecellTitle,
     tagline: (l10n) => l10n.freecellTagline,
     icon: Icons.view_column,
     color: const Color(0xFF1565C0),
+    route: '/freecell',
+    variants: {FreeCellController.variant: (l10n) => l10n.freecellClassic},
+    difficulties: {
+      for (final difficulty in FreeCellDifficulty.values)
+        difficulty.name: difficulty.label,
+    },
+    detailLabels: FreeCellStatKeys.labels,
   ),
   GameInfo(
     id: 'spider',

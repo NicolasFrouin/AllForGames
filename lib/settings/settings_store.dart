@@ -3,6 +3,7 @@ import 'dart:ui' show Locale;
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../games/freecell/freecell_difficulty.dart';
 import '../games/klondike/klondike_difficulty.dart';
 import '../games/mahjong/mahjong_difficulty.dart';
 import '../l10n/app_localizations.dart';
@@ -17,6 +18,7 @@ class SettingsStore extends ChangeNotifier {
     this._klondikeDrawCount,
     this._klondikeDifficulty,
     this._mahjongDifficulty,
+    this._freecellDifficulty,
   );
 
   static const localeKey = 'settings.locale';
@@ -24,6 +26,7 @@ class SettingsStore extends ChangeNotifier {
   static const klondikeDrawCountKey = 'settings.klondike.drawCount';
   static const klondikeDifficultyKey = 'settings.klondike.difficulty';
   static const mahjongDifficultyKey = 'settings.mahjong.difficulty';
+  static const freecellDifficultyKey = 'settings.freecell.difficulty';
 
   static const _defaultDrawCount = 1;
   static const _defaultDifficulty = KlondikeDifficulty.medium;
@@ -34,6 +37,7 @@ class SettingsStore extends ChangeNotifier {
   int _klondikeDrawCount;
   KlondikeDifficulty _klondikeDifficulty;
   MahjongDifficulty _mahjongDifficulty;
+  FreeCellDifficulty _freecellDifficulty;
 
   static Future<SettingsStore> load([SharedPreferencesAsync? prefs]) async {
     prefs ??= SharedPreferencesAsync();
@@ -42,6 +46,7 @@ class SettingsStore extends ChangeNotifier {
     var drawCount = _defaultDrawCount;
     var difficulty = _defaultDifficulty;
     var mahjongDifficulty = MahjongDifficulty.medium;
+    var freecellDifficulty = FreeCellDifficulty.medium;
     try {
       locale = _supportedLocale(await prefs.getString(localeKey));
       cardBackId = _knownCardBack(await prefs.getString(cardBackKey));
@@ -54,6 +59,11 @@ class SettingsStore extends ChangeNotifier {
             mahjongDifficultyKey,
           )] ??
           MahjongDifficulty.medium;
+      freecellDifficulty =
+          FreeCellDifficulty.values.asNameMap()[await prefs.getString(
+            freecellDifficultyKey,
+          )] ??
+          FreeCellDifficulty.medium;
     } on Object catch (error) {
       // Storage can be blocked (for example site data off in the browser).
       // The app still works, it only keeps the settings of this session.
@@ -66,6 +76,7 @@ class SettingsStore extends ChangeNotifier {
       drawCount,
       difficulty,
       mahjongDifficulty,
+      freecellDifficulty,
     );
   }
 
@@ -83,6 +94,10 @@ class SettingsStore extends ChangeNotifier {
   /// Difficulty of the last new Mahjong game the player dealt, for the next
   /// one.
   MahjongDifficulty get mahjongDifficulty => _mahjongDifficulty;
+
+  /// Difficulty of the last new FreeCell game the player dealt, for the
+  /// next one.
+  FreeCellDifficulty get freecellDifficulty => _freecellDifficulty;
 
   /// Listeners are told after the write, never during the call, like the
   /// other stores.
@@ -128,6 +143,15 @@ class SettingsStore extends ChangeNotifier {
     await _guard(
       'save the Mahjong difficulty',
       () => _prefs.setString(mahjongDifficultyKey, difficulty.name),
+    );
+    notifyListeners();
+  }
+
+  Future<void> setFreecellDifficulty(FreeCellDifficulty difficulty) async {
+    _freecellDifficulty = difficulty;
+    await _guard(
+      'save the FreeCell difficulty',
+      () => _prefs.setString(freecellDifficultyKey, difficulty.name),
     );
     notifyListeners();
   }

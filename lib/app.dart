@@ -3,6 +3,8 @@ import 'package:material_ui/material_ui.dart';
 
 import 'achievements/achievements_screen.dart';
 import 'app_stores.dart';
+import 'games/freecell/freecell_difficulty.dart';
+import 'games/freecell/freecell_screen.dart';
 import 'games/game_catalog.dart';
 import 'games/klondike/klondike_screen.dart';
 import 'games/mahjong/mahjong_difficulty.dart';
@@ -55,6 +57,20 @@ class _AllForGamesAppState extends State<AllForGamesApp> {
                   '3' => 3,
                   _ => 1,
                 },
+                seed: int.tryParse(query['seed'] ?? ''),
+              );
+            },
+          ),
+          GoRoute(
+            path: 'freecell',
+            // Query parameters start a given deal: /freecell?difficulty=hard&
+            // seed=42. Without them, the saved game continues.
+            builder: (context, state) {
+              final query = state.uri.queryParameters;
+              return FreeCellScreen(
+                stores: widget.stores,
+                difficulty: FreeCellDifficulty.values
+                    .asNameMap()[query['difficulty']],
                 seed: int.tryParse(query['seed'] ?? ''),
               );
             },
