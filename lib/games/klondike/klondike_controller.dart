@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 
+import '../../saves/game_save_store.dart';
 import '../../stats/game_record.dart';
 import '../../stats/play_timer.dart';
 import '../../stats/stats_store.dart';
@@ -37,10 +38,12 @@ abstract final class KlondikeStatKeys {
   };
 }
 
-/// Runs one Klondike game at a time and records its statistics.
+/// Runs one Klondike game at a time. It saves the game after each action, so
+/// the player can continue it later, and records it when it ends.
 class KlondikeController extends ChangeNotifier {
   KlondikeController({
     required this._stats,
+    required this._saves,
     int drawCount = 1,
     int? seed,
     KlondikeState? initialState,
@@ -49,9 +52,31 @@ class KlondikeController extends ChangeNotifier {
     _start(drawCount: drawCount, seed: seed, initialState: initialState);
   }
 
+  /// Continues a game saved by [toJson]. Throws a [FormatException] when
+  /// [json] is not a readable Klondike save.
+  KlondikeController.restore(
+    Map<String, Object?> json, {
+    required this._stats,
+    required this._saves,
+    DateTime Function()? clock,
+  }) : _clock = clock ?? DateTime.now {
+    try {
+      _restore(json);
+    } on FormatException {
+      rethrow;
+    } on Object catch (error) {
+      // A missing field or a value of the wrong type.
+      throw FormatException('Unreadable Klondike save: $error');
+    }
+  }
+
   static const gameId = 'klondike';
 
+  /// Version of the [toJson] format.
+  static const _saveVersion = 1;
+
   final StatsStore _stats;
+  final GameSaveStore _saves;
   final DateTime Function() _clock;
   final _history = <({KlondikeState state, int score})>[];
   final _counters = <String, int>{};
@@ -153,30 +178,105 @@ class KlondikeController extends ChangeNotifier {
     _score = previous.score;
     _undos++;
     _noteAction();
-    _saveProgress();
+    save();
     notifyListeners();
   }
 
-  void pause() => _timer.pause();
+  /// Also saves the game: the app may never come back from a pause.
+  void pause() {
+    _timer.pause();
+    save();
+  }
 
   void resume() {
     if (!_finished) _timer.start();
   }
 
-  /// Records the game as abandoned if the player made at least one move.
-  void abandon() {
+  /// Saves the game so the player can continue it later. A won game is not
+  /// saved: it is in the statistics.
+  void save() {
     if (_finished) return;
-    _finished = true;
-    _timer.pause();
-    if (_moves > 0) {
-      unawaited(_stats.add(_record(GameOutcome.abandoned)));
-    }
+    unawaited(
+      _saves.save(
+        SavedGame(
+          gameId: gameId,
+          moves: _moves,
+          playTime: _timer.elapsed,
+          savedAt: _clock(),
+          data: toJson(),
+        ),
+      ),
+    );
   }
 
-  void newGame({int? drawCount, int? seed}) {
-    abandon();
-    _start(drawCount: drawCount ?? _state.drawCount, seed: seed);
+  /// Deals a new game and saves it. The current game counts as abandoned if
+  /// the player made at least one move and did not win it.
+  void newGame({int? drawCount, int? seed, KlondikeState? initialState}) {
+    if (!_finished && _moves > 0) {
+      unawaited(_stats.add(_record(GameOutcome.abandoned)));
+    }
+    _start(
+      drawCount: drawCount ?? _state.drawCount,
+      seed: seed,
+      initialState: initialState,
+    );
+    save();
     notifyListeners();
+  }
+
+  /// The whole game, undo history included, for [KlondikeController.restore].
+  Map<String, Object?> toJson() => {
+    'version': _saveVersion,
+    'seed': _seed,
+    'drawCount': _state.drawCount,
+    'state': _state.encode(),
+    'history': [
+      for (final entry in _history) [entry.score, entry.state.encode()],
+    ],
+    'startedAt': _startedAt.toUtc().toIso8601String(),
+    'playTimeMs': _timer.elapsed.inMilliseconds,
+    'score': _score,
+    'moves': _moves,
+    'undos': _undos,
+    'counters': {..._counters},
+    'initialFaceDown': _initialFaceDown,
+    'timeToFirstMoveMs': _timeToFirstMove?.inMilliseconds,
+    'lastActionMs': _lastActionAt.inMilliseconds,
+    'longestThinkMs': _longestThink.inMilliseconds,
+  };
+
+  void _restore(Map<String, Object?> json) {
+    if (json['version'] != _saveVersion) {
+      throw FormatException('Unknown Klondike save version ${json['version']}');
+    }
+    final drawCount = json['drawCount'] as int;
+    KlondikeState decode(Object? text) =>
+        KlondikeState.decode(text as String, drawCount: drawCount);
+    Duration duration(Object? ms) => Duration(milliseconds: ms as int);
+
+    _seed = json['seed'] as int;
+    _state = decode(json['state']);
+    _history.addAll([
+      for (final entry
+          in (json['history'] as List<Object?>).cast<List<Object?>>())
+        (state: decode(entry[1]), score: entry[0] as int),
+    ]);
+    _startedAt = DateTime.parse(json['startedAt'] as String);
+    _timer = PlayTimer(clock: _clock, elapsed: duration(json['playTimeMs']))
+      ..start();
+    _score = json['score'] as int;
+    _moves = json['moves'] as int;
+    _undos = json['undos'] as int;
+    for (final MapEntry(:key, :value)
+        in (json['counters'] as Map<String, Object?>).entries) {
+      _counters[key] = value as int;
+    }
+    _initialFaceDown = json['initialFaceDown'] as int;
+    if (json['timeToFirstMoveMs'] case final ms?) {
+      _timeToFirstMove = duration(ms);
+    }
+    _lastActionAt = duration(json['lastActionMs']);
+    _longestThink = duration(json['longestThinkMs']);
   }
 
   void _start({
@@ -216,8 +316,9 @@ class KlondikeController extends ChangeNotifier {
       final record = _record(GameOutcome.won);
       _result = record;
       unawaited(_stats.add(record));
+      unawaited(_saves.remove(gameId));
     } else {
-      _saveProgress();
+      save();
     }
     notifyListeners();
   }
@@ -231,9 +332,6 @@ class KlondikeController extends ChangeNotifier {
   }
 
   void _bump(String key) => _counters[key] = (_counters[key] ?? 0) + 1;
-
-  void _saveProgress() =>
-      unawaited(_stats.saveInProgress(_record(GameOutcome.abandoned)));
 
   GameRecord _record(GameOutcome outcome) => GameRecord(
     gameId: gameId,

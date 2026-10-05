@@ -34,6 +34,15 @@ void main() {
     expect(timer.elapsed, const Duration(seconds: 7));
   });
 
+  test('a timer of a continued game starts from the time already played', () {
+    timer = PlayTimer(clock: () => now, elapsed: const Duration(minutes: 3));
+    expect(timer.elapsed, const Duration(minutes: 3));
+
+    timer.start();
+    wait(5);
+    expect(timer.elapsed, const Duration(minutes: 3, seconds: 5));
+  });
+
   test('a second start or pause changes nothing', () {
     timer.start();
     wait(5);

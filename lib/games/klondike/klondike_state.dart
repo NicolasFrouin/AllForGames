@@ -81,11 +81,56 @@ class KlondikeState {
     );
   }
 
+  /// Reads a board written by [encode]. Throws a [FormatException] unless
+  /// [text] holds the 52 cards once each, in 13 piles, with each foundation
+  /// in order.
+  factory KlondikeState.decode(String text, {required int drawCount}) {
+    final piles = text.split(',').map(_decodePile).toList();
+    if (piles.length != 13 || (drawCount != 1 && drawCount != 3)) {
+      throw FormatException('Not a Klondike board', text);
+    }
+    final count = piles.fold(0, (sum, pile) => sum + pile.length);
+    final ids = {
+      for (final pile in piles)
+        for (final card in pile) card.id,
+    };
+    if (count != 52 || ids.length != 52) {
+      throw FormatException('A board needs the 52 cards once each', text);
+    }
+    for (var i = 0; i < 4; i++) {
+      final foundation = piles[2 + i];
+      for (var j = 0; j < foundation.length; j++) {
+        final card = foundation[j];
+        if (card.suit.index != i || card.rank != j + 1 || !card.faceUp) {
+          throw FormatException('Foundation $i is not in order', text);
+        }
+      }
+    }
+    return KlondikeState(
+      stock: piles[0],
+      waste: piles[1],
+      foundations: piles.sublist(2, 6),
+      tableau: piles.sublist(6),
+      drawCount: drawCount,
+    );
+  }
+
   final List<PlayingCard> stock;
   final List<PlayingCard> waste;
   final List<List<PlayingCard>> foundations;
   final List<List<PlayingCard>> tableau;
   final int drawCount;
+
+  /// Compact text of the board for saves: the 13 piles (stock, waste,
+  /// foundations, tableau) joined by commas, each pile as the
+  /// [PlayingCard.code]s of its cards from bottom to top. [drawCount] is not
+  /// in it.
+  String encode() => [
+    stock,
+    waste,
+    ...foundations,
+    ...tableau,
+  ].map((pile) => pile.map((card) => card.code).join()).join(',');
 
   List<PlayingCard> pile(PileRef ref) => switch (ref.type) {
     PileType.stock => stock,
@@ -242,6 +287,14 @@ class KlondikeState {
       }
     }
     return best;
+  }
+
+  static List<PlayingCard> _decodePile(String text) {
+    if (text.length.isOdd) throw FormatException('Not a card pile', text);
+    return [
+      for (var i = 0; i < text.length; i += 2)
+        PlayingCard.fromCode(text.substring(i, i + 2)),
+    ];
   }
 
   static int _moveScore(PileType from, PileType to) => switch ((from, to)) {

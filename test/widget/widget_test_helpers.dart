@@ -1,9 +1,10 @@
+import 'package:all_for_games/app_stores.dart';
+import 'package:all_for_games/saves/game_save_store.dart';
 import 'package:all_for_games/stats/game_record.dart';
-import 'package:all_for_games/stats/stats_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
-import '../helpers/test_stats_store.dart';
+import '../helpers/test_stores.dart';
 
 /// A saved game. [endedMinute] orders records in time.
 GameRecord record({
@@ -30,9 +31,25 @@ GameRecord record({
   details: details,
 );
 
-/// A store whose saved data holds [records].
-Future<StatsStore> seededStore(List<GameRecord> records) =>
-    createTestStatsStore(savedData(records));
+/// A game in progress as the hub shows it. Its [SavedGame.data] is not a
+/// game that can continue.
+SavedGame savedGame({
+  String gameId = 'klondike',
+  int moves = 12,
+  Duration playTime = const Duration(minutes: 3, seconds: 5),
+}) => SavedGame(
+  gameId: gameId,
+  moves: moves,
+  playTime: playTime,
+  savedAt: DateTime.utc(2026, 1, 1, 13),
+  data: const {},
+);
+
+/// Stores whose saved data holds [records] and the games in progress [saves].
+Future<AppStores> seededStores(
+  List<GameRecord> records, [
+  List<SavedGame> saves = const [],
+]) => createTestStores({...savedData(records), ...savedGameData(saves)});
 
 /// A desktop-like window, so every widget of the screen is laid out on screen.
 void useSurface(WidgetTester tester, [Size size = const Size(1280, 900)]) {

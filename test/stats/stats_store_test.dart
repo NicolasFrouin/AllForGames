@@ -2,11 +2,9 @@ import 'package:all_for_games/stats/game_record.dart';
 import 'package:all_for_games/stats/stats_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
-import 'package:shared_preferences_platform_interface/types.dart';
 
-import '../helpers/test_stats_store.dart';
+import '../helpers/test_stores.dart';
 
 GameRecord game(
   String gameId, {
@@ -31,24 +29,6 @@ List<int> seeds(Iterable<GameRecord> records) => [
   for (final r in records) r.seed,
 ];
 
-/// Storage where every read and write fails, like a blocked localStorage.
-final class _BrokenPrefs extends InMemorySharedPreferencesAsync {
-  _BrokenPrefs() : super.empty();
-
-  @override
-  Future<Map<String, Object>> getPreferences(
-    GetPreferencesParameters parameters,
-    SharedPreferencesOptions options,
-  ) => throw StateError('storage blocked');
-
-  @override
-  Future<bool> setString(
-    String key,
-    String value,
-    SharedPreferencesOptions options,
-  ) => throw StateError('storage blocked');
-}
-
 void main() {
   test('starts empty without saved data', () async {
     final store = await createTestStatsStore();
@@ -61,35 +41,18 @@ void main() {
     await store.add(game('klondike', seed: 1, endMinute: 30));
     await store.add(game('other', seed: 2, endMinute: 20));
 
-    expect(seeds(await savedGames()), [2, 1]);
+    expect(seeds(await storedRecords()), [2, 1]);
   });
 
-  test(
-    'a game in progress is saved but listed only from the next start',
-    () async {
-      final store = await createTestStatsStore();
-      await store.saveInProgress(
-        game('klondike', seed: 7, outcome: GameOutcome.abandoned),
-      );
+  test('the same game added twice (two tabs) is stored once', () async {
+    final tabA = await createTestStatsStore();
+    final tabB = await StatsStore.load();
+    await tabA.add(game('klondike', moves: 90));
+    await tabB.add(game('klondike', moves: 91));
 
-      expect(store.records, isEmpty);
-      final saved = await savedGames();
-      expect(seeds(saved), [7]);
-      expect(saved.single.outcome, GameOutcome.abandoned);
-    },
-  );
-
-  test('the final record replaces the in-progress save of the game', () async {
-    final store = await createTestStatsStore();
-    await store.saveInProgress(
-      game('klondike', outcome: GameOutcome.abandoned, moves: 3),
-    );
-    await store.add(game('klondike', moves: 90));
-
-    final saved = await savedGames();
+    final saved = await storedRecords();
     expect(saved, hasLength(1));
-    expect(saved.single.won, isTrue);
-    expect(saved.single.moves, 90);
+    expect(saved.single.moves, 91);
   });
 
   test('two stores on the same storage (two tabs) keep both games', () async {
@@ -99,7 +62,7 @@ void main() {
     await tabB.add(game('klondike', seed: 1));
     await tabA.add(game('klondike', seed: 2));
 
-    expect(seeds(await savedGames()), unorderedEquals([1, 2]));
+    expect(seeds(await storedRecords()), unorderedEquals([1, 2]));
   });
 
   test('an unreadable entry is skipped and never deleted', () async {
@@ -112,7 +75,7 @@ void main() {
     expect(seeds(store.records), [5]);
 
     await store.add(game('klondike', seed: 6));
-    expect(seeds(await savedGames()), [5, 6]);
+    expect(seeds(await storedRecords()), [5, 6]);
     expect(await SharedPreferencesAsync().getString(badKey), '{"seed": "x"}');
   });
 
@@ -128,7 +91,7 @@ void main() {
       await tabA.clear('klondike');
 
       expect(tabA.recordsFor('klondike'), isEmpty);
-      expect(seeds(await savedGames()), [3]);
+      expect(seeds(await storedRecords()), [3]);
     },
   );
 
@@ -148,13 +111,14 @@ void main() {
   });
 
   test('blocked storage still gives a working store', () async {
-    SharedPreferencesAsyncPlatform.instance = _BrokenPrefs();
+    SharedPreferencesAsyncPlatform.instance = BrokenPrefs();
     final store = await StatsStore.load();
     expect(store.records, isEmpty);
 
     await store.add(game('klondike'));
-    await store.saveInProgress(game('klondike', seed: 2));
     expect(store.statsFor('klondike').played, 1);
+    await store.clear('klondike');
+    expect(store.records, isEmpty);
   });
 
   test('statsFor filters by game and variant', () async {

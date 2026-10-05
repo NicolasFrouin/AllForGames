@@ -6,12 +6,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'game_record.dart';
 import 'game_stats.dart';
 
-/// Keeps every game of every game type on the device, one storage key per game.
+/// Keeps every finished game of every game type on the device, one storage
+/// key per game.
 ///
 /// With one key per game, a second browser tab or an unreadable entry can
-/// never remove other games. The game in progress is saved under its key after
-/// each move: if the app closes before the game ends (for example a closed
-/// browser tab), the next start finds it as an abandoned game.
+/// never remove other games. Games in progress are in `GameSaveStore`.
 class StatsStore extends ChangeNotifier {
   StatsStore._(this._prefs, this._records);
 
@@ -54,19 +53,19 @@ class StatsStore extends ChangeNotifier {
 
   GameStats get overall => GameStats.from(_records);
 
-  /// Saves a finished game. It replaces the in-progress save of that game.
+  /// Saves a finished game.
   ///
   /// Listeners are told after the save, never during the call: a game screen
   /// may add its record while the framework unmounts it, when no widget can
   /// rebuild.
   Future<void> add(GameRecord record) async {
     _records.add(record);
-    await _write(record);
+    await _guard(
+      'save a game',
+      () => _prefs.setString(keyOf(record), jsonEncode(record.toJson())),
+    );
     notifyListeners();
   }
-
-  /// Saves the game in progress. It is not in [records] until [add].
-  Future<void> saveInProgress(GameRecord record) => _write(record);
 
   Future<void> clear(String gameId) async {
     _records.removeWhere((record) => record.gameId == gameId);
@@ -81,11 +80,6 @@ class StatsStore extends ChangeNotifier {
     });
     notifyListeners();
   }
-
-  Future<void> _write(GameRecord record) => _guard(
-    'save a game',
-    () => _prefs.setString(keyOf(record), jsonEncode(record.toJson())),
-  );
 
   /// A full or blocked storage must not break the game.
   static Future<void> _guard(String action, Future<void> Function() io) async {

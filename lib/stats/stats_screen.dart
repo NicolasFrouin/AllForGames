@@ -1,15 +1,15 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../app_stores.dart';
 import '../common/format.dart';
 import '../games/game_catalog.dart';
 import 'game_record.dart';
 import 'game_stats.dart';
-import 'stats_store.dart';
 
 class StatsScreen extends StatefulWidget {
-  const StatsScreen({super.key, required this.stats, required this.game});
+  const StatsScreen({super.key, required this.stores, required this.game});
 
-  final StatsStore stats;
+  final AppStores stores;
   final GameInfo game;
 
   @override
@@ -39,7 +39,7 @@ class _StatsScreenState extends State<StatsScreen> {
         ],
       ),
     );
-    if (confirmed ?? false) await widget.stats.clear(widget.game.id);
+    if (confirmed ?? false) await widget.stores.stats.clear(widget.game.id);
   }
 
   @override
@@ -59,9 +59,12 @@ class _StatsScreenState extends State<StatsScreen> {
       ),
       body: SafeArea(
         child: ListenableBuilder(
-          listenable: widget.stats,
+          listenable: widget.stores.stats,
           builder: (context, _) {
-            final records = widget.stats.recordsFor(game.id, variant: _variant);
+            final records = widget.stores.stats.recordsFor(
+              game.id,
+              variant: _variant,
+            );
             final stats = GameStats.from(records);
             return Center(
               child: ConstrainedBox(

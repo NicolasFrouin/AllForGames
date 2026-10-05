@@ -1,8 +1,10 @@
 import 'dart:math';
 
 import 'package:all_for_games/app.dart';
+import 'package:all_for_games/app_stores.dart';
 import 'package:all_for_games/games/klondike/klondike_controller.dart';
 import 'package:all_for_games/games/klondike/klondike_state.dart';
+import 'package:all_for_games/saves/game_save_store.dart';
 import 'package:all_for_games/stats/game_record.dart';
 import 'package:all_for_games/stats/stats_store.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,22 +15,30 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('a played game shows on the hub and in the statistics', (
+  testWidgets('a game left continues; a new game records it as abandoned', (
     tester,
   ) async {
     await startApp(tester);
     expect(textOf(tester, 'summary-klondike'), startsWith('Not played'));
 
-    await tester.tap(find.byKey(const ValueKey('game-klondike')));
-    await tester.pumpAndSettle();
+    await openKlondike(tester);
     await tapStock(tester);
     expect(textOf(tester, 'moves-value'), '1');
+    await goBack(tester);
 
-    await tester.tap(find.byKey(const ValueKey('undo')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Back'));
-    await tester.pumpAndSettle();
+    expect(textOf(tester, 'resume-klondike'), startsWith('Continue · 1 move'));
+    expect(textOf(tester, 'summary-klondike'), startsWith('Not played'));
+    expect(valueOf(tester, 'overall-played'), '0');
 
+    await openKlondike(tester);
+    expect(textOf(tester, 'moves-value'), '1');
+    expect(canUndo(tester), isTrue);
+
+    await confirmNewGame(tester);
+    expect(textOf(tester, 'moves-value'), '0');
+    await goBack(tester);
+
+    expect(find.byKey(const ValueKey('resume-klondike')), findsNothing);
     expect(textOf(tester, 'summary-klondike'), startsWith('1 played'));
     expect(valueOf(tester, 'overall-played'), '1');
 
@@ -60,29 +70,64 @@ void main() {
     expect(tester.getTopLeft(cardFinder).dx, tester.getTopLeft(targetSlot).dx);
   });
 
-  testWidgets('a recorded game is saved in browser storage', (tester) async {
+  testWidgets('a game in progress is kept in browser storage', (tester) async {
     await startApp(tester, '/klondike?seed=42');
     await tapStock(tester);
-    await tester.tap(find.byTooltip('Back'));
-    await tester.pumpAndSettle();
+    await goBack(tester);
 
-    final saved = (await StatsStore.load()).recordsFor(
-      KlondikeController.gameId,
+    final saved = (await GameSaveStore.load())[KlondikeController.gameId];
+    expect(saved!.moves, 1);
+    expect((await StatsStore.load()).records, isEmpty);
+
+    // Close the app, then start it again on the same storage.
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(AllForGamesApp(stores: await AppStores.load()));
+    await tester.pumpAndSettle();
+    expect(textOf(tester, 'resume-klondike'), startsWith('Continue · 1 move'));
+
+    await openKlondike(tester);
+    expect(textOf(tester, 'moves-value'), '1');
+
+    await confirmNewGame(tester);
+    final record = (await StatsStore.load()).records.single;
+    expect(
+      (record.seed, record.moves, record.outcome),
+      (42, 1, GameOutcome.abandoned),
     );
-    expect(saved, hasLength(1));
-    expect(saved.single.seed, 42);
-    expect(saved.single.moves, 1);
-    expect(saved.single.outcome, GameOutcome.abandoned);
   });
 }
 
 /// Starts the app on empty real storage (localStorage on web).
 Future<void> startApp(WidgetTester tester, [String location = '/']) async {
   await SharedPreferencesAsync().clear();
-  final stats = await StatsStore.load();
+  final stores = await AppStores.load();
   await tester.pumpWidget(
-    AllForGamesApp(stats: stats, initialLocation: location),
+    AllForGamesApp(stores: stores, initialLocation: location),
   );
+  await tester.pumpAndSettle();
+}
+
+Future<void> openKlondike(WidgetTester tester) async {
+  await tester.tap(find.byKey(const ValueKey('game-klondike')));
+  await tester.pumpAndSettle();
+}
+
+Future<void> goBack(WidgetTester tester) async {
+  await tester.tap(find.byTooltip('Back'));
+  await tester.pumpAndSettle();
+}
+
+bool canUndo(WidgetTester tester) =>
+    tester.widget<IconButton>(find.byKey(const ValueKey('undo'))).onPressed !=
+    null;
+
+/// Starts a new Draw 1 game over a game with moves, which asks first.
+Future<void> confirmNewGame(WidgetTester tester) async {
+  await tester.tap(find.byKey(const ValueKey('new-game')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('New game · Draw 1'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const ValueKey('confirm-new-game')));
   await tester.pumpAndSettle();
 }
 

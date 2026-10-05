@@ -1,3 +1,7 @@
+import 'dart:math';
+
+import 'package:all_for_games/app.dart';
+import 'package:all_for_games/app_stores.dart';
 import 'package:all_for_games/games/game_catalog.dart';
 import 'package:all_for_games/games/klondike/card_view.dart';
 import 'package:all_for_games/games/klondike/klondike_controller.dart';
@@ -6,13 +10,12 @@ import 'package:all_for_games/games/klondike/klondike_state.dart';
 import 'package:all_for_games/hub/hub_screen.dart';
 import 'package:all_for_games/stats/game_record.dart';
 import 'package:all_for_games/stats/stats_screen.dart';
-import 'package:all_for_games/stats/stats_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../games/klondike/klondike_test_helpers.dart';
-import '../helpers/test_stats_store.dart';
+import '../helpers/test_stores.dart';
 import 'widget_test_helpers.dart';
 
 /// Two cards in the stock: the 2♠ is drawn first.
@@ -23,30 +26,38 @@ final stockBoard = board(
   ],
 );
 
-/// Opens [state] in the app routes, with the hub below the game.
-Future<StatsStore> pumpGame(
+/// The seed 42 deal: a full board, so a save of it can continue.
+final deal = KlondikeState.deal(Random(42));
+
+/// Opens [state] in the app routes, with the hub below the game. Opening the
+/// game again from the hub continues the saved game.
+Future<AppStores> pumpGame(
   WidgetTester tester,
   KlondikeState state, {
   DateTime Function()? clock,
 }) async {
   useSurface(tester);
-  final store = await createTestStatsStore();
+  final stores = await createTestStores();
   final router = GoRouter(
     initialLocation: '/klondike',
+    initialExtra: state,
     routes: [
       GoRoute(
         path: '/',
-        builder: (context, _) => HubScreen(stats: store),
+        builder: (context, _) => HubScreen(stores: stores),
         routes: [
           GoRoute(
             path: 'klondike',
-            builder: (context, _) =>
-                KlondikeScreen(stats: store, initialState: state, clock: clock),
+            builder: (context, route) => KlondikeScreen(
+              stores: stores,
+              initialState: route.extra as KlondikeState?,
+              clock: clock,
+            ),
           ),
           GoRoute(
             path: 'stats/:gameId',
             builder: (context, _) => StatsScreen(
-              stats: store,
+              stores: stores,
               game: gameById(KlondikeController.gameId)!,
             ),
           ),
@@ -57,7 +68,7 @@ Future<StatsStore> pumpGame(
   addTearDown(router.dispose);
   await tester.pumpWidget(MaterialApp.router(routerConfig: router));
   await tester.pumpAndSettle();
-  return store;
+  return stores;
 }
 
 Finder byKey(String key) => find.byKey(ValueKey(key));
@@ -120,6 +131,30 @@ Future<void> leaveGame(WidgetTester tester) async {
   expect(find.byType(HubScreen), findsOneWidget);
 }
 
+Future<void> openFromHub(WidgetTester tester) async {
+  await tester.tap(byKey('game-klondike'));
+  await tester.pumpAndSettle();
+  expect(find.byType(KlondikeScreen), findsOneWidget);
+}
+
+/// Checks the top card of each tableau pile of [state] is on its pile, face up.
+void expectTableauTops(WidgetTester tester, KlondikeState state) {
+  for (var i = 0; i < 7; i++) {
+    final top = state.tableau[i].last.id;
+    expect(at(tester, top).dx, at(tester, 'tableau-$i').dx, reason: top);
+    expect(isFaceUp(tester, top), isTrue, reason: top);
+  }
+}
+
+Future<void> chooseNewGame(WidgetTester tester, {required int draw}) async {
+  await tester.tap(byKey('new-game'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('New game · Draw $draw'));
+  await tester.pumpAndSettle();
+}
+
+const confirmTitle = 'Start a new game?';
+
 void main() {
   testWidgets('tapping the stock turns its top card into the waste', (
     tester,
@@ -141,7 +176,7 @@ void main() {
   testWidgets('undo puts the card back but still counts the move made', (
     tester,
   ) async {
-    final store = await pumpGame(tester, stockBoard);
+    await pumpGame(tester, stockBoard);
     await tapStock(tester);
 
     await tester.tap(byKey('undo'));
@@ -152,11 +187,6 @@ void main() {
     expect(at(tester, 'spades-2'), at(tester, 'stock'));
     expect(isFaceUp(tester, 'spades-2'), isFalse);
     expect(canUndo(tester), isFalse);
-
-    await leaveGame(tester);
-    final record = store.records.single;
-    expect(record.moves, 1);
-    expect(record.undos, 1);
   });
 
   testWidgets('tapping a card that fits a foundation moves it there', (
@@ -243,20 +273,20 @@ void main() {
       ],
     );
 
-    Future<StatsStore> finish(WidgetTester tester) async {
-      final store = await pumpGame(tester, finishBoard);
+    Future<AppStores> finish(WidgetTester tester) async {
+      final stores = await pumpGame(tester, finishBoard);
       await tester.tap(byKey('auto-complete'));
       await tester.pumpAndSettle();
       expect(find.text('You won!'), findsOneWidget);
-      return store;
+      return stores;
     }
 
     testWidgets('wins the game, then play again starts a new one', (
       tester,
     ) async {
-      final store = await finish(tester);
+      final stores = await finish(tester);
       expect(at(tester, 'spades-13'), at(tester, 'foundation-3'));
-      final record = store.records.single;
+      final record = stores.stats.records.single;
       expect(record.outcome, GameOutcome.won);
       expect(record.moves, 1);
       expect(record.details[KlondikeStatKeys.autoCompleted], 1);
@@ -268,50 +298,122 @@ void main() {
       expect(textOf('moves-value'), '0');
       expect(textOf('score-value'), '0');
       expect(byKey('auto-complete'), findsNothing);
-      expect(store.records, hasLength(1));
+      expect(stores.stats.records, hasLength(1));
     });
 
     testWidgets('back to games shows the win on the hub', (tester) async {
-      final store = await finish(tester);
+      final stores = await finish(tester);
 
       await tester.tap(find.text('Back to games'));
       await tester.pumpAndSettle();
 
       expect(find.byType(KlondikeScreen), findsNothing);
       expect(textOf('summary-klondike'), startsWith('1 played · 100% won'));
-      expect(store.records.single.outcome, GameOutcome.won);
+      expect(stores.stats.records.single.outcome, GameOutcome.won);
+    });
+
+    testWidgets('a win removes the saved game: the next visit deals anew', (
+      tester,
+    ) async {
+      final stores = await pumpGame(tester, finishBoard);
+      await tester.tap(byKey('hearts-12'));
+      await tester.pumpAndSettle();
+      expect(stores.saves[KlondikeController.gameId]!.moves, 1);
+
+      await tester.tap(byKey('auto-complete'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Back to games'));
+      await tester.pumpAndSettle();
+
+      expect(stores.saves[KlondikeController.gameId], isNull);
+      expect(await storedSave(KlondikeController.gameId), isNull);
+      expect(byKey('resume-klondike'), findsNothing);
+
+      await openFromHub(tester);
+      expect(textOf('moves-value'), '0');
+      expect(byKey('auto-complete'), findsNothing);
+      // A new deal shows the 7 tableau tops.
+      expect(faceUpCount(tester), 7);
     });
   });
 
-  testWidgets('leaving after a move records one abandoned game', (
+  testWidgets('leaving saves the game and the hub continues it, undo too', (
     tester,
   ) async {
-    final store = await pumpGame(tester, stockBoard);
+    var now = DateTime.utc(2026, 1, 1, 12);
+    final stores = await pumpGame(tester, deal, clock: () => now);
+    final drawn = deal.stock.last.id;
+    now = now.add(const Duration(seconds: 20));
     await tapStock(tester);
+    expect(at(tester, drawn), at(tester, 'waste'));
 
     await leaveGame(tester);
 
-    final record = store.records.single;
-    expect(record.outcome, GameOutcome.abandoned);
-    expect(record.variant, 'draw1');
-    expect(record.moves, 1);
-    // The saved game in progress is not added a second time on the next start.
-    expect((await StatsStore.load()).records, hasLength(1));
+    expect(stores.stats.records, isEmpty);
+    expect(await storedRecords(), isEmpty);
+    expect(textOf('resume-klondike'), 'Continue · 1 move · 0:20');
+    expect(textOf('summary-klondike'), 'Not played yet · Tap to play');
+
+    await openFromHub(tester);
+    expect(textOf('moves-value'), '1');
+    expect(textOf('time-value'), '0:20');
+    expect(at(tester, drawn), at(tester, 'waste'));
+    expect(isFaceUp(tester, drawn), isTrue);
+    expectTableauTops(tester, deal);
+
+    await tester.tap(byKey('undo'));
+    await tester.pumpAndSettle();
+    expect(at(tester, drawn), at(tester, 'stock'));
+    expect(isFaceUp(tester, drawn), isFalse);
+    expect(canUndo(tester), isFalse);
+    expect(stores.stats.records, isEmpty);
   });
 
-  testWidgets('leaving without a move records nothing', (tester) async {
-    final store = await pumpGame(tester, stockBoard);
+  testWidgets('leaving without a move keeps the deal, not shown on the hub', (
+    tester,
+  ) async {
+    final stores = await pumpGame(tester, deal);
 
     await leaveGame(tester);
 
-    expect(store.records, isEmpty);
-    expect((await StatsStore.load()).records, isEmpty);
+    expect(stores.stats.records, isEmpty);
+    expect(byKey('resume-klondike'), findsNothing);
+
+    await openFromHub(tester);
+    expect(textOf('moves-value'), '0');
+    expectTableauTops(tester, deal);
+  });
+
+  testWidgets('a link to a deal records the saved game as abandoned', (
+    tester,
+  ) async {
+    useSurface(tester);
+    final stores = await createTestStores();
+    await tester.pumpWidget(
+      AllForGamesApp(stores: stores, initialLocation: '/klondike?seed=42'),
+    );
+    await tester.pumpAndSettle();
+    await tapStock(tester);
+    await leaveGame(tester);
+    expect(stores.stats.records, isEmpty);
+
+    GoRouter.of(tester.element(find.byType(HubScreen))).go('/klondike?seed=7');
+    await tester.pumpAndSettle();
+
+    expect(textOf('moves-value'), '0');
+    expectTableauTops(tester, KlondikeState.deal(Random(7)));
+    final record = stores.stats.records.single;
+    expect(
+      (record.seed, record.outcome, record.moves),
+      (42, GameOutcome.abandoned, 1),
+    );
+    expect(stores.saves[KlondikeController.gameId]!.moves, 0);
   });
 
   testWidgets('the stats page keeps the game running behind it', (
     tester,
   ) async {
-    final store = await pumpGame(tester, stockBoard);
+    final stores = await pumpGame(tester, stockBoard);
     await tapStock(tester);
 
     await tester.tap(byKey('open-stats'));
@@ -323,7 +425,7 @@ void main() {
     expect(find.byType(StatsScreen), findsNothing);
     expect(textOf('moves-value'), '1');
     expect(at(tester, 'spades-2'), at(tester, 'waste'));
-    expect(store.records, isEmpty);
+    expect(stores.stats.records, isEmpty);
   });
 
   testWidgets('a second finger cannot change the board during a drag', (
@@ -363,7 +465,7 @@ void main() {
     'play time stops under the stats page, also after a browser back',
     (tester) async {
       var now = DateTime.utc(2026, 1, 1, 12);
-      final store = await pumpGame(tester, stockBoard, clock: () => now);
+      final stores = await pumpGame(tester, stockBoard, clock: () => now);
       now = now.add(const Duration(seconds: 10));
       await tapStock(tester);
 
@@ -377,29 +479,60 @@ void main() {
       expect(find.byType(StatsScreen), findsNothing);
       now = now.add(const Duration(seconds: 20));
 
-      await tester.pageBack();
-      await tester.pumpAndSettle();
-      expect(store.records.single.playTime, const Duration(seconds: 30));
+      await leaveGame(tester);
+      expect(
+        stores.saves[KlondikeController.gameId]!.playTime,
+        const Duration(seconds: 30),
+      );
     },
   );
+
+  testWidgets('new game asks first; cancel keeps the game', (tester) async {
+    final stores = await pumpGame(tester, stockBoard);
+    await tapStock(tester);
+
+    await chooseNewGame(tester, draw: 3);
+    expect(find.text(confirmTitle), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    expect(find.text(confirmTitle), findsNothing);
+    expect(textOf('moves-value'), '1');
+    expect(textOf('draw-value'), 'Draw 1');
+    expect(at(tester, 'spades-2'), at(tester, 'waste'));
+    expect(stores.stats.records, isEmpty);
+  });
+
+  testWidgets('new game without a move deals again without asking', (
+    tester,
+  ) async {
+    final stores = await pumpGame(tester, stockBoard);
+
+    await chooseNewGame(tester, draw: 3);
+
+    expect(find.text(confirmTitle), findsNothing);
+    expect(textOf('draw-value'), 'Draw 3');
+    expect(faceUpCount(tester), 7);
+    expect(stores.stats.records, isEmpty);
+  });
 
   testWidgets('new game in Draw 3 deals again and records the old game', (
     tester,
   ) async {
-    final store = await pumpGame(tester, stockBoard);
+    final stores = await pumpGame(tester, stockBoard);
     expect(textOf('draw-value'), 'Draw 1');
     await tapStock(tester);
 
-    await tester.tap(byKey('new-game'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('New game · Draw 3'));
+    await chooseNewGame(tester, draw: 3);
+    await tester.tap(byKey('confirm-new-game'));
     await tester.pumpAndSettle();
 
     expect(textOf('draw-value'), 'Draw 3');
     expect(textOf('moves-value'), '0');
-    final record = store.records.single;
+    final record = stores.stats.records.single;
     expect(record.outcome, GameOutcome.abandoned);
     expect(record.variant, 'draw1');
+    expect(stores.saves[KlondikeController.gameId]!.moves, 0);
 
     // A new deal shows the 7 tableau tops; a draw then turns 3 cards.
     expect(faceUpCount(tester), 7);

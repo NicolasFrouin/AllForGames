@@ -1,17 +1,18 @@
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../app_stores.dart';
 import '../common/format.dart';
 import '../games/game_catalog.dart';
 import '../games/klondike/playing_card.dart';
 import '../games/klondike/suit_icon.dart';
+import '../saves/game_save_store.dart';
 import '../stats/game_stats.dart';
-import '../stats/stats_store.dart';
 
 class HubScreen extends StatelessWidget {
-  const HubScreen({super.key, required this.stats});
+  const HubScreen({super.key, required this.stores});
 
-  final StatsStore stats;
+  final AppStores stores;
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +27,7 @@ class HubScreen extends StatelessWidget {
         ),
         child: SafeArea(
           child: ListenableBuilder(
-            listenable: stats,
+            listenable: Listenable.merge([stores.stats, stores.saves]),
             builder: (context, _) => Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 1100),
@@ -35,7 +36,7 @@ class HubScreen extends StatelessWidget {
                     SliverPadding(
                       padding: const EdgeInsets.fromLTRB(20, 28, 20, 8),
                       sliver: SliverToBoxAdapter(
-                        child: _Header(overall: stats.overall),
+                        child: _Header(overall: stores.stats.overall),
                       ),
                     ),
                     SliverPadding(
@@ -56,9 +57,10 @@ class HubScreen extends StatelessWidget {
                       sliver: SliverGrid.builder(
                         gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
                           maxCrossAxisExtent: 360,
-                          // Grows with the user's font size.
+                          // Grows with the user's font size. Room for every
+                          // line, the continue line too.
                           mainAxisExtent: MediaQuery.textScalerOf(context)
-                              .scale(230),
+                              .scale(250),
                           mainAxisSpacing: 16,
                           crossAxisSpacing: 16,
                         ),
@@ -67,7 +69,8 @@ class HubScreen extends StatelessWidget {
                           final game = gameCatalog[index];
                           return GameTile(
                             game: game,
-                            stats: stats.statsFor(game.id),
+                            stats: stores.stats.statsFor(game.id),
+                            saved: stores.saves[game.id],
                           );
                         },
                       ),
@@ -234,10 +237,18 @@ class _OverallChip extends StatelessWidget {
 }
 
 class GameTile extends StatelessWidget {
-  const GameTile({super.key, required this.game, required this.stats});
+  const GameTile({
+    super.key,
+    required this.game,
+    required this.stats,
+    this.saved,
+  });
 
   final GameInfo game;
   final GameStats stats;
+
+  /// The game in progress. Tapping the tile continues it.
+  final SavedGame? saved;
 
   @override
   Widget build(BuildContext context) {
@@ -310,6 +321,33 @@ class GameTile extends StatelessWidget {
                 ),
                 if (game.isAvailable) ...[
                   const SizedBox(height: 12),
+                  if (saved case SavedGame(:final moves, :final playTime)
+                      when moves > 0) ...[
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.play_circle_outline,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            'Continue · $moves ${moves == 1 ? 'move' : 'moves'}'
+                            ' · ${formatClock(playTime)}',
+                            key: ValueKey('resume-${game.id}'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.labelLarge?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                  ],
                   Text(
                     _summary(stats),
                     key: ValueKey('summary-${game.id}'),

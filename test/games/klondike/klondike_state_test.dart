@@ -25,6 +25,134 @@ void main() {
     expect(up, isNot(down));
   });
 
+  group('card codes', () {
+    test('every card reads back from its code, face up or down', () {
+      for (final suit in Suit.values) {
+        for (var rank = 1; rank <= 13; rank++) {
+          for (final faceUp in [true, false]) {
+            final card = PlayingCard(suit, rank, faceUp: faceUp);
+            expect(PlayingCard.fromCode(card.code), card, reason: card.code);
+          }
+        }
+      }
+    });
+
+    test('rank then suit, an uppercase suit for a face-up card', () {
+      expect(PlayingCard.fromCode('TH'), card('10H'));
+      expect(PlayingCard.fromCode('Kc'), card('KC', up: false));
+      expect(card('AS').code, 'AS');
+      expect(card('9D', up: false).code, '9d');
+    });
+
+    test('anything else is a FormatException', () {
+      for (final code in ['', 'T', 'THH', '1H', '10', 'Tx', 'th', 'TX']) {
+        expect(
+          () => PlayingCard.fromCode(code),
+          throwsFormatException,
+          reason: code,
+        );
+      }
+    });
+  });
+
+  group('encode', () {
+    // A deal after some draws and moves: cards in every kind of pile.
+    KlondikeState played() {
+      var state = KlondikeState.deal(Random(7), drawCount: 3);
+      for (var i = 0; i < 30; i++) {
+        state = state.draw()!.state;
+        if (state.nextFoundationMove() case (:final from, :final to)) {
+          state = state.move(from, 1, to)!.state;
+        }
+      }
+      return state;
+    }
+
+    test('decode gives back the same board', () {
+      for (final state in [
+        KlondikeState.deal(Random(1)),
+        played(),
+        board(foundations: foundationsUpTo([13, 13, 13, 13])),
+      ]) {
+        final decoded = KlondikeState.decode(
+          state.encode(),
+          drawCount: state.drawCount,
+        );
+        expect(decoded.stock, state.stock);
+        expect(decoded.waste, state.waste);
+        expect(decoded.foundations, state.foundations);
+        expect(decoded.tableau, state.tableau);
+        expect(decoded.drawCount, state.drawCount);
+      }
+      expect(played().foundationCardCount, greaterThan(0));
+      expect(played().waste, isNotEmpty);
+    });
+
+    /// [state] with [cards] taken from their piles and put on foundation [index].
+    KlondikeState withFoundation(
+      KlondikeState state,
+      int index,
+      List<PlayingCard> cards,
+    ) {
+      final ids = {for (final c in cards) c.id};
+      List<PlayingCard> rest(List<PlayingCard> pile) => [
+        for (final c in pile)
+          if (!ids.contains(c.id)) c,
+      ];
+      return KlondikeState(
+        stock: rest(state.stock),
+        waste: rest(state.waste),
+        foundations: [
+          for (var i = 0; i < 4; i++)
+            i == index ? cards : rest(state.foundations[i]),
+        ],
+        tableau: [for (final pile in state.tableau) rest(pile)],
+      );
+    }
+
+    test('decode rejects text that is not a full valid board', () {
+      final deal = KlondikeState.deal(Random(1));
+      final good = deal.encode();
+      final piles = good.split(',');
+      String withPile(int index, String pile) =>
+          ([...piles]..[index] = pile).join(',');
+      String foundation(List<PlayingCard> cards) =>
+          withFoundation(deal, 0, cards).encode();
+
+      expect(
+        KlondikeState.decode(
+          foundation([card('AC'), card('2C')]),
+          drawCount: 1,
+        ).foundations[0],
+        [card('AC'), card('2C')],
+      );
+      final invalid = {
+        '12 piles': piles.skip(1).join(','),
+        '14 piles': '$good,',
+        'a missing card': withPile(0, piles[0].substring(2)),
+        'a card twice': withPile(1, piles[0].substring(0, 2)),
+        'half a card': withPile(0, '${piles[0]}A'),
+        'not a card': withPile(0, 'Zz${piles[0].substring(2)}'),
+        'a foundation of another suit': foundation([card('AD')]),
+        'a foundation out of order': foundation([card('2C'), card('AC')]),
+        'a face-down foundation card': foundation([card('AC', up: false)]),
+        'empty text': '',
+      };
+      for (final MapEntry(:key, :value) in invalid.entries) {
+        expect(
+          () => KlondikeState.decode(value, drawCount: 1),
+          throwsFormatException,
+          reason: key,
+        );
+      }
+      expect(
+        () => KlondikeState.decode(good, drawCount: 2),
+        throwsFormatException,
+        reason: 'draw 2',
+      );
+    });
+  });
+
   group('deal', () {
     final state = KlondikeState.deal(Random(42), drawCount: 3);
 

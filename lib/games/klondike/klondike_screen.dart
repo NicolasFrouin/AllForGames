@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../app_stores.dart';
 import '../../common/format.dart';
-import '../../stats/stats_store.dart';
 import 'klondike_board.dart';
 import 'klondike_controller.dart';
 import 'klondike_state.dart';
@@ -14,15 +14,18 @@ const feltColor = Color(0xFF0B5D3B);
 class KlondikeScreen extends StatefulWidget {
   const KlondikeScreen({
     super.key,
-    required this.stats,
-    this.drawCount = 1,
+    required this.stores,
+    this.drawCount,
     this.seed,
     this.initialState,
     this.clock,
   });
 
-  final StatsStore stats;
-  final int drawCount;
+  final AppStores stores;
+
+  /// [drawCount], [seed] and [initialState] ask for a new deal. Without any
+  /// of them, the saved game continues.
+  final int? drawCount;
   final int? seed;
 
   /// Starts from this board instead of a new deal (used by tests).
@@ -44,17 +47,57 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
   @override
   void initState() {
     super.initState();
-    _controller = KlondikeController(
-      stats: widget.stats,
-      drawCount: widget.drawCount,
-      seed: widget.seed,
-      initialState: widget.initialState,
-      clock: widget.clock,
-    )..addListener(_onGameChanged);
+    _controller = _openGame()..addListener(_onGameChanged);
     _lifecycle = AppLifecycleListener(
+      // Hiding pauses the game, which saves it: a closed browser tab keeps the
+      // latest play time.
       onHide: () => _setAppVisible(false),
       onShow: () => _setAppVisible(true),
     );
+  }
+
+  /// Continues the saved game, unless the widget asks for a new deal: then
+  /// the saved game counts as abandoned if it has moves.
+  KlondikeController _openGame() {
+    final saved = _restoreSavedGame();
+    final newDeal =
+        widget.drawCount != null ||
+        widget.seed != null ||
+        widget.initialState != null;
+    if (saved != null && !newDeal) return saved;
+    final drawCount = widget.drawCount ?? 1;
+    if (saved != null) {
+      return saved..newGame(
+        drawCount: drawCount,
+        seed: widget.seed,
+        initialState: widget.initialState,
+      );
+    }
+    return KlondikeController(
+      stats: widget.stores.stats,
+      saves: widget.stores.saves,
+      drawCount: drawCount,
+      seed: widget.seed,
+      initialState: widget.initialState,
+      clock: widget.clock,
+    );
+  }
+
+  KlondikeController? _restoreSavedGame() {
+    final saved = widget.stores.saves[KlondikeController.gameId];
+    if (saved == null) return null;
+    try {
+      return KlondikeController.restore(
+        saved.data,
+        stats: widget.stores.stats,
+        saves: widget.stores.saves,
+        clock: widget.clock,
+      );
+    } on FormatException catch (error) {
+      // For example a save of a newer app version: a new deal replaces it.
+      debugPrint('KlondikeScreen: cannot continue the saved game: $error');
+      return null;
+    }
   }
 
   @override
@@ -84,7 +127,8 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
     _lifecycle.dispose();
     _controller
       ..removeListener(_onGameChanged)
-      ..abandon()
+      // Saves the game (unless won): the next visit continues it.
+      ..pause()
       ..dispose();
     super.dispose();
   }
@@ -101,7 +145,7 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
   Future<void> _showWinDialog() async {
     final record = _controller.result;
     if (!mounted || record == null) return;
-    final stats = widget.stats.statsFor(
+    final stats = widget.stores.stats.statsFor(
       KlondikeController.gameId,
       variant: record.variant,
     );
@@ -147,6 +191,32 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
     }
   }
 
+  /// Asks first when the current game would count as abandoned.
+  Future<void> _newGame(int drawCount) async {
+    if (_controller.moves > 0 && _controller.result == null) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Start a new game?'),
+          content: const Text('The current game will count as abandoned.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              key: const ValueKey('confirm-new-game'),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('New game'),
+            ),
+          ],
+        ),
+      );
+      if (!(confirmed ?? false) || !mounted) return;
+    }
+    _controller.newGame(drawCount: drawCount);
+  }
+
   void _openStats() => context.push('/stats/${KlondikeController.gameId}');
 
   @override
@@ -170,8 +240,7 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
             key: const ValueKey('new-game'),
             tooltip: 'New game',
             icon: const Icon(Icons.add_box_outlined),
-            onSelected: (drawCount) =>
-                _controller.newGame(drawCount: drawCount),
+            onSelected: _newGame,
             itemBuilder: (context) => const [
               PopupMenuItem(value: 1, child: Text('New game · Draw 1')),
               PopupMenuItem(value: 3, child: Text('New game · Draw 3')),

@@ -1,10 +1,9 @@
 import 'package:flutter/widgets.dart';
 
 import 'app.dart';
-import 'stats/stats_store.dart';
+import 'app_stores.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final stats = await StatsStore.load();
-  runApp(AllForGamesApp(stats: stats));
+  runApp(AllForGamesApp(stores: await AppStores.load()));
 }

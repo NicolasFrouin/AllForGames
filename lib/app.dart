@@ -1,20 +1,20 @@
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'app_stores.dart';
 import 'games/game_catalog.dart';
 import 'games/klondike/klondike_screen.dart';
 import 'hub/hub_screen.dart';
 import 'stats/stats_screen.dart';
-import 'stats/stats_store.dart';
 
 class AllForGamesApp extends StatefulWidget {
   const AllForGamesApp({
     super.key,
-    required this.stats,
+    required this.stores,
     this.initialLocation = '/',
   });
 
-  final StatsStore stats;
+  final AppStores stores;
   final String initialLocation;
 
   @override
@@ -27,23 +27,31 @@ class _AllForGamesAppState extends State<AllForGamesApp> {
     routes: [
       GoRoute(
         path: '/',
-        builder: (context, state) => HubScreen(stats: widget.stats),
+        builder: (context, state) => HubScreen(stores: widget.stores),
         routes: [
           GoRoute(
             path: 'klondike',
-            // Query parameters let a link replay a deal: /klondike?draw=3&seed=42
-            builder: (context, state) => KlondikeScreen(
-              stats: widget.stats,
-              drawCount: state.uri.queryParameters['draw'] == '3' ? 3 : 1,
-              seed: int.tryParse(state.uri.queryParameters['seed'] ?? ''),
-            ),
+            // Query parameters start a given deal: /klondike?draw=3&seed=42.
+            // Without them, the saved game continues.
+            builder: (context, state) {
+              final query = state.uri.queryParameters;
+              return KlondikeScreen(
+                stores: widget.stores,
+                drawCount: switch (query['draw']) {
+                  null => null,
+                  '3' => 3,
+                  _ => 1,
+                },
+                seed: int.tryParse(query['seed'] ?? ''),
+              );
+            },
           ),
           GoRoute(
             path: 'stats/:gameId',
             redirect: (context, state) =>
                 gameById(state.pathParameters['gameId']!) == null ? '/' : null,
             builder: (context, state) => StatsScreen(
-              stats: widget.stats,
+              stores: widget.stores,
               game: gameById(state.pathParameters['gameId']!)!,
             ),
           ),

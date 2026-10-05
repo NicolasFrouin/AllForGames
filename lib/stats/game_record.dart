@@ -53,7 +53,8 @@ class GameRecord {
   final int score;
   final Map<String, int> details;
 
-  /// Same for the in-progress saves and the final record of one game.
+  /// Stays the same when a saved game continues, so a game recorded twice
+  /// (for example by two tabs) is stored once.
   String get id => '$gameId-${startedAt.microsecondsSinceEpoch}-$seed';
 
   bool get won => outcome == GameOutcome.won;

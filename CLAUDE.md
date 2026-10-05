@@ -28,7 +28,9 @@ Toolchain: Flutter 3.47.6 / Dart 3.13 (Homebrew cask). CI (`.github/workflows/ci
 ```
 lib/
   main.dart, app.dart        loads the stores, routes (go_router): /, /klondike?draw=3&seed=42, /stats/:gameId
-  hub/                       home page: header, overall stats, game grid
+  app_stores.dart            AppStores: every store (stats, saves; settings later), loaded once, given to the screens
+  hub/                       home page: header, overall stats, game grid (with a continue line per game in progress)
+  saves/                     SavedGame (one game in progress, game-specific JSON in data), GameSaveStore
   stats/                     GameRecord (one finished game), GameStats (aggregates), StatsStore, PlayTimer, stats page
   common/format.dart         duration/date/percent formatting
   games/game_catalog.dart    GameInfo list shown on the hub (route, variants, stat labels)
@@ -44,11 +46,17 @@ integration_test/            e2e tests (run on web by scripts/e2e_web.sh, or on 
   never `package:flutter/material.dart` (go_router uses material_ui; mixing them breaks Theme lookups).
 - **Rules are pure Dart** (`klondike_state.dart`): immutable state, `move`/`draw` return a new state or null.
   The controller owns the session (undo history, score, timer, counters). Widgets only call the controller.
-- **Statistics**: every finished game (won, or abandoned with at least one move) is a `GameRecord`.
+- **Statistics**: records = finished games only. A game ends when it is won, or abandoned when the player starts
+  a new game over it (with at least one move). In-progress games live in `GameSaveStore`, never as records.
   Game-specific counters go in `details` (`Map<String, int>`); keys ending with `Ms` are durations in ms.
   Add a label for each new key in the game's `GameInfo.detailLabels`.
-- **Storage** (shared_preferences, `SharedPreferencesAsync`; localStorage on web):
-  one key per record (`StatsStore.keyOf`), never rewrite a whole list (other tabs and unreadable entries must survive).
+- **Saved games**: leaving a game (back, app closed, tab closed) saves it; opening it again continues it.
+  The controller saves itself after every action, on `pause()` and when the screen closes, and removes the save
+  on a win. `toJson()` has a `version`; `restore(json)` throws `FormatException` on bad data, then the screen
+  deals a new game. Route params (`/klondike?seed=42`) start that deal and abandon the saved one.
+- **Storage** (shared_preferences, `SharedPreferencesAsync`; localStorage on web): one key per item, never a whole
+  list (other tabs and unreadable entries must survive). Keys: `stats.game.<gameId>-<startedAt µs>-<seed>` per
+  record (`StatsStore.keyOf`), `save.<gameId>` per game in progress (`GameSaveStore.keyOf`).
   Catch storage errors (blocked or full storage must not break the app).
 - **ChangeNotifier stores** notify *after* an `await`, never synchronously in a mutating call:
   screens call them from `dispose()`, when no widget can rebuild.
@@ -62,7 +70,8 @@ integration_test/            e2e tests (run on web by scripts/e2e_web.sh, or on 
 - Write tests for behavior that can break: rules, stats, storage, controller state, navigation, persistence.
   No tests of static text, colors, markup or mocks only.
 - Each bug fix gets a regression test (check it fails without the fix).
-- Widget tests: `useSurface(tester)` for a desktop-size window; seed data with `seededStore([...])`.
+- Widget tests: `useSurface(tester)` for a desktop-size window; seed data with `seededStores([records], [saves])`
+  (or `createTestStores(data)` from `test/helpers/test_stores.dart`).
   Drag a card by its visible top strip (`getTopLeft + Offset(10, 6)`), move past the touch slop, then to the target.
 - e2e tests use real storage: clear it at the start of each test.
 
@@ -70,7 +79,8 @@ integration_test/            e2e tests (run on web by scripts/e2e_web.sh, or on 
 
 1. Rules + controller in `lib/games/<game>/` with unit tests.
 2. Screen and route in `lib/app.dart`; entry in `game_catalog.dart` (route, variants, detail labels).
-3. Record finished games with `StatsStore.add`; the hub and stats page then work without changes.
+3. Record finished games with `StatsStore.add`; save the game in progress in `GameSaveStore` (controller
+   `toJson`/`restore`, remove on a win). The hub and stats page then work without changes.
 4. Widget tests + one e2e flow.
 
 ## Workflow

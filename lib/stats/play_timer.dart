@@ -1,10 +1,13 @@
 /// Measures active play time. It can pause, for example when the app goes to
 /// the background.
 class PlayTimer {
-  PlayTimer({DateTime Function()? clock}) : _clock = clock ?? DateTime.now;
+  /// [elapsed] is the time already played, for a game that continues.
+  PlayTimer({DateTime Function()? clock, Duration elapsed = Duration.zero})
+    : _clock = clock ?? DateTime.now,
+      _accumulated = elapsed;
 
   final DateTime Function() _clock;
-  Duration _accumulated = Duration.zero;
+  Duration _accumulated;
   DateTime? _runningSince;
 
   bool get isRunning => _runningSince != null;

@@ -1,4 +1,5 @@
 import 'package:all_for_games/app.dart';
+import 'package:all_for_games/app_stores.dart';
 import 'package:all_for_games/stats/stats_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -45,11 +46,11 @@ final savedGames = [
   record(gameId: 'freecell', endedMinute: 5),
 ];
 
-Future<void> pumpStats(WidgetTester tester, StatsStore store) async {
+Future<void> pumpStats(WidgetTester tester, AppStores stores) async {
   // Tall enough to lay out every section of the list.
   useSurface(tester, const Size(1280, 1400));
   await tester.pumpWidget(
-    AllForGamesApp(stats: store, initialLocation: '/stats/klondike'),
+    AllForGamesApp(stores: stores, initialLocation: '/stats/klondike'),
   );
   await tester.pumpAndSettle();
 }
@@ -74,7 +75,7 @@ Future<void> tapReset(WidgetTester tester, Finder button) async {
 
 void main() {
   testWidgets('shows the empty state without a Klondike game', (tester) async {
-    await pumpStats(tester, await seededStore([savedGames.last]));
+    await pumpStats(tester, await seededStores([savedGames.last]));
 
     expect(find.text(emptyText), findsOneWidget);
     expect(find.byKey(const ValueKey('stat-Played')), findsNothing);
@@ -82,7 +83,7 @@ void main() {
   });
 
   testWidgets('shows the numbers of every saved Klondike game', (tester) async {
-    await pumpStats(tester, await seededStore(savedGames));
+    await pumpStats(tester, await seededStores(savedGames));
 
     expect(find.text(emptyText), findsNothing);
     expectStats({
@@ -116,7 +117,7 @@ void main() {
   });
 
   testWidgets('variant chips filter the numbers', (tester) async {
-    await pumpStats(tester, await seededStore(savedGames));
+    await pumpStats(tester, await seededStores(savedGames));
 
     await selectVariant(tester, 'draw1');
     expectStats({
@@ -155,24 +156,24 @@ void main() {
   });
 
   testWidgets('cancelling the reset keeps the games', (tester) async {
-    final store = await seededStore(savedGames);
-    await pumpStats(tester, store);
+    final stores = await seededStores(savedGames);
+    await pumpStats(tester, stores);
 
     await tapReset(tester, find.text('Cancel'));
 
     expectStats({'Played': '4'});
-    expect(store.records, hasLength(savedGames.length));
+    expect(stores.stats.records, hasLength(savedGames.length));
   });
 
   testWidgets('reset deletes the Klondike games only', (tester) async {
-    final store = await seededStore(savedGames);
-    await pumpStats(tester, store);
+    final stores = await seededStores(savedGames);
+    await pumpStats(tester, stores);
 
     await tapReset(tester, find.byKey(const ValueKey('confirm-reset')));
 
     expect(find.text(emptyText), findsOneWidget);
     expect(find.byKey(const ValueKey('stat-Played')), findsNothing);
-    expect(store.records.map((r) => r.gameId), ['freecell']);
+    expect(stores.stats.records.map((r) => r.gameId), ['freecell']);
     final reloaded = await StatsStore.load();
     expect(reloaded.records.map((r) => r.gameId), ['freecell']);
   });
