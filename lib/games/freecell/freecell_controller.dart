@@ -111,6 +111,7 @@ class FreeCellController extends ChangeNotifier {
   bool _finished = false;
   List<String> _lastMovedCardIds = const [];
   int _lastAutoMoveCount = 0;
+  FreeCellState? _lastLanding;
   FreeCellAction _lastAction = FreeCellAction.none;
   int _actionSerial = 0;
 
@@ -138,6 +139,10 @@ class FreeCellController extends ChangeNotifier {
   /// How many cards at the end of [lastMovedCardIds] went to the
   /// foundations by themselves.
   int get lastAutoMoveCount => _lastAutoMoveCount;
+
+  /// The board between the two steps of the last action: after the player's
+  /// move, before the automatic moves. Null when the last action had none.
+  FreeCellState? get lastLanding => _lastLanding;
 
   /// The last action ([FreeCellAction.none] for a game that continues).
   FreeCellAction get lastAction => _lastAction;
@@ -192,7 +197,13 @@ class FreeCellController extends ChangeNotifier {
       _counters[FreeCellStatKeys.autoMoves] =
           (_counters[FreeCellStatKeys.autoMoves] ?? 0) + automatic;
     }
-    _commit(next, FreeCellAction.move, order, automatic: automatic);
+    _commit(
+      next,
+      FreeCellAction.move,
+      order,
+      automatic: automatic,
+      landing: automatic > 0 ? moved : null,
+    );
     return true;
   }
 
@@ -226,6 +237,7 @@ class FreeCellController extends ChangeNotifier {
     final previous = _history.removeLast();
     _lastMovedCardIds = _movedCardIds(_state, previous.state);
     _lastAutoMoveCount = 0;
+    _lastLanding = null;
     _lastAction = FreeCellAction.undo;
     _actionSerial++;
     _state = previous.state;
@@ -366,6 +378,7 @@ class FreeCellController extends ChangeNotifier {
     _finished = false;
     _lastMovedCardIds = const [];
     _lastAutoMoveCount = 0;
+    _lastLanding = null;
     _lastAction = FreeCellAction.deal;
     _actionSerial++;
   }
@@ -387,10 +400,12 @@ class FreeCellController extends ChangeNotifier {
     FreeCellAction action,
     List<String> moved, {
     int automatic = 0,
+    FreeCellState? landing,
   }) {
     _history.add((state: _state, score: _score));
     _lastMovedCardIds = moved;
     _lastAutoMoveCount = automatic;
+    _lastLanding = landing;
     _lastAction = action;
     _actionSerial++;
     _score +=

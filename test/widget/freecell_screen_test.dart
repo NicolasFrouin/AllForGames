@@ -175,6 +175,51 @@ void main() {
     expect(textOf('score-value'), '0');
   });
 
+  group('automatic moves', () {
+    /// The places of [ids] at each frame, until the cards stop.
+    Future<List<Map<String, Offset>>> framesOf(
+      WidgetTester tester,
+      List<String> ids,
+    ) async {
+      final frames = <Map<String, Offset>>[];
+      for (var i = 0; i < 150 && tester.binding.hasScheduledFrame; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        frames.add({for (final id in ids) id: at(tester, id)});
+      }
+      await tester.pumpAndSettle();
+      return frames;
+    }
+
+    testWidgets('start once the move landed', (tester) async {
+      await pumpGame(tester, board(cascades: ['AH 5C', '6D']));
+      final ace = at(tester, 'hearts-1');
+
+      await tester.tapAt(at(tester, 'clubs-5') + const Offset(10, 6));
+      final frames = await framesOf(tester, ['clubs-5', 'hearts-1']);
+
+      expect(at(tester, 'hearts-1'), at(tester, 'foundation-2'));
+      final leaves = frames.indexWhere((frame) => frame['hearts-1'] != ace);
+      expect(leaves, greaterThan(0));
+      expect(frames[leaves]['clubs-5'], at(tester, 'clubs-5'));
+    });
+
+    testWidgets('a moved card that goes home first lands where the player '
+        'put it', (tester) async {
+      // The 2♠ goes to a free cell, which frees the A♠: both go home.
+      await pumpGame(tester, board(cascades: ['AS 2S', '9H']));
+      final ace = at(tester, 'spades-1');
+
+      await tester.tapAt(at(tester, 'spades-2') + const Offset(10, 6));
+      final frames = await framesOf(tester, ['spades-1', 'spades-2']);
+
+      expect(at(tester, 'spades-1'), at(tester, 'foundation-3'));
+      expect(at(tester, 'spades-2'), at(tester, 'foundation-3'));
+      final leaves = frames.indexWhere((frame) => frame['spades-1'] != ace);
+      expect(leaves, greaterThan(0));
+      expect(frames[leaves]['spades-2'], at(tester, 'freecell-0'));
+    });
+  });
+
   testWidgets('a tapped card goes onto a cascade, else into a free cell', (
     tester,
   ) async {

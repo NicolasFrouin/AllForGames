@@ -26,8 +26,8 @@ const _dealStyle = MotionStyle(
   maxArc: 0.3,
 );
 
-/// A move followed by cards that go to the foundations by themselves: one
-/// card after the other, so the eye can follow them.
+/// The cards that go to the foundations by themselves once the move landed:
+/// one after the other, so the eye can follow them.
 const _autoStyle = MotionStyle(stagger: 70);
 const _cascadeStyle = MotionStyle(
   stagger: 45,
@@ -70,7 +70,7 @@ class FreeCellBoard extends StatelessWidget {
               piles: [
                 for (final ref in FreeCellPile.all) _pile(ref, state, layout),
               ],
-              action: _action(state),
+              action: _action(state, layout),
               canDrag: _canDrag,
               canTap: (pile, _) => pile.type != FreeCellPileType.foundation,
               onTap: (pile, index) =>
@@ -104,7 +104,7 @@ class FreeCellBoard extends StatelessWidget {
     };
   }
 
-  TableAction<FreeCellPile> _action(FreeCellState state) {
+  TableAction<FreeCellPile> _action(FreeCellState state, _BoardLayout layout) {
     final serial = controller.actionSerial;
     final moved = controller.lastMovedCardIds;
     return switch (controller.lastAction) {
@@ -114,10 +114,11 @@ class FreeCellBoard extends StatelessWidget {
         style: _dealStyle,
         dealFrom: const FreeCellPile.cell(0),
       ),
-      FreeCellAction.move when controller.lastAutoMoveCount > 0 => TableAction(
+      FreeCellAction.move when controller.lastLanding != null => _twoSteps(
         serial,
-        cardIds: moved,
-        style: _autoStyle,
+        moved,
+        controller.lastLanding!,
+        layout,
       ),
       FreeCellAction.finish => TableAction(
         serial,
@@ -128,6 +129,36 @@ class FreeCellBoard extends StatelessWidget {
       FreeCellAction.move ||
       FreeCellAction.undo => TableAction(serial, cardIds: moved),
     };
+  }
+
+  /// A move, then the automatic moves to the foundations once it landed. A
+  /// moved card that goes on to a foundation first lands where the player
+  /// put it, as [landing] shows.
+  TableAction<FreeCellPile> _twoSteps(
+    int serial,
+    List<String> moved,
+    FreeCellState landing,
+    _BoardLayout layout,
+  ) {
+    final split = moved.length - controller.lastAutoMoveCount;
+    final automatic = moved.sublist(split);
+    final stops = <String, CardStop<FreeCellPile>>{};
+    for (final ref in FreeCellPile.all) {
+      final cards = landing.pile(ref);
+      final offsets = layout.offsets(ref, cards);
+      for (final (index, card) in cards.indexed) {
+        if (automatic.contains(card.id) && moved.indexOf(card.id) < split) {
+          stops[card.id] = CardStop(ref, index, offsets[index]);
+        }
+      }
+    }
+    return TableAction(
+      serial,
+      cardIds: moved.sublist(0, split),
+      stops: stops,
+      thenIds: automatic,
+      thenStyle: _autoStyle,
+    );
   }
 
   /// The cascade cards, row by row from the left.
