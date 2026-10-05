@@ -5,12 +5,12 @@ Classic games in one app: pick a game on the hub, play, and follow detailed stat
 - **Klondike** solitaire (Draw 1 / Draw 3), with undo, drag and drop, tap-to-move and auto-finish
 - **FreeCell**, with multi-card moves and automatic moves to the foundations
 - **Spider** with 1, 2 or 4 suits
+- **Mahjong** solitaire (Pyramid and Turtle layouts), with hints, shuffle and undo
 - Easy, Medium and Hard levels, and every deal can be won (proven by solvers)
 - Games are saved: leave and come back to continue where you were
 - Statistics for every game: time, moves, undos, score, streaks, records and more
 - Achievements, with progress, that unlock new card backs to pick for the games
 - English and French
-- **Mahjong** solitaire (Pyramid and Turtle layouts), with hints, shuffle and undo
 - Fluid animations: dealing, flying and flipping cards, and a celebration for every win
 
 Built with [Flutter](https://flutter.dev): one codebase for Web, Android, iOS, Windows, macOS and Linux.
