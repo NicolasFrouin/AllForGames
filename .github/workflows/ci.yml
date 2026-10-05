@@ -74,12 +74,11 @@ jobs:
           install-chromedriver: true
 
       # Deals come from seeds: they must be the same on the VM, JavaScript and WebAssembly.
-      - name: Deals are the same on the web (JS and Wasm)
+      # The e2e tests check a deal in the JavaScript app; this checks WebAssembly (release builds).
+      - name: Deals are the same in WebAssembly
         env:
           CHROME_EXECUTABLE: ${{ steps.chrome.outputs.chrome-path }}
-        run: |
-          flutter test --platform chrome test/games/klondike/klondike_state_test.dart
-          flutter test --platform chrome --wasm test/games/klondike/klondike_state_test.dart
+        run: flutter test --platform chrome --wasm test/games/klondike/klondike_state_test.dart
 
       - name: End-to-end tests (Chrome)
         env:
