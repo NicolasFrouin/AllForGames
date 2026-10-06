@@ -18,12 +18,14 @@ import 'freecell_flows.dart';
 import 'fast_animations.dart';
 import 'mahjong_flows.dart';
 import 'spider_flows.dart';
+import 'tripeaks_flows.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   mahjongFlows();
   spiderFlows();
   freecellFlows();
+  tripeaksFlows();
 
   testFlow('a game left continues; a new game records it as abandoned', (
     tester,

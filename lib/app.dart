@@ -11,6 +11,8 @@ import 'games/mahjong/mahjong_difficulty.dart';
 import 'games/mahjong/mahjong_screen.dart';
 import 'games/spider/spider_difficulty.dart';
 import 'games/spider/spider_screen.dart';
+import 'games/tripeaks/tripeaks_difficulty.dart';
+import 'games/tripeaks/tripeaks_screen.dart';
 import 'hub/hub_screen.dart';
 import 'l10n/app_localizations.dart';
 import 'skins/skin_rewards.dart';
@@ -104,6 +106,20 @@ class _AllForGamesAppState extends State<AllForGamesApp> {
               return SpiderScreen(
                 stores: widget.stores,
                 difficulty: SpiderDifficulty.values
+                    .asNameMap()[query['difficulty']],
+                seed: int.tryParse(query['seed'] ?? ''),
+              );
+            },
+          ),
+          GoRoute(
+            path: 'tripeaks',
+            // Query parameters start a given deal: /tripeaks?difficulty=hard&
+            // seed=42. Without them, the saved game continues.
+            builder: (context, state) {
+              final query = state.uri.queryParameters;
+              return TriPeaksScreen(
+                stores: widget.stores,
+                difficulty: TriPeaksDifficulty.values
                     .asNameMap()[query['difficulty']],
                 seed: int.tryParse(query['seed'] ?? ''),
               );

@@ -399,6 +399,70 @@
   "@spiderLongestThink": {
     "description": "Spider statistic: longest time between two moves."
   },
+  "tripeaksTitle": "TriPeaks",
+  "@tripeaksTitle": {
+    "description": "Name of the TriPeaks solitaire game."
+  },
+  "tripeaksTagline": "Clear three peaks with cards one rank above or below.",
+  "@tripeaksTagline": {
+    "description": "One-line description of TriPeaks on its hub tile."
+  },
+  "tripeaksClassic": "Classic",
+  "@tripeaksClassic": {
+    "description": "TriPeaks game mode: the standard rules, three peaks and a stock of 23 cards (statistics filter, recent games)."
+  },
+  "tripeaksEasyHint": "Playing whatever fits is usually enough.",
+  "@tripeaksEasyHint": {
+    "description": "New game sheet: what an Easy TriPeaks deal needs, under the difficulty choice."
+  },
+  "tripeaksMediumHint": "Pick the card to play with care: the order matters.",
+  "@tripeaksMediumHint": {
+    "description": "New game sheet: what a Medium TriPeaks deal needs, under the difficulty choice."
+  },
+  "tripeaksHardHint": "Few ways to win: plan your runs and when to draw.",
+  "@tripeaksHardHint": {
+    "description": "New game sheet: what a Hard TriPeaks deal needs, under the difficulty choice."
+  },
+  "tripeaksRun": "Run",
+  "@tripeaksRun": {
+    "description": "TriPeaks status bar: cards played in a row from the peaks since the last draw."
+  },
+  "tripeaksStock": "Stock",
+  "@tripeaksStock": {
+    "description": "TriPeaks status bar: cards left in the stock."
+  },
+  "tripeaksStuck": "No card fits and the stock is empty.",
+  "@tripeaksStuck": {
+    "description": "TriPeaks: banner when no move is left."
+  },
+  "tripeaksCardsCleared": "Cards cleared",
+  "@tripeaksCardsCleared": {
+    "description": "TriPeaks statistic: cards played from the peaks."
+  },
+  "tripeaksLongestRun": "Longest run",
+  "@tripeaksLongestRun": {
+    "description": "TriPeaks statistic and win dialog: most cards played from the peaks in a row, without a draw."
+  },
+  "tripeaksPeaksCleared": "Peaks cleared",
+  "@tripeaksPeaksCleared": {
+    "description": "TriPeaks statistic: peaks whose top card was played."
+  },
+  "tripeaksDraws": "Cards drawn",
+  "@tripeaksDraws": {
+    "description": "TriPeaks statistic: cards turned from the stock onto the waste."
+  },
+  "tripeaksStockLeft": "Cards left in the stock",
+  "@tripeaksStockLeft": {
+    "description": "TriPeaks statistic and win dialog: stock cards not drawn (a bonus on a win)."
+  },
+  "tripeaksTimeToFirstMove": "Time to first move",
+  "@tripeaksTimeToFirstMove": {
+    "description": "TriPeaks statistic: time from the deal to the first move."
+  },
+  "tripeaksLongestThink": "Longest think time",
+  "@tripeaksLongestThink": {
+    "description": "TriPeaks statistic: longest time between two moves."
+  },
   "mahjongTitle": "Mahjong",
   "@mahjongTitle": {
     "description": "Name of the Mahjong solitaire game."

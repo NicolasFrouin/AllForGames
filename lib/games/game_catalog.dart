@@ -12,6 +12,9 @@ import 'mahjong/mahjong_difficulty.dart';
 import 'mahjong/mahjong_difficulty_texts.dart';
 import 'spider/spider_controller.dart';
 import 'spider/spider_difficulty_texts.dart';
+import 'tripeaks/tripeaks_controller.dart';
+import 'tripeaks/tripeaks_difficulty.dart';
+import 'tripeaks/tripeaks_difficulty_texts.dart';
 
 /// A text in the language of the app.
 typedef LocalizedText = String Function(AppLocalizations l10n);
@@ -93,6 +96,20 @@ final gameCatalog = [
     // The levels are the suit counts: the variants of the records.
     variants: spiderVariantNames,
     detailLabels: SpiderStatKeys.labels,
+  ),
+  GameInfo(
+    id: TriPeaksController.gameId,
+    title: (l10n) => l10n.tripeaksTitle,
+    tagline: (l10n) => l10n.tripeaksTagline,
+    icon: Icons.landscape,
+    color: const Color(0xFF00838F),
+    route: '/tripeaks',
+    variants: {TriPeaksController.variant: (l10n) => l10n.tripeaksClassic},
+    difficulties: {
+      for (final difficulty in TriPeaksDifficulty.values)
+        difficulty.name: difficulty.label,
+    },
+    detailLabels: TriPeaksStatKeys.labels,
   ),
   GameInfo(
     id: MahjongController.gameId,

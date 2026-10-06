@@ -28,10 +28,12 @@ void main() {
     '/mahjong?mode=tray&seed=1&difficulty=hard': Size(360, 640),
     '/mahjong?mode=tray&seed=1&difficulty=easy': Size(360, 640),
     '/spider?seed=1': Size(360, 640),
+    '/tripeaks?seed=1': Size(360, 640),
     '/stats/mahjong': Size(360, 640),
     '/stats/spider': Size(360, 640),
     '/stats/klondike': Size(360, 640),
     '/stats/freecell': Size(360, 640),
+    '/stats/tripeaks': Size(360, 640),
     '/stats': Size(360, 6000),
   };
   // A tab lays out only its own page.
