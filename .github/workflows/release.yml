@@ -1,0 +1,214 @@
+name: Release
+
+# A tag v1.2.3 publishes a GitHub Release with the Android APK, the app bundle and the web build.
+# Run by hand (Actions > Release > Run workflow), the same files become artifacts of the run.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+# Creating the release needs write access to the repository contents.
+permissions:
+  contents: write
+
+# Its own group: a release never cancels the CI (group ci-...) nor another release. On the one
+# runner, the runs wait in turn.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Android and web builds
+    # Always the self-hosted runner (Coolify, Linux x64), never GitHub-hosted runners.
+    runs-on: [self-hosted, Linux, X64]
+    # The first run on a new runner container downloads the Android SDK, the NDK and Gradle.
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          clean: false
+      # The workspace stays on the runner and is shared with the CI: keep the compiler caches,
+      # remove everything else git does not track (a key.properties left by a cancelled run too).
+      - name: Clean the workspace, keep the build caches
+        run: git clean -ffdx -e /build/ -e /.dart_tool/
+
+      # flutter-action needs these tools; a bare runner image may not have all of them. gh creates
+      # the release: Ubuntu 20.04 has no package for it, so it comes from its GitHub release.
+      - name: Runner tools
+        run: |
+          sudo=$( (( EUID == 0 )) || echo sudo )
+          packages=()
+          for pair in curl:curl git:git jq:jq unzip:unzip xz:xz-utils zip:zip; do
+            command -v "${pair%%:*}" >/dev/null || packages+=("${pair#*:}")
+          done
+          if (( ${#packages[@]} )); then
+            $sudo apt-get update -q
+            $sudo apt-get install -y -q --no-install-recommends "${packages[@]}"
+          fi
+          if ! command -v gh >/dev/null; then
+            tag=$(curl -fsSL https://api.github.com/repos/cli/cli/releases/latest | jq -r .tag_name)
+            curl -fsSLo "$RUNNER_TEMP/gh.deb" \
+              "https://github.com/cli/cli/releases/download/$tag/gh_${tag#v}_linux_amd64.deb"
+            $sudo dpkg -i "$RUNNER_TEMP/gh.deb"
+          fi
+
+      # Gradle and the Android SDK tools run on Java. Like the Flutter SDK, the JDK stays in the
+      # runner's tool cache: later runs find it there (no cache archives).
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      # The SDK goes to ~/.android/sdk on the runner's disk: the command-line tools are downloaded
+      # once, later runs only accept the licences again. Gradle installs the platform, build tools
+      # and NDK it needs there (the licences are accepted). Flutter needs the command-line tools
+      # for the app bundle: apkanalyzer checks that the debug symbols were stripped.
+      - uses: android-actions/setup-android@v4
+        with:
+          log-accepted-android-sdk-licenses: false
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.6
+          channel: stable
+      # As root (the runner container), tar keeps the owner of the SDK archive: git then refuses the
+      # SDK checkout ("dubious ownership"), and every flutter command fails.
+      - name: Trust the Flutter SDK for git
+        run: |
+          git config --global --get-all safe.directory | grep -qxF "$FLUTTER_ROOT" ||
+            git config --global --add safe.directory "$FLUTTER_ROOT"
+
+      # The version shown by the app: the tag (v1.2.3 -> 1.2.3) or, run by hand, the pubspec
+      # version. The build number (Android versionCode) must grow with every build the Play Store
+      # gets: the run number of this workflow does. Below 1.0 or with a suffix (v1.2.3-beta.1),
+      # the GitHub Release is a prerelease.
+      - name: Version
+        id: version
+        run: |
+          if [[ $GITHUB_EVENT_NAME == push ]]; then
+            name=${GITHUB_REF_NAME#v}
+          else
+            name=$(sed -n 's/^version: *\([^+ ]*\).*/\1/p' pubspec.yaml)
+          fi
+          if [[ ! $name =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Version '$name' is not like 1.2.3 or 1.2.3-beta.1 (tags: v1.2.3)."
+            exit 1
+          fi
+          prerelease=false
+          [[ $name == 0.* || $name == *-* ]] && prerelease=true
+          echo "prerelease=$prerelease" >>"$GITHUB_OUTPUT"
+          {
+            echo "BUILD_NAME=$name"
+            echo "BUILD_NUMBER=$GITHUB_RUN_NUMBER"
+            echo "DIST=$RUNNER_TEMP/dist"
+          } >>"$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/dist"
+
+      # With the upload key in the secrets, the APK and the app bundle are signed for the Play
+      # Store. Without it, they are signed with the runner's debug key: the APK installs on a phone
+      # for a test, the Play Store refuses the bundle. The keystore goes to the job's temp folder
+      # (emptied after the job); the last step removes key.properties (the workspace stays).
+      - name: Signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [[ -z $KEYSTORE_BASE64 ]]; then
+            echo '::warning::No ANDROID_KEYSTORE_BASE64 secret: Android builds are signed with the debug key.'
+            echo 'SIGNING=debug key of the runner (fine for a test install, not for the Play Store)' >>"$GITHUB_ENV"
+            exit 0
+          fi
+          for name in KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            [[ -n ${!name} ]] || { echo "::error::The ANDROID_$name secret is missing."; exit 1; }
+          done
+          base64 -d <<<"$KEYSTORE_BASE64" >"$RUNNER_TEMP/upload-keystore.jks"
+          umask 077
+          {
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyPassword=$KEY_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "storeFile=$RUNNER_TEMP/upload-keystore.jks"
+          } >android/key.properties
+          echo 'SIGNING=upload key' >>"$GITHUB_ENV"
+
+      # Web first: the WebAssembly build needs the most memory, before Gradle starts (6 GB runner).
+      # The flutter commands below run pub themselves, without --no-pub on purpose: only then does
+      # a release build write the Android plugin registrant without the dev-only plugins
+      # (integration_test), which do not compile in release.
+      # build/ stays on the runner: build/web starts empty, so no stale file goes in the zip.
+      - name: Web build
+        run: |
+          rm -rf build/web
+          flutter build web --release --wasm --build-name "$BUILD_NAME" --build-number "$BUILD_NUMBER"
+          (cd build/web && zip -qr "$DIST/all-for-games-$BUILD_NAME-web.zip" .)
+      # One APK for every ABI (arm64, armv7, x86_64) to install directly, and the app bundle for
+      # the Play Store.
+      - name: Android builds
+        run: |
+          flutter build apk --release --build-name "$BUILD_NAME" --build-number "$BUILD_NUMBER"
+          cp build/app/outputs/flutter-apk/app-release.apk "$DIST/all-for-games-$BUILD_NAME.apk"
+          flutter build appbundle --release --build-name "$BUILD_NAME" --build-number "$BUILD_NUMBER"
+          cp build/app/outputs/bundle/release/app-release.aab "$DIST/all-for-games-$BUILD_NAME.aab"
+
+      # gh release create fails when the release exists: a re-run uploads the files again instead.
+      - name: GitHub Release
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRERELEASE: ${{ steps.version.outputs.prerelease }}
+        run: |
+          tag=$GITHUB_REF_NAME
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$tag" "$DIST"/* --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            flags=(--title "All For Games $BUILD_NAME" --generate-notes --verify-tag)
+            [[ $PRERELEASE == true ]] && flags+=(--prerelease)
+            gh release create "$tag" "$DIST"/* --repo "$GITHUB_REPOSITORY" "${flags[@]}"
+          fi
+
+      # Run by hand: artifacts of the run, each file on its own (archive: false) so the APK
+      # downloads as is on a phone. Artifacts count against the account's storage (release files
+      # do not): they expire after two weeks.
+      - name: Upload the APK
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v7
+        with:
+          path: ${{ env.DIST }}/all-for-games-${{ env.BUILD_NAME }}.apk
+          archive: false
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload the app bundle
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v7
+        with:
+          path: ${{ env.DIST }}/all-for-games-${{ env.BUILD_NAME }}.aab
+          archive: false
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload the web build
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v7
+        with:
+          path: ${{ env.DIST }}/all-for-games-${{ env.BUILD_NAME }}-web.zip
+          archive: false
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Summary
+        run: |
+          {
+            echo "### All For Games $BUILD_NAME (build $BUILD_NUMBER)"
+            echo "Android signing: $SIGNING"
+            echo
+            for file in "$DIST"/*; do echo "- \`${file##*/}\` ($(du -h "$file" | cut -f1))"; done
+          } >>"$GITHUB_STEP_SUMMARY"
+
+      # The workspace and the home stay on the runner: no signing key may stay behind, and the
+      # Gradle daemon (up to 3 GB) must not hold memory after the job.
+      - name: Clean up
+        if: always()
+        run: |
+          rm -f android/key.properties "$RUNNER_TEMP/upload-keystore.jks"
+          if [[ -x android/gradlew ]]; then (cd android && ./gradlew --stop -q) || true; fi
