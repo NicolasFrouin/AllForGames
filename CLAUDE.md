@@ -16,7 +16,7 @@ flutter pub get                               # also generates lib/l10n/app_loca
 flutter gen-l10n                              # regenerates them after an ARB change
 flutter run -d chrome                         # dev, hot reload
 flutter analyze                               # must be clean
-dart format lib test integration_test test_driver
+dart format lib test integration_test test_driver tool
 flutter test                                  # unit + widget tests (fast)
 scripts/test_bundle.sh                        # the same in one compile (what CI runs)
 flutter test test/games/klondike              # one folder or file: prefer narrow runs

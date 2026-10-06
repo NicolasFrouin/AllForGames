@@ -27,9 +27,7 @@ install_driver() {
 }
 
 driver=''
-# CHROMEWEBDRIVER is the chromedriver folder on GitHub-hosted runners.
 for candidate in "${CHROMEDRIVER:-}" "$(command -v chromedriver || true)" \
-  "${CHROMEWEBDRIVER:+$CHROMEWEBDRIVER/chromedriver}" \
   .chromedriver/chromedriver/*/*/chromedriver; do
   if [[ -x "$candidate" && "$(major_of "$candidate")" == "$chrome_major" ]]; then
     driver=$candidate

@@ -123,8 +123,8 @@ jobs:
           for name in KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
             [[ -n ${!name} ]] || { echo "::error::The ANDROID_$name secret is missing."; exit 1; }
           done
-          base64 -d <<<"$KEYSTORE_BASE64" >"$RUNNER_TEMP/upload-keystore.jks"
           umask 077
+          base64 -d <<<"$KEYSTORE_BASE64" >"$RUNNER_TEMP/upload-keystore.jks"
           {
             echo "storePassword=$KEYSTORE_PASSWORD"
             echo "keyPassword=$KEY_PASSWORD"
