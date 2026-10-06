@@ -737,7 +737,8 @@ class _CardTableState<P extends Object> extends State<CardTable<P>>
 
   /// Dropped where they cannot go: the cards fly back to their pile.
   void _snapBack(_DragData<P> data, Offset globalTopLeft) {
-    if (!_matches(data)) return;
+    // Draggable reports a cancel even after the table is gone.
+    if (!mounted || !_matches(data)) return;
     final topLeft = _toLocal(globalTopLeft);
     setState(() {
       _addMotions({
