@@ -8,6 +8,7 @@ import '../win_dialog.dart';
 import '../../common/format.dart';
 import '../../l10n/app_localizations.dart';
 import '../../skins/tile_styles.dart';
+import '../../stats/game_record.dart';
 import 'mahjong_board.dart';
 import 'mahjong_controller.dart';
 import 'mahjong_difficulty.dart';
@@ -26,6 +27,7 @@ class MahjongScreen extends StatefulWidget {
   const MahjongScreen({
     super.key,
     required this.stores,
+    this.mode,
     this.difficulty,
     this.seed,
     this.initialState,
@@ -34,9 +36,10 @@ class MahjongScreen extends StatefulWidget {
 
   final AppStores stores;
 
-  /// [difficulty], [seed] and [initialState] ask for a new deal. Without any
-  /// of them, the saved game continues. A new deal takes the difficulty of
-  /// the settings when it has none.
+  /// [mode], [difficulty], [seed] and [initialState] ask for a new deal.
+  /// Without any of them, the saved game continues. A new deal takes the
+  /// mode and the difficulty of the settings when it has none.
+  final MahjongMode? mode;
   final MahjongDifficulty? difficulty;
   final int? seed;
 
@@ -83,16 +86,19 @@ class _MahjongScreenState extends State<MahjongScreen> {
   MahjongController _openGame() {
     final saved = _restoreSavedGame();
     final newDeal =
+        widget.mode != null ||
         widget.difficulty != null ||
         widget.seed != null ||
         widget.initialState != null;
     if (saved != null && !newDeal) return saved;
-    final difficulty =
-        widget.difficulty ?? widget.stores.settings.mahjongDifficulty;
-    final transposed = _fitsTransposed(difficulty);
+    final settings = widget.stores.settings;
+    final mode = widget.mode ?? settings.mahjongMode;
+    final difficulty = widget.difficulty ?? settings.mahjongDifficulty;
+    final transposed = _fitsTransposed(difficulty, mode);
     if (saved != null) {
       return saved..newGame(
         difficulty: difficulty,
+        mode: mode,
         transposed: transposed,
         seed: widget.seed,
         initialState: widget.initialState,
@@ -102,6 +108,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
       stats: widget.stores.stats,
       saves: widget.stores.saves,
       difficulty: difficulty,
+      mode: mode,
       transposed: transposed,
       seed: widget.seed,
       initialState: widget.initialState,
@@ -126,10 +133,10 @@ class _MahjongScreenState extends State<MahjongScreen> {
     }
   }
 
-  /// Whether a new deal of [difficulty] gets bigger tiles with rows and
-  /// columns swapped, on this screen (a phone held upright). The board keeps
-  /// its orientation for the whole game: the rules depend on it.
-  bool _fitsTransposed(MahjongDifficulty difficulty) {
+  /// Whether a new deal of [difficulty] in [mode] gets bigger tiles with
+  /// rows and columns swapped, on this screen (a phone held upright). The
+  /// board keeps its orientation for the whole game: the rules depend on it.
+  bool _fitsTransposed(MahjongDifficulty difficulty, MahjongMode mode) {
     final size = MediaQuery.sizeOf(context);
     final padding = MediaQuery.paddingOf(context);
     final room = Size(
@@ -137,7 +144,11 @@ class _MahjongScreenState extends State<MahjongScreen> {
       // The app bar and the status bar.
       size.height - padding.vertical - kToolbarHeight - 48,
     );
-    return MahjongBoardGeometry.prefersTransposed(room, difficulty.layout());
+    return MahjongBoardGeometry.prefersTransposed(
+      room,
+      difficulty.layout(),
+      tray: mode == MahjongMode.tray,
+    );
   }
 
   void _setAppVisible(bool visible) {
@@ -173,46 +184,80 @@ class _MahjongScreenState extends State<MahjongScreen> {
   /// Called by the board once the win celebration has played.
   Future<void> _showWinDialog() async {
     final record = _controller.result;
-    if (!mounted || record == null || _resultShown) return;
+    if (!mounted || record == null || !record.won || _resultShown) return;
     _resultShown = true;
     final stores = widget.stores;
+    final l10n = AppLocalizations.of(context);
     final playAgain = await showWinDialog(
       context,
       stores: stores,
       record: record,
       stats: stores.stats.statsFor(
         MahjongController.gameId,
+        variant: record.variant,
         difficulty: record.difficulty,
       ),
       rows: [
         (
-          label: AppLocalizations.of(context).mahjongBestCombo,
+          label: l10n.mahjongBestCombo,
           value: '${record.details[MahjongStatKeys.bestCombo] ?? 0}',
         ),
+        if (record.details[MahjongStatKeys.mostHeld] case final held?)
+          (label: l10n.mahjongMostHeld, value: '$held'),
       ],
     );
     if (!mounted) return;
     if (playAgain) {
-      _controller.newGame(transposed: _fitsTransposed(_controller.difficulty));
+      _dealAgain();
     } else {
       context.go('/');
     }
   }
 
-  /// Opens the new game sheet with the difficulty of the settings, then
-  /// deals the chosen game and keeps its difficulty for the next time.
+  /// Called by the board once the full tray has flashed: the game is lost.
+  /// Try again deals the same game, New game another one.
+  Future<void> _showLossDialog() async {
+    final record = _controller.result;
+    if (!mounted || record == null || record.won || _resultShown) return;
+    _resultShown = true;
+    final tryAgain = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => _TrayFullDialog(record: record),
+    );
+    if (!mounted || tryAgain == null) return;
+    if (tryAgain) {
+      _controller.newGame(seed: _controller.seed);
+    } else {
+      _dealAgain();
+    }
+  }
+
+  /// A new deal of the same mode and difficulty.
+  void _dealAgain() => _controller.newGame(
+    transposed: _fitsTransposed(_controller.difficulty, _controller.mode),
+  );
+
+  /// Opens the new game sheet with the options of the settings, then deals
+  /// the chosen game and keeps its options for the next time.
   Future<void> _newGame() async {
     final settings = widget.stores.settings;
-    final difficulty = await showMahjongNewGameSheet(
+    final options = await showMahjongNewGameSheet(
       context,
-      initial: settings.mahjongDifficulty,
+      initial: (
+        mode: settings.mahjongMode,
+        difficulty: settings.mahjongDifficulty,
+      ),
       abandons: _controller.moves > 0 && _controller.result == null,
     );
-    if (difficulty == null || !mounted) return;
+    if (options == null || !mounted) return;
+    final (:mode, :difficulty) = options;
+    unawaited(settings.setMahjongMode(mode));
     unawaited(settings.setMahjongDifficulty(difficulty));
     _controller.newGame(
       difficulty: difficulty,
-      transposed: _fitsTransposed(difficulty),
+      mode: mode,
+      transposed: _fitsTransposed(difficulty, mode),
     );
   }
 
@@ -241,7 +286,11 @@ class _MahjongScreenState extends State<MahjongScreen> {
                 IconButton(
                   key: const ValueKey('hint'),
                   tooltip: l10n.hint,
-                  onPressed: controller.canHint ? controller.hint : null,
+                  onPressed: !controller.canHint
+                      ? null
+                      : controller.isTray
+                      ? controller.hintPick
+                      : controller.hint,
                   icon: const Icon(Icons.lightbulb_outline),
                 ),
               ],
@@ -281,14 +330,12 @@ class _MahjongScreenState extends State<MahjongScreen> {
                               widget.stores.settings.tileStyleId,
                             ),
                             onCelebrated: _showWinDialog,
+                            onLost: _showLossDialog,
                           ),
                         ),
                       ),
                     ),
-                    Align(
-                      alignment: Alignment.bottomCenter,
-                      child: _StuckBanner(controller: controller),
-                    ),
+                    _StuckBanner(controller: controller),
                   ],
                 ),
               ),
@@ -300,7 +347,65 @@ class _MahjongScreenState extends State<MahjongScreen> {
   }
 }
 
-/// Offered as soon as no match is left: shuffle, or undo.
+/// The tray is full: the game is lost. Shows what the game reached, and
+/// returns true for Try again (the same deal), false for New game.
+class _TrayFullDialog extends StatelessWidget {
+  const _TrayFullDialog({required this.record});
+
+  final GameRecord record;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    Widget row(String label, Object? value) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Expanded(child: Text(label)),
+          Text(
+            '${value ?? 0}',
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+    return AlertDialog(
+      key: const ValueKey('tray-full'),
+      icon: Icon(Icons.inbox, size: 40, color: theme.colorScheme.error),
+      title: Text(l10n.mahjongTrayFullTitle),
+      scrollable: true,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(l10n.mahjongTrayFullMessage),
+          const SizedBox(height: 12),
+          row(
+            l10n.mahjongPairsMatched,
+            record.details[MahjongStatKeys.pairsMatched],
+          ),
+          row(l10n.mahjongTilesLeft, record.details[MahjongStatKeys.tilesLeft]),
+          row(l10n.time, formatClock(record.playTime)),
+        ],
+      ),
+      actions: [
+        TextButton(
+          key: const ValueKey('lost-new-game'),
+          onPressed: () => Navigator.of(context).pop(false),
+          child: Text(l10n.newGame),
+        ),
+        FilledButton(
+          key: const ValueKey('try-again'),
+          onPressed: () => Navigator.of(context).pop(true),
+          child: Text(l10n.tryAgain),
+        ),
+      ],
+    );
+  }
+}
+
+/// Offered as soon as no move is left that does not lose: in classic mode
+/// shuffle, or undo; in tray mode undo.
 class _StuckBanner extends StatelessWidget {
   const _StuckBanner({required this.controller});
 
@@ -313,65 +418,83 @@ class _StuckBanner extends StatelessWidget {
     final animate = !MediaQuery.disableAnimationsOf(context);
     return ListenableBuilder(
       listenable: controller,
-      builder: (context, _) => AnimatedSwitcher(
-        duration: Duration(milliseconds: animate ? 280 : 0),
-        transitionBuilder: (child, animation) => SlideTransition(
-          position: Tween(
-            begin: const Offset(0, 1),
-            end: Offset.zero,
-          ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOut)),
-          child: FadeTransition(opacity: animation, child: child),
-        ),
-        child: !controller.isStuck
-            ? const SizedBox.shrink()
-            : Padding(
-                key: const ValueKey('stuck-banner'),
-                padding: const EdgeInsets.all(12),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 520),
-                  child: Material(
-                    color: theme.colorScheme.surfaceContainerHigh,
-                    elevation: 6,
-                    borderRadius: BorderRadius.circular(16),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 12, 8),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.shuffle,
-                                color: theme.colorScheme.primary,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(child: Text(l10n.mahjongStuck)),
-                            ],
-                          ),
-                          OverflowBar(
-                            spacing: 8,
-                            overflowAlignment: OverflowBarAlignment.end,
-                            children: [
-                              if (controller.canUndo)
-                                TextButton(
-                                  onPressed: controller.undo,
-                                  child: Text(l10n.undo),
+      // In tray mode, the tray is at the bottom.
+      builder: (context, _) => Align(
+        alignment: controller.isTray
+            ? Alignment.topCenter
+            : Alignment.bottomCenter,
+        child: AnimatedSwitcher(
+          duration: Duration(milliseconds: animate ? 280 : 0),
+          transitionBuilder: (child, animation) => SlideTransition(
+            position:
+                Tween(
+                  begin: Offset(0, controller.isTray ? -1 : 1),
+                  end: Offset.zero,
+                ).animate(
+                  CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                ),
+            child: FadeTransition(opacity: animation, child: child),
+          ),
+          child: !controller.isStuck
+              ? const SizedBox.shrink()
+              : Padding(
+                  key: const ValueKey('stuck-banner'),
+                  padding: const EdgeInsets.all(12),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 520),
+                    child: Material(
+                      color: theme.colorScheme.surfaceContainerHigh,
+                      elevation: 6,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 12, 8),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  controller.isTray
+                                      ? Icons.inbox
+                                      : Icons.shuffle,
+                                  color: theme.colorScheme.primary,
                                 ),
-                              FilledButton.icon(
-                                key: const ValueKey('shuffle'),
-                                onPressed: controller.shuffle,
-                                icon: const Icon(Icons.shuffle),
-                                label: Text(l10n.mahjongShuffle),
-                              ),
-                            ],
-                          ),
-                        ],
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    controller.isTray
+                                        ? l10n.mahjongTrayStuck
+                                        : l10n.mahjongStuck,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            OverflowBar(
+                              spacing: 8,
+                              overflowAlignment: OverflowBarAlignment.end,
+                              children: [
+                                if (controller.canUndo)
+                                  TextButton(
+                                    onPressed: controller.undo,
+                                    child: Text(l10n.undo),
+                                  ),
+                                if (!controller.isTray)
+                                  FilledButton.icon(
+                                    key: const ValueKey('shuffle'),
+                                    onPressed: controller.shuffle,
+                                    icon: const Icon(Icons.shuffle),
+                                    label: Text(l10n.mahjongShuffle),
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
+        ),
       ),
     );
   }
@@ -430,7 +553,7 @@ class _StatusBarState extends State<_StatusBar> {
               icon: Icons.grid_view,
               label: label(l10n.mahjongTiles),
               tooltip: l10n.mahjongTiles,
-              value: '${controller.state.tileCount}',
+              value: '${controller.tilesLeft}',
             ),
             _StatusItem(
               id: 'pairs',
@@ -446,11 +569,22 @@ class _StatusBarState extends State<_StatusBar> {
               tooltip: l10n.score,
               value: '${controller.score}',
             ),
-            _StatusItem(
-              id: 'difficulty',
-              icon: Icons.speed,
-              value: controller.difficulty.label(l10n),
-            ),
+            // Tray mode names itself with the level, so a phone keeps one
+            // line.
+            if (controller.isTray)
+              _StatusItem(
+                id: 'mode',
+                icon: Icons.view_week_outlined,
+                value:
+                    '${controller.mode.label(l10n)} · '
+                    '${controller.difficulty.label(l10n)}',
+              )
+            else
+              _StatusItem(
+                id: 'difficulty',
+                icon: Icons.speed,
+                value: controller.difficulty.label(l10n),
+              ),
           ],
         ),
       ),
@@ -483,7 +617,7 @@ class _StatusItem extends StatelessWidget {
       children: [
         Icon(icon, color: Colors.white70, size: 18),
         const SizedBox(width: 6),
-        // Large text can wrap a long label.
+        // Large text can wrap a long label, or a long value.
         if (label case final label?)
           Flexible(
             child: Text(
@@ -491,7 +625,9 @@ class _StatusItem extends StatelessWidget {
               style: style.copyWith(color: Colors.white70),
             ),
           ),
-        Text(value, key: ValueKey('$id-value'), style: style),
+        Flexible(
+          child: Text(value, key: ValueKey('$id-value'), style: style),
+        ),
       ],
     );
     return label == null && tooltip != null

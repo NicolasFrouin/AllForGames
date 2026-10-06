@@ -361,6 +361,41 @@ void main() {
       expect(restore(await storedSave(gameId)).state.layout.transposed, isTrue);
     });
 
+    test('a save of version 1, with four flowers and four seasons that '
+        'matched each other, continues with one flower and one season', () {
+      final game = controller(difficulty: MahjongDifficulty.hard, seed: 4);
+      // Version 1 had no tray mode, and numbered the four flowers 34 to 37,
+      // the seasons 38 to 41.
+      final json = game.toJson()
+        ..remove('mode')
+        ..remove('tray');
+      var flowers = 0;
+      var seasons = 0;
+      final version1 = {
+        ...json,
+        'version': 1,
+        'faces': [
+          for (final face in json['faces']! as List<int>)
+            face == flower
+                ? 34 + flowers++ % 4
+                : face == season
+                ? 38 + seasons++ % 4
+                : face,
+        ],
+      };
+
+      final restored = MahjongController.restore(
+        version1,
+        stats: stats,
+        saves: saves,
+      );
+
+      expect((flowers, seasons), (4, 4));
+      expect(restored.state.faces, game.state.faces);
+      playHints(restored);
+      expect(restored.result!.won, isTrue);
+    });
+
     test('unreadable data throws a FormatException', () async {
       final game = controller(difficulty: MahjongDifficulty.easy);
       final json = game.toJson();

@@ -49,9 +49,9 @@ class MahjongState {
     return position != null && layout.isFree(position, _occupied);
   }
 
-  /// Whether [a] and [b] are two free tiles that match.
+  /// Whether [a] and [b] are two free tiles of the same face.
   bool canMatch(int a, int b) =>
-      a != b && isFree(a) && isFree(b) && faceOf(a).matches(faceOf(b));
+      a != b && isFree(a) && isFree(b) && faces[a] == faces[b];
 
   /// The board without [a] and [b], or null when they cannot be matched.
   MahjongState? match(int a, int b) {
@@ -67,12 +67,12 @@ class MahjongState {
   late final List<TilePair> freePairs = _freePairs();
 
   List<TilePair> _freePairs() {
-    final byGroup = <int, List<int>>{};
+    final byFace = <int, List<int>>{};
     for (final id in _positions.keys) {
-      if (isFree(id)) (byGroup[faceOf(id).group] ??= []).add(id);
+      if (isFree(id)) (byFace[faces[id]] ??= []).add(id);
     }
     return [
-      for (final ids in byGroup.values)
+      for (final ids in byFace.values)
         for (var i = 0; i < ids.length; i++)
           for (var j = i + 1; j < ids.length; j++) (ids[i], ids[j]),
     ];
@@ -94,7 +94,7 @@ class MahjongState {
           pa == pb ||
           !occupied[pa] ||
           !occupied[pb] ||
-          !faceOf(a).matches(faceOf(b)) ||
+          faces[a] != faces[b] ||
           !layout.isFree(pa, occupied) ||
           !layout.isFree(pb, occupied)) {
         return false;

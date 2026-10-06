@@ -101,7 +101,7 @@ final gameCatalog = [
     icon: Icons.grid_view,
     color: const Color(0xFFC62828),
     route: '/mahjong',
-    variants: mahjongLayoutNames,
+    variants: mahjongVariantNames,
     difficulties: {
       for (final difficulty in MahjongDifficulty.values)
         difficulty.name: difficulty.label,

@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../games/freecell/freecell_state_test.dart' as freecell;
 import '../games/klondike/klondike_state_test.dart' as klondike;
 import '../games/mahjong/mahjong_generator_test.dart' as mahjong;
+import '../games/mahjong/mahjong_tray_test.dart' as tray;
 import '../games/spider/spider_state_test.dart' as spider;
 
 /// Every game deals from a seed, and the lists of winnable deals were proven
@@ -34,6 +35,14 @@ void main() {
     expect(
       faces.take(mahjong.seed1MediumFaces.length),
       mahjong.seed1MediumFaces,
+    );
+  });
+
+  test('Mahjong tray mode', () {
+    final faces = tray.trayDeal(MahjongDifficulty.medium, 1).state.faces;
+    expect(
+      faces.take(tray.seed1MediumTrayFaces.length),
+      tray.seed1MediumTrayFaces,
     );
   });
 }

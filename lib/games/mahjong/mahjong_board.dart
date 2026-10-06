@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:flutter/foundation.dart' show listEquals;
+import 'package:flutter/foundation.dart' show ValueListenable, listEquals;
 import 'package:flutter/scheduler.dart' show Ticker;
 import 'package:material_ui/material_ui.dart';
 
@@ -14,27 +14,77 @@ import 'mahjong_moving_tile.dart';
 import 'mahjong_state.dart';
 import 'mahjong_tile_view.dart';
 import 'mahjong_tiles.dart';
+import 'mahjong_tray.dart';
 
-/// The size of the tiles and where each one goes, for a layout in a size.
+/// The size of the tiles and where each one goes, for a layout in a size,
+/// and in tray mode the places of the tray under the board.
 class MahjongBoardGeometry {
-  factory MahjongBoardGeometry.fit(Size size, MahjongLayout layout) {
-    final (width, ratio) = _fit(
-      size,
-      layout.width / 2,
-      layout.height / 2,
-      layout.layers,
-    );
-    return MahjongBoardGeometry._(width, width * ratio, layout);
+  factory MahjongBoardGeometry.fit(
+    Size size,
+    MahjongLayout layout, {
+    bool tray = false,
+  }) {
+    final columns = layout.width / 2;
+    final rows = layout.height / 2;
+    var (width, ratio) = _fit(size, columns, rows, layout.layers);
+    if (tray) {
+      // The tray takes room from the board, so the tiles shrink a little:
+      // the room they need at the first size is enough.
+      final room = Size(
+        size.width,
+        max(1.0, size.height - _trayHeight(width, ratio)),
+      );
+      (width, ratio) = _fit(room, columns, rows, layout.layers);
+    }
+    return MahjongBoardGeometry._(width, width * ratio, layout, tray);
   }
 
-  MahjongBoardGeometry._(this.tileWidth, this.tileHeight, MahjongLayout layout)
-    : depth = tileWidth * _depthRatio,
-      size = Size(
-        tileWidth * (layout.width / 2 + _depthRatio * layout.layers),
-        tileHeight * layout.height / 2 +
-            tileWidth * _depthRatio * layout.layers,
-      ),
-      _layers = layout.layers;
+  MahjongBoardGeometry._(
+    this.tileWidth,
+    this.tileHeight,
+    MahjongLayout layout,
+    bool tray,
+  ) : depth = tileWidth * _depthRatio,
+      _layers = layout.layers {
+    final board = Size(
+      tileWidth * (layout.width / 2 + _depthRatio * layout.layers),
+      tileHeight * layout.height / 2 + depth * layout.layers,
+    );
+    if (!tray) {
+      size = board;
+      boardOffset = Offset.zero;
+      trayRect = null;
+      traySlots = const [];
+      return;
+    }
+    final padding = tileWidth * _trayPadding;
+    final gap = tileWidth * _slotGap;
+    final panel = Size(
+      tileWidth * TrayState.capacity +
+          gap * (TrayState.capacity - 1) +
+          depth +
+          2 * padding,
+      _trayHeight(tileWidth, tileHeight / tileWidth),
+    );
+    size = Size(max(board.width, panel.width), board.height + panel.height);
+    boardOffset = Offset((size.width - board.width) / 2, 0);
+    final panelTop = board.height + tileWidth * _trayGap;
+    trayRect = Rect.fromLTWH(
+      (size.width - panel.width) / 2,
+      panelTop,
+      panel.width,
+      panel.height - tileWidth * _trayGap,
+    );
+    traySlots = [
+      for (var i = 0; i < TrayState.capacity; i++)
+        Rect.fromLTWH(
+          trayRect!.left + padding + i * (tileWidth + gap),
+          panelTop + padding,
+          tileWidth,
+          tileHeight,
+        ),
+    ];
+  }
 
   /// Thickness of a tile, and shift of each layer up and to the left, for a
   /// tile width of 1.
@@ -45,23 +95,42 @@ class MahjongBoardGeometry {
   static const _maxRatio = 1.36;
   static const _maxTileWidth = 84.0;
 
+  /// Around the tray, for a tile width of 1: from the board, inside its
+  /// frame, and between two places.
+  static const _trayGap = 0.3;
+  static const _trayPadding = 0.18;
+  static const _slotGap = 0.2;
+
   final double tileWidth;
   final double tileHeight;
   final double depth;
   final int _layers;
 
-  /// The size of the whole board.
-  final Size size;
+  /// The size of the whole board, the tray included.
+  late final Size size;
+
+  /// Where the layout starts in [size]: the tray can be wider than it.
+  late final Offset boardOffset;
+
+  /// The frame of the tray, and the face of a tile in each of its places
+  /// (tray mode only).
+  late final Rect? trayRect;
+  late final List<Rect> traySlots;
 
   /// Room around a tile for its halo.
   double get margin => tileWidth * 0.2;
 
   Rect faceRect(TilePosition p) => Rect.fromLTWH(
-    p.x / 2 * tileWidth + (_layers - 1 - p.z) * depth,
-    p.y / 2 * tileHeight + (_layers - 1 - p.z) * depth,
+    boardOffset.dx + p.x / 2 * tileWidth + (_layers - 1 - p.z) * depth,
+    boardOffset.dy + p.y / 2 * tileHeight + (_layers - 1 - p.z) * depth,
     tileWidth,
     tileHeight,
   );
+
+  /// The height of the tray and its gap from the board, for tiles of
+  /// [width] and height [ratio].
+  static double _trayHeight(double width, double ratio) =>
+      width * (ratio + _depthRatio + 2 * _trayPadding + _trayGap);
 
   /// The tile width and height ratio of a layout of [columns] by [rows]
   /// tiles on [layers] in [size].
@@ -86,21 +155,23 @@ class MahjongBoardGeometry {
   }
 
   /// Whether [layout] with rows and columns swapped has bigger tiles in
-  /// [size] (a tall screen).
-  static bool prefersTransposed(Size size, MahjongLayout layout) {
-    double area(double columns, double rows) {
-      final (width, ratio) = _fit(size, columns, rows, layout.layers);
-      return width * width * ratio;
+  /// [size] (a tall screen), with a [tray] under it or not.
+  static bool prefersTransposed(
+    Size size,
+    MahjongLayout layout, {
+    bool tray = false,
+  }) {
+    double area(MahjongLayout layout) {
+      final geometry = MahjongBoardGeometry.fit(size, layout, tray: tray);
+      return geometry.tileWidth * geometry.tileHeight;
     }
 
-    final columns = layout.width / 2;
-    final rows = layout.height / 2;
-    return area(rows, columns) > area(columns, rows) * 1.1;
+    return area(layout.toTransposed()) > area(layout) * 1.1;
   }
 }
 
-/// Where a tile rests on the board.
-typedef _Target = ({int id, TileFace face, Rect rect, int z});
+/// Where a tile rests: on the board, or in the tray.
+typedef _Target = ({int id, TileFace face, Rect rect, int z, bool inTray});
 
 /// Everything a tile widget shows: the board keeps the widget of a tile
 /// while its look stays the same.
@@ -131,10 +202,11 @@ class _PaintOrder extends ChangeNotifier {
   }
 }
 
-/// Draws the Mahjong board. One timeline moves the tiles: each action plans
-/// a [TileMotion] for the tiles it changes (a drop for a new deal, a flight
-/// for a shuffle, a vanish for a match), and a hint makes its tiles glow for
-/// a moment.
+/// Draws the Mahjong board, and the tray under it in tray mode. One
+/// timeline moves the tiles: each action plans a [TileMotion] for the tiles
+/// it changes (a drop for a new deal, a flight for a shuffle or a pick into
+/// the tray, a vanish for a match, a pop for a pair cleared in the tray),
+/// and a hint makes its tiles glow for a moment.
 ///
 /// A frame only repaints the tiles that move or glow ([MovingTile]); the
 /// tile widgets are built when an action changes them, and the tile layer
@@ -145,6 +217,7 @@ class MahjongBoard extends StatefulWidget {
     required this.controller,
     this.tileStyle = classicTileStyle,
     this.onCelebrated,
+    this.onLost,
   });
 
   final MahjongController controller;
@@ -153,6 +226,10 @@ class MahjongBoard extends StatefulWidget {
   /// Called once after a win, when the celebration has played (at once with
   /// reduced motion): time for the win dialog.
   final VoidCallback? onCelebrated;
+
+  /// Called once after a loss (a full tray), when the tray has flashed (at
+  /// once with reduced motion): time for the loss dialog.
+  final VoidCallback? onLost;
 
   @override
   State<MahjongBoard> createState() => _MahjongBoardState();
@@ -165,6 +242,9 @@ class _MahjongBoardState extends State<MahjongBoard>
   static const _dropDuration = 300.0;
   static const _vanishDuration = 380.0;
   static const _flightDuration = 520.0;
+  static const _trayFlight = 420.0;
+  static const _slideDuration = 240.0;
+  static const _flashDuration = 900.0;
 
   /// From the end of the winning match to the win dialog.
   static const _celebration = 1250.0;
@@ -212,6 +292,10 @@ class _MahjongBoardState extends State<MahjongBoard>
   /// The win celebration: its confetti, and when to call `onCelebrated`.
   Confetti? _confetti;
   double? _celebratedAt;
+
+  /// A loss: when the full tray starts to flash, and when to call `onLost`.
+  double? _flashStart;
+  double? _lostAt;
   Map<int, _Target> _targets = const {};
   MahjongBoardGeometry? _geometry;
   int? _seenSerial;
@@ -237,6 +321,10 @@ class _MahjongBoardState extends State<MahjongBoard>
       _celebratedAt = null;
       widget.onCelebrated?.call();
     }
+    if (_lostAt case final at? when now >= at) {
+      _lostAt = null;
+      widget.onLost?.call();
+    }
   }
 
   void _stopTimeline() {
@@ -254,18 +342,26 @@ class _MahjongBoardState extends State<MahjongBoard>
     Map<int, TileMotion> added, {
     Confetti? confetti,
     double? celebratedAt,
+    double? lostAt,
   }) {
-    if (added.isEmpty && confetti == null && celebratedAt == null) return;
+    if (added.isEmpty &&
+        confetti == null &&
+        celebratedAt == null &&
+        lostAt == null) {
+      return;
+    }
     final now = _now;
     for (final MapEntry(key: id, value: motion) in added.entries) {
       _motions[id] = motion.shifted(-now);
     }
     if (confetti != null) _confetti = confetti.shifted(-now);
     if (celebratedAt != null) _celebratedAt = now + celebratedAt;
+    if (lostAt != null) _lostAt = now + lostAt;
     _end = [
       for (final motion in _motions.values) motion.end,
       ?_confetti?.end,
       ?_celebratedAt,
+      ?_lostAt,
     ].fold(now, max);
     if (!_ticker.isActive) {
       _tickerStart = now;
@@ -285,6 +381,7 @@ class _MahjongBoardState extends State<MahjongBoard>
           final geometry = MahjongBoardGeometry.fit(
             constraints.biggest,
             state.layout,
+            tray: _controller.isTray,
           );
           _geometry = geometry;
           _plan(state, geometry, animate: animate);
@@ -298,6 +395,15 @@ class _MahjongBoardState extends State<MahjongBoard>
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
+                  if (geometry.trayRect case final trayRect?)
+                    _TrayPanel(
+                      rect: trayRect,
+                      slots: geometry.traySlots,
+                      filled: _controller.tray.length,
+                      clock: _clock,
+                      lost: _controller.isLost,
+                      flashStart: _flashStart,
+                    ),
                   // Changes of the paint order rebuild this layer only, with
                   // the same tile widgets.
                   Positioned.fill(
@@ -338,6 +444,15 @@ class _MahjongBoardState extends State<MahjongBoard>
     final previous = _targets;
     _targets = {
       for (final id in state.tileIds) id: _target(state, id, geometry),
+      for (final (i, id) in _controller.tray.indexed)
+        id: (
+          id: id,
+          face: state.faceOf(id),
+          rect: geometry.traySlots[i],
+          // Above every layer of the board.
+          z: state.layout.layers,
+          inTray: true,
+        ),
     };
     final serial = _controller.actionSerial;
     final action = serial == _seenSerial ? null : _controller.lastAction;
@@ -345,15 +460,23 @@ class _MahjongBoardState extends State<MahjongBoard>
     final hinted = _controller.hintSerial != _seenHint;
     _seenHint = _controller.hintSerial;
 
-    final won = action != null && _controller.result != null;
+    final ended = action != null && _controller.result != null;
+    final won = ended && _controller.result!.won;
+    final lost = ended && _controller.isLost;
+    if (action == MahjongAction.deal) {
+      _flashStart = null;
+      _lostAt = null;
+    }
     if (!animate) {
       _stopTimeline();
       _motions.clear();
       _celebratedAt = null;
+      _lostAt = null;
       _sortByDepth();
-      if (won) {
+      if (won || lost) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) widget.onCelebrated?.call();
+          if (!mounted) return;
+          (won ? widget.onCelebrated : widget.onLost)?.call();
         });
       }
       return;
@@ -368,25 +491,30 @@ class _MahjongBoardState extends State<MahjongBoard>
         added.addAll(_dropMotions(state, geometry));
       case MahjongAction.match:
         added.addAll(_vanishMotions(previous));
+      case MahjongAction.pick:
+        added.addAll(_pickMotions(previous, geometry));
       case MahjongAction.undo || MahjongAction.shuffle:
         added.addAll(_returnMotions(previous, geometry));
       case MahjongAction.none || null:
         break;
     }
     if (hinted) {
-      if (_controller.hintPair case (final a, final b)) {
-        for (final id in [a, b]) {
-          added[id] = const TileMotion(
-            kind: TileMotionKind.pulse,
-            start: 0,
-            duration: 1800,
-          );
-        }
+      for (final id in _controller.hintedTiles) {
+        added[id] = const TileMotion(
+          kind: TileMotionKind.pulse,
+          start: 0,
+          duration: 1800,
+        );
       }
     }
     _sortByDepth();
     if (won) {
       _celebrate(added, geometry);
+    } else if (lost) {
+      // The last tile lands in the tray, then the tray flashes.
+      final landed = added.values.fold(0.0, (end, m) => max(end, m.end));
+      _flashStart = _now + landed;
+      _addMotions(added, lostAt: landed + _flashDuration);
     } else {
       _addMotions(added);
     }
@@ -394,7 +522,13 @@ class _MahjongBoardState extends State<MahjongBoard>
 
   _Target _target(MahjongState state, int id, MahjongBoardGeometry geometry) {
     final p = state.layout.positions[state.positionOf(id)!];
-    return (id: id, face: state.faceOf(id), rect: geometry.faceRect(p), z: p.z);
+    return (
+      id: id,
+      face: state.faceOf(id),
+      rect: geometry.faceRect(p),
+      z: p.z,
+      inTray: false,
+    );
   }
 
   /// Paint order on the table: layer by layer, then from the back (top
@@ -469,6 +603,72 @@ class _MahjongBoardState extends State<MahjongBoard>
           );
         }(),
     };
+  }
+
+  /// Tray mode: the picked tile flies into its place in the tray, or to the
+  /// tile of the tray it clears, and both pop; then the tray closes up.
+  Map<int, TileMotion> _pickMotions(
+    Map<int, _Target> previous,
+    MahjongBoardGeometry geometry,
+  ) {
+    final added = <int, TileMotion>{};
+    Offset poseOf(int id) => _motions[id]?.poseAt(_now).offset ?? Offset.zero;
+    final gone = [
+      for (final MapEntry(key: id, value: target) in previous.entries)
+        if (!_targets.containsKey(id)) target,
+    ];
+    final picked = gone.where((target) => !target.inTray).firstOrNull;
+    final partner = gone.where((target) => target.inTray).firstOrNull;
+    var closesAt = 0.0;
+    if (picked != null && partner != null) {
+      // It lands a little up and to the right, both tiles in sight.
+      final landing = partner.rect.shift(
+        Offset(geometry.tileWidth * 0.22, -geometry.tileHeight * 0.12),
+      );
+      _leaving[picked.id] = (
+        id: picked.id,
+        face: picked.face,
+        rect: landing,
+        z: partner.z,
+        inTray: true,
+      );
+      _leaving[partner.id] = partner;
+      const duration = _trayFlight / TileMotion.collectFlight;
+      added[picked.id] = TileMotion(
+        kind: TileMotionKind.collect,
+        start: 0,
+        duration: duration,
+        from: picked.rect.topLeft + poseOf(picked.id) - landing.topLeft,
+        height: geometry.tileHeight * 0.6,
+      );
+      added[partner.id] = const TileMotion(
+        kind: TileMotionKind.pop,
+        start: _trayFlight,
+        duration: duration - _trayFlight,
+      );
+      closesAt = _trayFlight + (duration - _trayFlight) / 2;
+    }
+    for (final target in _targets.values) {
+      final before = previous[target.id];
+      if (before == null || before.rect == target.rect) continue;
+      final from =
+          before.rect.topLeft + poseOf(target.id) - target.rect.topLeft;
+      added[target.id] = before.inTray
+          ? TileMotion(
+              kind: TileMotionKind.slide,
+              start: closesAt,
+              duration: _slideDuration,
+              from: from,
+            )
+          : TileMotion(
+              kind: TileMotionKind.fly,
+              start: 0,
+              duration: _trayFlight,
+              from: from,
+              height: geometry.tileHeight * 0.6,
+            );
+    }
+    return added;
   }
 
   /// After an undo or a shuffle: tiles fly to their new places, and
@@ -560,7 +760,7 @@ class _MahjongBoardState extends State<MahjongBoard>
       _tileAnimate = animate;
       _tileStyle = widget.tileStyle;
     }
-    final hint = _controller.hintPair;
+    final hint = _controller.hintedTiles;
     final tiles = <int, Widget>{};
     for (final (target, leaving) in _byDepth) {
       final id = target.id;
@@ -568,9 +768,9 @@ class _MahjongBoardState extends State<MahjongBoard>
         target: target,
         leaving: leaving,
         selected: !leaving && _controller.selected == id,
-        dimmed: !leaving && !state.isFree(id),
+        dimmed: !leaving && !target.inTray && !state.isFree(id),
         // The hint pulses, then stays softly lit until the next action.
-        hinted: !leaving && hint != null && (hint.$1 == id || hint.$2 == id),
+        hinted: !leaving && hint.contains(id),
         motion: _motions[id],
       );
       final kept = _tileWidgets[id];
@@ -714,4 +914,131 @@ class _Lift extends StatelessWidget {
       child: child,
     );
   }
+}
+
+/// The frame of the tray and its empty places, under the tiles. Once the
+/// tray is full ([lost]), it flashes red from [flashStart] on the board
+/// timeline, then stays red.
+class _TrayPanel extends StatelessWidget {
+  const _TrayPanel({
+    required this.rect,
+    required this.slots,
+    required this.filled,
+    required this.clock,
+    required this.lost,
+    required this.flashStart,
+  });
+
+  static const _flashDuration = _MahjongBoardState._flashDuration;
+
+  final Rect rect;
+  final List<Rect> slots;
+
+  /// Places taken by a tile, from the left.
+  final int filled;
+  final ValueListenable<double> clock;
+  final bool lost;
+  final double? flashStart;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Positioned.fill(
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fromRect(
+            rect: rect,
+            child: RepaintBoundary(
+              child: CustomPaint(
+                painter: _TrayPainter(
+                  slots: [for (final slot in slots) slot.shift(-rect.topLeft)],
+                  // Only a flash follows the timeline.
+                  clock: lost ? clock : null,
+                  flashStart: flashStart,
+                  lost: lost,
+                ),
+              ),
+            ),
+          ),
+          for (final (i, slot) in slots.indexed)
+            Positioned.fromRect(
+              rect: slot,
+              child: Semantics(
+                label: i < filled ? null : l10n.mahjongTrayEmptyPlace,
+                child: SizedBox.expand(key: ValueKey('tray-slot-$i')),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrayPainter extends CustomPainter {
+  _TrayPainter({
+    required this.slots,
+    required this.clock,
+    required this.flashStart,
+    required this.lost,
+  }) : super(repaint: clock);
+
+  static const _frame = Color(0xFF082020);
+  static const _red = Color(0xFFE53935);
+
+  final List<Rect> slots;
+  final ValueListenable<double>? clock;
+  final double? flashStart;
+  final bool lost;
+
+  /// How red the tray is: two flashes, then a steady glow.
+  double get _red01 {
+    if (!lost) return 0;
+    final start = flashStart;
+    final time = clock?.value;
+    if (start == null || time == null) return 1;
+    final t = (time - start) / _TrayPanel._flashDuration;
+    if (t < 0) return 0;
+    if (t >= 1) return 1;
+    return (1 - cos(2 * pi * 2 * t)) / 2;
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final unit = slots.isEmpty ? 40.0 : slots.first.width;
+    final frame = RRect.fromRectAndRadius(
+      Offset.zero & size,
+      Radius.circular(unit * 0.22),
+    );
+    final red = _red01;
+    canvas.drawRRect(
+      frame,
+      Paint()..color = Color.lerp(_frame, _red, red * 0.45)!,
+    );
+    canvas.drawRRect(
+      frame.deflate(0.75),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(1.5, unit * 0.04 + red * unit * 0.04)
+        ..color = Color.lerp(Colors.white24, _red, red)!,
+    );
+    for (final slot in slots) {
+      final place = RRect.fromRectAndRadius(slot, Radius.circular(unit * 0.12));
+      canvas.drawRRect(place, Paint()..color = Colors.black26);
+      canvas.drawRRect(
+        place,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = max(1.0, unit * 0.03)
+          ..color = Colors.white24,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_TrayPainter old) =>
+      old.lost != lost ||
+      old.flashStart != flashStart ||
+      old.clock != clock ||
+      !listEquals(old.slots, slots);
 }

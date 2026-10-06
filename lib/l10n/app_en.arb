@@ -1232,36 +1232,78 @@
   "@mahjongTileWhiteDragon": {
     "description": "Name of a Mahjong tile, for screen readers."
   },
-  "mahjongTilePlum": "Plum flower",
-  "@mahjongTilePlum": {
-    "description": "Name of a Mahjong flower tile, for screen readers."
+  "mahjongTileFlower": "Flower",
+  "@mahjongTileFlower": {
+    "description": "Name of the Mahjong flower tile, for screen readers."
   },
-  "mahjongTileOrchid": "Orchid flower",
-  "@mahjongTileOrchid": {
-    "description": "Name of a Mahjong flower tile, for screen readers."
+  "mahjongTileSeason": "Season",
+  "@mahjongTileSeason": {
+    "description": "Name of the Mahjong season tile, for screen readers."
   },
-  "mahjongTileChrysanthemum": "Chrysanthemum flower",
-  "@mahjongTileChrysanthemum": {
-    "description": "Name of a Mahjong flower tile, for screen readers."
+  "mahjongModeTitle": "Mode",
+  "@mahjongModeTitle": {
+    "description": "New game sheet: title of the choice of the Mahjong mode (classic or tray)."
   },
-  "mahjongTileBambooFlower": "Bamboo flower",
-  "@mahjongTileBambooFlower": {
-    "description": "Name of a Mahjong flower tile, for screen readers."
+  "mahjongModeClassic": "Classic",
+  "@mahjongModeClassic": {
+    "description": "Mahjong mode: match two free tiles of the same face."
   },
-  "mahjongTileSpring": "Spring",
-  "@mahjongTileSpring": {
-    "description": "Name of a Mahjong season tile, for screen readers."
+  "mahjongModeTray": "Tray",
+  "@mahjongModeTray": {
+    "description": "Mahjong mode: each tile tapped goes into a tray of 4 places; a full tray loses."
   },
-  "mahjongTileSummer": "Summer",
-  "@mahjongTileSummer": {
-    "description": "Name of a Mahjong season tile, for screen readers."
+  "mahjongClassicModeHint": "Match two free tiles of the same face.",
+  "@mahjongClassicModeHint": {
+    "description": "New game sheet: what the classic Mahjong mode is."
   },
-  "mahjongTileAutumn": "Autumn",
-  "@mahjongTileAutumn": {
-    "description": "Name of a Mahjong season tile, for screen readers."
+  "mahjongTrayModeHint": "Each tile you tap goes into a tray of 4 places, where two identical tiles clear each other. A full tray loses the game.",
+  "@mahjongTrayModeHint": {
+    "description": "New game sheet: what the tray Mahjong mode is."
   },
-  "mahjongTileWinter": "Winter",
-  "@mahjongTileWinter": {
-    "description": "Name of a Mahjong season tile, for screen readers."
+  "mahjongTrayEasyHint": "A small pyramid of 72 tiles: pairs are often free together.",
+  "@mahjongTrayEasyHint": {
+    "description": "New game sheet: what an Easy Mahjong deal is in tray mode."
+  },
+  "mahjongTrayMediumHint": "The Turtle of 144 tiles: some tiles must wait in the tray.",
+  "@mahjongTrayMediumHint": {
+    "description": "New game sheet: what a Medium Mahjong deal is in tray mode."
+  },
+  "mahjongTrayHardHint": "The Turtle, where up to 3 tiles must wait at once: plan your picks.",
+  "@mahjongTrayHardHint": {
+    "description": "New game sheet: what a Hard Mahjong deal is in tray mode."
+  },
+  "mahjongTrayVariant": "Tray · {layout}",
+  "@mahjongTrayVariant": {
+    "description": "Mahjong variant of the statistics: the tray mode on a layout (Pyramid, Turtle).",
+    "placeholders": {
+      "layout": {
+        "type": "String",
+        "example": "Turtle"
+      }
+    }
+  },
+  "mahjongTrayFullTitle": "The tray is full",
+  "@mahjongTrayFullTitle": {
+    "description": "Mahjong tray mode: title of the dialog when the 4 places of the tray hold no pair: the game is lost."
+  },
+  "mahjongTrayFullMessage": "No pair among the 4 tiles of the tray: this game is lost.",
+  "@mahjongTrayFullMessage": {
+    "description": "Mahjong tray mode: text of the dialog of a lost game."
+  },
+  "mahjongTrayStuck": "Any tile would now fill the tray. Undo some moves.",
+  "@mahjongTrayStuck": {
+    "description": "Mahjong tray mode: message shown when every free tile would fill the tray."
+  },
+  "mahjongTrayEmptyPlace": "Empty tray place",
+  "@mahjongTrayEmptyPlace": {
+    "description": "Mahjong tray mode: an empty place of the tray, for screen readers."
+  },
+  "mahjongMostHeld": "Most tiles in the tray",
+  "@mahjongMostHeld": {
+    "description": "Mahjong statistic (tray mode): most tiles the tray held at once."
+  },
+  "mahjongTilesHeld": "Tiles put in the tray",
+  "@mahjongTilesHeld": {
+    "description": "Mahjong statistic (tray mode): tiles that went into the tray to wait for their partner."
   }
 }

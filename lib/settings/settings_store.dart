@@ -21,6 +21,7 @@ class SettingsStore extends ChangeNotifier {
     this._klondikeDrawCount,
     this._klondikeDifficulty,
     this._mahjongDifficulty,
+    this._mahjongMode,
     this._freecellDifficulty,
     this._spiderDifficulty,
   );
@@ -31,6 +32,7 @@ class SettingsStore extends ChangeNotifier {
   static const klondikeDrawCountKey = 'settings.klondike.drawCount';
   static const klondikeDifficultyKey = 'settings.klondike.difficulty';
   static const mahjongDifficultyKey = 'settings.mahjong.difficulty';
+  static const mahjongModeKey = 'settings.mahjong.mode';
   static const freecellDifficultyKey = 'settings.freecell.difficulty';
   static const spiderDifficultyKey = 'settings.spider.difficulty';
 
@@ -44,6 +46,7 @@ class SettingsStore extends ChangeNotifier {
   int _klondikeDrawCount;
   KlondikeDifficulty _klondikeDifficulty;
   MahjongDifficulty _mahjongDifficulty;
+  MahjongMode _mahjongMode;
   FreeCellDifficulty _freecellDifficulty;
   SpiderDifficulty _spiderDifficulty;
 
@@ -55,6 +58,7 @@ class SettingsStore extends ChangeNotifier {
     var drawCount = _defaultDrawCount;
     var difficulty = _defaultDifficulty;
     var mahjongDifficulty = MahjongDifficulty.medium;
+    var mahjongMode = MahjongMode.classic;
     var freecellDifficulty = FreeCellDifficulty.medium;
     var spiderDifficulty = SpiderDifficulty.medium;
     try {
@@ -70,6 +74,11 @@ class SettingsStore extends ChangeNotifier {
             mahjongDifficultyKey,
           )] ??
           MahjongDifficulty.medium;
+      mahjongMode =
+          MahjongMode.values.asNameMap()[await prefs.getString(
+            mahjongModeKey,
+          )] ??
+          MahjongMode.classic;
       freecellDifficulty =
           FreeCellDifficulty.values.asNameMap()[await prefs.getString(
             freecellDifficultyKey,
@@ -93,6 +102,7 @@ class SettingsStore extends ChangeNotifier {
       drawCount,
       difficulty,
       mahjongDifficulty,
+      mahjongMode,
       freecellDifficulty,
       spiderDifficulty,
     );
@@ -115,6 +125,10 @@ class SettingsStore extends ChangeNotifier {
   /// Difficulty of the last new Mahjong game the player dealt, for the next
   /// one.
   MahjongDifficulty get mahjongDifficulty => _mahjongDifficulty;
+
+  /// Mode of the last new Mahjong game the player dealt (classic or tray),
+  /// for the next one.
+  MahjongMode get mahjongMode => _mahjongMode;
 
   /// Difficulty of the last new FreeCell game the player dealt, for the
   /// next one.
@@ -179,6 +193,15 @@ class SettingsStore extends ChangeNotifier {
     await _guard(
       'save the Mahjong difficulty',
       () => _prefs.setString(mahjongDifficultyKey, difficulty.name),
+    );
+    notifyListeners();
+  }
+
+  Future<void> setMahjongMode(MahjongMode mode) async {
+    _mahjongMode = mode;
+    await _guard(
+      'save the Mahjong mode',
+      () => _prefs.setString(mahjongModeKey, mode.name),
     );
     notifyListeners();
   }

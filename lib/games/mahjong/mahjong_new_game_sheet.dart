@@ -4,16 +4,19 @@ import '../../l10n/app_localizations.dart';
 import 'mahjong_difficulty.dart';
 import 'mahjong_difficulty_texts.dart';
 
-/// Lets the player choose the difficulty of a new game, starting from
-/// [initial]. With [abandons], it says that the game on screen will count as
-/// abandoned, so Deal also confirms that.
+/// Options of a new Mahjong game.
+typedef MahjongNewGame = ({MahjongMode mode, MahjongDifficulty difficulty});
+
+/// Lets the player choose the mode and the difficulty of a new game,
+/// starting from [initial]. With [abandons], it says that the game on screen
+/// will count as abandoned, so Deal also confirms that.
 ///
-/// Returns the chosen difficulty, or null when the player closes the sheet.
-Future<MahjongDifficulty?> showMahjongNewGameSheet(
+/// Returns the chosen options, or null when the player closes the sheet.
+Future<MahjongNewGame?> showMahjongNewGameSheet(
   BuildContext context, {
-  required MahjongDifficulty initial,
+  required MahjongNewGame initial,
   required bool abandons,
-}) => showModalBottomSheet<MahjongDifficulty>(
+}) => showModalBottomSheet<MahjongNewGame>(
   context: context,
   // As tall as its content, which scrolls when the text is large.
   isScrollControlled: true,
@@ -25,7 +28,7 @@ Future<MahjongDifficulty?> showMahjongNewGameSheet(
 class _NewGameSheet extends StatefulWidget {
   const _NewGameSheet({required this.initial, required this.abandons});
 
-  final MahjongDifficulty initial;
+  final MahjongNewGame initial;
   final bool abandons;
 
   @override
@@ -33,7 +36,8 @@ class _NewGameSheet extends StatefulWidget {
 }
 
 class _NewGameSheetState extends State<_NewGameSheet> {
-  late MahjongDifficulty _difficulty = widget.initial;
+  late MahjongMode _mode = widget.initial.mode;
+  late MahjongDifficulty _difficulty = widget.initial.difficulty;
 
   @override
   Widget build(BuildContext context) {
@@ -60,6 +64,34 @@ class _NewGameSheetState extends State<_NewGameSheet> {
           Text(l10n.newGame, style: theme.textTheme.titleLarge),
           Padding(
             padding: const EdgeInsets.only(top: 16, bottom: 8),
+            child: Text(
+              l10n.mahjongModeTitle,
+              style: theme.textTheme.titleSmall,
+            ),
+          ),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final mode in MahjongMode.values)
+                ChoiceChip(
+                  key: ValueKey('new-game-mode-${mode.name}'),
+                  label: Text(mode.label(l10n)),
+                  selected: _mode == mode,
+                  onSelected: (_) => setState(() => _mode = mode),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _mode.hint(l10n),
+            key: const ValueKey('new-game-mode-hint'),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: colors.onSurfaceVariant,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 16, bottom: 8),
             child: Text(l10n.difficulty, style: theme.textTheme.titleSmall),
           ),
           Wrap(
@@ -77,7 +109,7 @@ class _NewGameSheetState extends State<_NewGameSheet> {
           ),
           const SizedBox(height: 8),
           Text(
-            _difficulty.hint(l10n),
+            _difficulty.hint(l10n, _mode),
             key: const ValueKey('new-game-hint'),
             style: theme.textTheme.bodyMedium?.copyWith(
               color: colors.onSurfaceVariant,
@@ -105,7 +137,9 @@ class _NewGameSheetState extends State<_NewGameSheet> {
               ),
               FilledButton(
                 key: const ValueKey('new-game-deal'),
-                onPressed: () => Navigator.of(context).pop(_difficulty),
+                onPressed: () =>
+                    Navigator.of(context)
+                        .pop((mode: _mode, difficulty: _difficulty)),
                 child: Text(l10n.newGameDeal),
               ),
             ],

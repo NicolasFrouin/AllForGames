@@ -171,6 +171,25 @@ void main() {
     expect(store.mahjongDifficulty, MahjongDifficulty.medium);
   });
 
+  test(
+    'keeps the mode of the last new Mahjong game; unknown is classic',
+    () async {
+      final store = await createStore();
+      expect(store.mahjongMode, MahjongMode.classic);
+
+      await store.setMahjongMode(MahjongMode.tray);
+
+      expect((await SettingsStore.load()).mahjongMode, MahjongMode.tray);
+      expect(await SharedPreferencesAsync().getAll(), {
+        SettingsStore.mahjongModeKey: 'tray',
+      });
+      final unknown = await createStore({
+        SettingsStore.mahjongModeKey: 'tower',
+      });
+      expect(unknown.mahjongMode, MahjongMode.classic);
+    },
+  );
+
   test('keeps the difficulty of the last new FreeCell game', () async {
     final store = await createStore();
     expect(store.freecellDifficulty, FreeCellDifficulty.medium);

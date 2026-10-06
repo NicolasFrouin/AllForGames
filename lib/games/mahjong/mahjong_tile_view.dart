@@ -92,18 +92,8 @@ String tileName(TileFace face, AppLocalizations l10n) => switch (face.suit) {
     l10n.mahjongTileGreenDragon,
     l10n.mahjongTileWhiteDragon,
   ][face.rank - 1],
-  TileSuit.flowers => [
-    l10n.mahjongTilePlum,
-    l10n.mahjongTileOrchid,
-    l10n.mahjongTileChrysanthemum,
-    l10n.mahjongTileBambooFlower,
-  ][face.rank - 1],
-  TileSuit.seasons => [
-    l10n.mahjongTileSpring,
-    l10n.mahjongTileSummer,
-    l10n.mahjongTileAutumn,
-    l10n.mahjongTileWinter,
-  ][face.rank - 1],
+  TileSuit.flowers => l10n.mahjongTileFlower,
+  TileSuit.seasons => l10n.mahjongTileSeason,
 };
 
 /// The rounded face of a tile at [faceRect].

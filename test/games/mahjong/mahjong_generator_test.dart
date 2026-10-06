@@ -14,8 +14,8 @@ import 'mahjong_test_helpers.dart';
 /// The first faces of the Medium deal of seed 1, as the Dart VM deals it.
 /// The e2e tests check that the web deals the same.
 const seed1MediumFaces = [
-  4, 33, 27, 1, 32, 36, 18, 15, 0, 25, 6, 12, //
-  11, 18, 29, 20, 10, 19, 9, 4, 25, 30, 5, 37,
+  4, 33, 27, 1, 32, 34, 18, 15, 0, 25, 6, 12, //
+  11, 18, 29, 20, 10, 19, 9, 4, 25, 30, 5, 34,
 ];
 
 MahjongDeal deal(MahjongDifficulty difficulty, int seed, {bool t = false}) =>
@@ -59,20 +59,18 @@ void main() {
   });
 
   test('a Turtle deal uses a full set, a pyramid deal half of one', () {
-    List<int> sorted(List<int> faces) => [...faces]..sort();
-    final fullSet = sorted([
-      for (final (a, b) in TileFace.setPairs()) ...[a, b],
-    ]);
-
-    expect(sorted(deal(MahjongDifficulty.hard, 7).state.faces), fullSet);
+    // Four tiles of each face.
+    final turtle = deal(MahjongDifficulty.hard, 7).state.faces;
+    expect(turtle, hasLength(144));
+    for (var face = 0; face < TileFace.count; face++) {
+      expect(turtle.where((f) => f == face), hasLength(4), reason: '$face');
+    }
 
     final pyramid = deal(MahjongDifficulty.easy, 7).state.faces;
     expect(pyramid, hasLength(72));
+    expect(pyramid.toSet(), hasLength(18));
     for (final face in pyramid.toSet()) {
-      final count = pyramid.where((f) => f == face).length;
-      final suit = TileFace(face).suit;
-      final single = suit == TileSuit.flowers || suit == TileSuit.seasons;
-      expect(count, single ? 1 : 4, reason: '$face');
+      expect(pyramid.where((f) => f == face), hasLength(4), reason: '$face');
     }
   });
 

@@ -7,9 +7,8 @@ final dots1 = TileFace.of(TileSuit.dots, 1).code;
 final dots2 = TileFace.of(TileSuit.dots, 2).code;
 final dots3 = TileFace.of(TileSuit.dots, 3).code;
 final bamboo1 = TileFace.of(TileSuit.bamboo, 1).code;
-final plum = TileFace.of(TileSuit.flowers, 1).code;
-final orchid = TileFace.of(TileSuit.flowers, 2).code;
-final spring = TileFace.of(TileSuit.seasons, 1).code;
+final flower = TileFace.of(TileSuit.flowers, 1).code;
+final season = TileFace.of(TileSuit.seasons, 1).code;
 
 /// A board of [layout] with a tile of each face of [faces] on the positions
 /// in order: tile `i` is on position `i`.

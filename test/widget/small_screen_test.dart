@@ -23,6 +23,8 @@ void main() {
     '/freecell?seed=1': Size(360, 640),
     '/mahjong?seed=1': Size(360, 640),
     '/mahjong?seed=1&difficulty=easy': Size(360, 640),
+    '/mahjong?mode=tray&seed=1&difficulty=hard': Size(360, 640),
+    '/mahjong?mode=tray&seed=1&difficulty=easy': Size(360, 640),
     '/spider?seed=1': Size(360, 640),
     '/stats/mahjong': Size(360, 640),
     '/stats/spider': Size(360, 640),

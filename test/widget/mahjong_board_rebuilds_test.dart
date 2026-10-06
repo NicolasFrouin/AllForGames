@@ -1,6 +1,7 @@
 import 'package:all_for_games/app.dart';
 import 'package:all_for_games/games/mahjong/mahjong_board.dart';
 import 'package:all_for_games/games/mahjong/mahjong_controller.dart';
+import 'package:all_for_games/games/mahjong/mahjong_difficulty.dart';
 import 'package:all_for_games/games/mahjong/mahjong_state.dart';
 import 'package:all_for_games/games/mahjong/mahjong_tile_view.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -19,12 +20,14 @@ typedef BuildRates = ({int frames, double all, double tileViews});
 Future<MahjongController> pumpBoard(
   WidgetTester tester, {
   MahjongState? state,
+  MahjongMode mode = MahjongMode.classic,
 }) async {
   useSurface(tester);
   final stores = await createTestStores();
   final controller = MahjongController(
     stats: stores.stats,
     saves: stores.saves,
+    mode: mode,
     seed: 42,
     initialState: state,
   );
@@ -103,5 +106,50 @@ void main() {
 
     expectCheap(await buildRates(tester, () => controller.tap(1)));
     expect(controller.result?.won, isTrue);
+  });
+
+  group('tray mode', () {
+    testWidgets('a tile flies into the tray, and a pair pops, without '
+        'rebuilding the board', (tester) async {
+      final controller = await pumpBoard(tester, mode: MahjongMode.tray);
+      expectCheap(
+        await buildRates(tester, () => controller.tap(controller.hintPick()!)),
+      );
+      // The picks of the winning order, until one clears a tile of the tray.
+      while (true) {
+        final pick = controller.hintPick()!;
+        await tester.pumpAndSettle();
+        if (controller.trayState.partnerOf(pick) != null) {
+          final held = controller.tray.length;
+          expectCheap(await buildRates(tester, () => controller.tap(pick)));
+          expect(controller.tray, hasLength(held - 1));
+          break;
+        }
+        controller.tap(pick);
+        await tester.pumpAndSettle();
+      }
+    });
+
+    testWidgets('a full tray flashes without rebuilding the board', (
+      tester,
+    ) async {
+      final controller = await pumpBoard(tester, mode: MahjongMode.tray);
+      final state = controller.state;
+      final picks = <int>[];
+      for (final id in state.tileIds) {
+        final face = state.faces[id];
+        if (state.isFree(id) &&
+            picks.every((pick) => state.faces[pick] != face)) {
+          picks.add(id);
+        }
+      }
+      for (final id in picks.take(3)) {
+        controller.tap(id);
+        await tester.pumpAndSettle();
+      }
+
+      expectCheap(await buildRates(tester, () => controller.tap(picks[3])));
+      expect(controller.isLost, isTrue);
+    });
   });
 }

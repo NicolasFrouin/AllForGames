@@ -21,6 +21,17 @@ enum TileMotionKind {
 
   /// A hint: the tile's halo pulses three times.
   pulse,
+
+  /// Tray mode: the tile flies on an arc to the tile of the tray it clears,
+  /// then [pop]s with it.
+  collect,
+
+  /// Tray mode: a tile of a cleared pair swells, then shrinks and fades
+  /// away.
+  pop,
+
+  /// Tray mode: the tile slides to its new place in the tray.
+  slide,
 }
 
 /// How a tile looks at a moment of its motion: [offset] from its place on
@@ -77,10 +88,15 @@ class TileMotion {
     height: height,
   );
 
+  /// Share of a [TileMotionKind.collect] spent flying, before the pop.
+  static const collectFlight = 0.6;
+
   /// Whether the tile leaves the board's paint order at [time]: it is in
   /// the air, above the others.
   bool isAirborneAt(double time) =>
-      (kind == TileMotionKind.fly || kind == TileMotionKind.vanish) &&
+      (kind == TileMotionKind.fly ||
+          kind == TileMotionKind.vanish ||
+          kind == TileMotionKind.collect) &&
       time >= start &&
       time < end;
 
@@ -97,12 +113,15 @@ class TileMotion {
           opacity: (t * 2.5).clamp(0.0, 1.0),
         );
       case TileMotionKind.fly:
-        final p = Curves.easeInOutCubic.transform(t);
-        final lift = sin(pi * t);
+        return _flight(t);
+      case TileMotionKind.collect:
+        if (t < collectFlight) return _flight(t / collectFlight);
+        return _pop((t - collectFlight) / (1 - collectFlight), to);
+      case TileMotionKind.pop:
+        return waiting ? const TilePose() : _pop(t, Offset.zero);
+      case TileMotionKind.slide:
         return TilePose(
-          offset: Offset.lerp(from, to, p)! - Offset(0, height * lift),
-          scale: 1 + 0.08 * lift,
-          elevation: lift,
+          offset: Offset.lerp(from, to, Curves.easeInOutCubic.transform(t))!,
         );
       case TileMotionKind.vanish:
         final p = Curves.easeInCubic.transform(t);
@@ -121,5 +140,36 @@ class TileMotion {
       case TileMotionKind.pulse:
         return TilePose(glow: waiting ? 0 : (1 - cos(2 * pi * 3 * t)) / 2);
     }
+  }
+
+  /// From [from] to [to] on an arc of [height], at [t] from 0 to 1.
+  TilePose _flight(double t) {
+    final p = Curves.easeInOutCubic.transform(t);
+    final lift = sin(pi * t);
+    return TilePose(
+      offset: Offset.lerp(from, to, p)! - Offset(0, height * lift),
+      scale: 1 + 0.08 * lift,
+      elevation: lift,
+    );
+  }
+
+  /// A pop at [offset], at [t] from 0 to 1: the tile swells, then shrinks
+  /// and fades away.
+  static TilePose _pop(double t, Offset offset) {
+    const swell = 0.3;
+    final scale = t < swell
+        ? lerpDouble(1, 1.18, Curves.easeOut.transform(t / swell))!
+        : lerpDouble(
+            1.18,
+            0.3,
+            Curves.easeIn.transform((t - swell) / (1 - swell)),
+          )!;
+    return TilePose(
+      offset: offset,
+      scale: scale,
+      opacity: t < swell ? 1 : 1 - (t - swell) / (1 - swell),
+      glow: 1 - t,
+      elevation: 1,
+    );
   }
 }

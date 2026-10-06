@@ -12,8 +12,8 @@ typedef MahjongDeal = ({MahjongState state, List<TilePair> solution});
 /// The deal is built backwards from the empty board's point of view: it
 /// removes two positions that are free together, again and again, from the
 /// full layout (starting over when it gets stuck), then gives each removed
-/// pair of positions the faces of a matching pair. Removing the pairs in
-/// that order clears the board.
+/// pair of positions a face. Removing the pairs in that order clears the
+/// board.
 MahjongDeal generateDeal(
   MahjongLayout layout,
   int seed, {
@@ -32,9 +32,8 @@ MahjongDeal generateDeal(
   final pairFaces = _pairFaces(layout, order, trapPercent, random);
   final faces = List.filled(layout.length, 0);
   for (final (i, (a, b)) in order.indexed) {
-    final (faceA, faceB) = pairFaces[i];
-    faces[a] = faceA;
-    faces[b] = faceB;
+    faces[a] = pairFaces[i];
+    faces[b] = pairFaces[i];
   }
   // A tile id is the position of the tile in the deal.
   return (
@@ -68,12 +67,12 @@ MahjongDeal shuffleTiles(MahjongState state, DealRandom random) {
   if (order == null) throw StateError('Cannot shuffle ${state.slots}');
 
   // The tiles in matching pairs, in a random order.
-  final byGroup = <int, List<int>>{};
+  final byFace = <int, List<int>>{};
   for (final id in state.tileIds) {
-    (byGroup[state.faceOf(id).group] ??= []).add(id);
+    (byFace[state.faces[id]] ??= []).add(id);
   }
   final pairs = <TilePair>[];
-  for (final ids in byGroup.values) {
+  for (final ids in byFace.values) {
     _shuffle(ids, random);
     for (var i = 0; i + 1 < ids.length; i += 2) {
       pairs.add((ids[i], ids[i + 1]));
@@ -121,16 +120,16 @@ List<(int, int)>? removalOrder(
   return null;
 }
 
-/// The faces of the pairs of [order].
+/// The face of each pair of [order].
 ///
-/// Each face (or the flowers, or the seasons) has four tiles: two pairs.
+/// Each face has four tiles: two pairs.
 /// When tiles of both pairs are free at the same time, the player chooses
 /// which go together, and a wrong choice can leave a tile under its only
 /// partner. So the second pair of a face is chosen either safe (its tiles
 /// are free with the first pair's, so all four can go in any order) or, for
 /// [trapPercent] % of the faces, as a trap (one of its tiles is free before
 /// the first pair goes, the other one lies under the first pair).
-List<(int, int)> _pairFaces(
+List<int> _pairFaces(
   MahjongLayout layout,
   List<(int, int)> order,
   int trapPercent,
@@ -179,14 +178,13 @@ List<(int, int)> _pairFaces(
     couples.add((i, partner));
   }
 
-  final setPairs = TileFace.setPairs();
-  final groups = _shuffle([
-    for (var g = 0; g < setPairs.length ~/ 2; g++) g,
+  final shuffled = _shuffle([
+    for (var face = 0; face < TileFace.count; face++) face,
   ], random);
-  final faces = List.filled(count, (0, 0));
+  final faces = List.filled(count, 0);
   for (final (k, (first, second)) in couples.indexed) {
-    faces[first] = setPairs[2 * groups[k]];
-    if (second != null) faces[second] = setPairs[2 * groups[k] + 1];
+    faces[first] = shuffled[k];
+    if (second != null) faces[second] = shuffled[k];
   }
   return faces;
 }

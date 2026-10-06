@@ -67,12 +67,10 @@ void main() {
       expect(state.match(0, 0), isNull);
     });
 
-    test('flowers match any flower, seasons any season', () {
-      final state = board(row(4), [plum, orchid, spring, dots1]);
-
-      expect(state.faceOf(0).matches(state.faceOf(1)), isTrue);
-      expect(state.faceOf(0).matches(state.faceOf(2)), isFalse);
-      expect(state.faceOf(2).matches(state.faceOf(3)), isFalse);
+    test('only tiles of the same face match, flowers and seasons too', () {
+      expect(board(row(2), [flower, flower]).match(0, 1), isNotNull);
+      expect(board(row(2), [season, season]).match(0, 1), isNotNull);
+      expect(board(row(2), [flower, season]).match(0, 1), isNull);
     });
 
     test('the last pair wins the game', () {
@@ -107,26 +105,13 @@ void main() {
   });
 
   group('tile faces', () {
-    test('42 faces in suit order, with their ranks', () {
+    test('36 faces in suit order, with their ranks', () {
       expect(TileFace.of(TileSuit.dots, 1).code, 0);
-      expect(TileFace.of(TileSuit.seasons, 4).code, TileFace.count - 1);
+      expect(TileFace.of(TileSuit.flowers, 1).code, 34);
+      expect(TileFace.of(TileSuit.seasons, 1).code, TileFace.count - 1);
       for (var code = 0; code < TileFace.count; code++) {
         final face = TileFace(code);
         expect(TileFace.of(face.suit, face.rank), face);
-      }
-    });
-
-    test('a full set is 144 tiles in 72 pairs', () {
-      final faces = [
-        for (final (a, b) in TileFace.setPairs()) ...[a, b],
-      ];
-      expect(faces, hasLength(144));
-      for (var code = 0; code < TileFace.count; code++) {
-        final suit = TileFace(code).suit;
-        final copies = suit == TileSuit.flowers || suit == TileSuit.seasons
-            ? 1
-            : 4;
-        expect(faces.where((face) => face == code), hasLength(copies));
       }
     });
   });

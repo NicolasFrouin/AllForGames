@@ -2,7 +2,6 @@ import 'dart:math';
 
 import 'mahjong_layout.dart';
 import 'mahjong_state.dart';
-import 'mahjong_tiles.dart';
 
 /// An order of pairs that clears [state], or null when there is none, or
 /// when the search gives up after [budget] boards (it runs on the UI thread:
@@ -16,7 +15,7 @@ import 'mahjong_tiles.dart';
 /// boards.
 List<TilePair>? solveMahjong(MahjongState state, {int budget = 20000}) {
   final solver = _Solver(state);
-  if (solver.groupPositions.keys.any(solver.deadEnd)) return null;
+  if (solver.facePositions.keys.any(solver.deadEnd)) return null;
   for (var run = 0; run * _restartBoards < budget; run++) {
     final solution = solver.run(
       min(_restartBoards, budget - run * _restartBoards),
@@ -34,7 +33,7 @@ class _Solver {
   _Solver(MahjongState state)
     : layout = state.layout,
       slots = state.slots,
-      groupOf = [for (final face in state.faces) TileFace(face).group],
+      faces = state.faces,
       tileCount = state.tileCount {
     for (var p = 0; p < layout.length; p++) {
       for (final q in [
@@ -47,7 +46,7 @@ class _Solver {
     }
     for (final (p, id) in slots.indexed) {
       if (id != MahjongState.empty) {
-        (groupPositions[groupOf[id]] ??= []).add(p);
+        (facePositions[faces[id]] ??= []).add(p);
       }
     }
     _reset();
@@ -55,14 +54,14 @@ class _Solver {
 
   final MahjongLayout layout;
   final List<int> slots;
-  final List<int> groupOf;
+  final List<int> faces;
   final int tileCount;
 
   /// The positions that each position blocks: those it lies on or beside.
   late final blocks = List.generate(layout.length, (_) => <int>[]);
 
-  /// The positions of the tiles of each group.
-  final groupPositions = <int, List<int>>{};
+  /// The positions of the tiles of each face.
+  final facePositions = <int, List<int>>{};
 
   late List<bool> occupied;
   late Map<int, int> left;
@@ -76,7 +75,7 @@ class _Solver {
   void _reset() {
     occupied = [for (final id in slots) id != MahjongState.empty];
     left = {
-      for (final MapEntry(:key, :value) in groupPositions.entries)
+      for (final MapEntry(:key, :value) in facePositions.entries)
         key: value.length,
     };
     path.clear();
@@ -94,12 +93,12 @@ class _Solver {
 
   bool over(int p, int q) => layout.above[q].contains(p);
 
-  /// Whether the tiles left of [group] can never all go: the last two lie
+  /// Whether the tiles left of [face] can never all go: the last two lie
   /// one on the other, or three lie on each other (the top one must go with
   /// the fourth, and the other two are then stuck).
-  bool deadEnd(int group) {
+  bool deadEnd(int face) {
     final ps = [
-      for (final p in groupPositions[group]!)
+      for (final p in facePositions[face]!)
         if (occupied[p]) p,
     ];
     for (final p in ps) {
@@ -114,35 +113,35 @@ class _Solver {
     return false;
   }
 
-  /// Whether the last two tiles of some groups wait on each other: a tile
+  /// Whether the last two tiles of some faces wait on each other: a tile
   /// of one lies on a tile of the next, around a loop. Each of them can only
   /// go after the one on it, so none ever goes.
   bool deadlocked() {
     final waits = <int, Set<int>>{};
-    for (final MapEntry(key: group, value: count) in left.entries) {
+    for (final MapEntry(key: face, value: count) in left.entries) {
       if (count != 2) continue;
-      for (final p in groupPositions[group]!) {
+      for (final p in facePositions[face]!) {
         if (!occupied[p]) continue;
         for (final q in layout.above[p]) {
           if (!occupied[q]) continue;
-          final other = groupOf[slots[q]];
-          if (left[other] == 2) (waits[other] ??= {}).add(group);
+          final other = faces[slots[q]];
+          if (left[other] == 2) (waits[other] ??= {}).add(face);
         }
       }
     }
     // 1: on the current path, 2: done.
     final marks = <int, int>{};
-    bool loops(int group) {
-      marks[group] = 1;
-      for (final next in waits[group] ?? const <int>{}) {
+    bool loops(int face) {
+      marks[face] = 1;
+      for (final next in waits[face] ?? const <int>{}) {
         final mark = marks[next];
         if (mark == 1 || (mark == null && loops(next))) return true;
       }
-      marks[group] = 2;
+      marks[face] = 2;
       return false;
     }
 
-    return waits.keys.any((group) => marks[group] == null && loops(group));
+    return waits.keys.any((face) => marks[face] == null && loops(face));
   }
 
   String _key() {
@@ -168,7 +167,7 @@ class _Solver {
   void _remove(int a, int b) {
     occupied[a] = false;
     occupied[b] = false;
-    left[groupOf[slots[a]]] = left[groupOf[slots[a]]]! - 2;
+    left[faces[slots[a]]] = left[faces[slots[a]]]! - 2;
     remaining -= 2;
     path.add((slots[a], slots[b]));
   }
@@ -176,7 +175,7 @@ class _Solver {
   void _restore(int a, int b) {
     occupied[a] = true;
     occupied[b] = true;
-    left[groupOf[slots[a]]] = left[groupOf[slots[a]]]! + 2;
+    left[faces[slots[a]]] = left[faces[slots[a]]]! + 2;
     remaining += 2;
     path.removeLast();
   }
@@ -193,11 +192,11 @@ class _Solver {
     final free = <int, List<int>>{};
     for (var p = 0; p < occupied.length; p++) {
       if (occupied[p] && layout.isFree(p, occupied)) {
-        (free[groupOf[slots[p]]] ??= []).add(p);
+        (free[faces[slots[p]]] ??= []).add(p);
       }
     }
-    for (final MapEntry(key: group, value: ps) in free.entries) {
-      if (ps.length >= 2 && ps.length == left[group]) {
+    for (final MapEntry(key: face, value: ps) in free.entries) {
+      if (ps.length >= 2 && ps.length == left[face]) {
         final pairs = [(ps[0], ps[1]), if (ps.length == 4) (ps[2], ps[3])];
         for (final (a, b) in pairs) {
           _remove(a, b);
@@ -224,7 +223,7 @@ class _Solver {
     ]..sort((x, y) => y.$3.compareTo(x.$3));
     for (final (a, b, _) in moves) {
       _remove(a, b);
-      if (!deadEnd(groupOf[slots[a]])) {
+      if (!deadEnd(faces[slots[a]])) {
         final result = _search(visited);
         if (result != false) return result;
       }
