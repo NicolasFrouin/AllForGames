@@ -35,6 +35,19 @@ void main() {
     expect(textOf('summary-klondike'), 'Not played yet · Tap to play');
   });
 
+  testWidgets('an unknown link opens the hub', (tester) async {
+    useSurface(tester);
+    await tester.pumpWidget(
+      AllForGamesApp(
+        stores: await seededStores([]),
+        initialLocation: '/no-such-page',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(HubScreen), findsOneWidget);
+  });
+
   testWidgets('summary and overall chips reflect the saved games', (
     tester,
   ) async {

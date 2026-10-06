@@ -47,6 +47,8 @@ class AllForGamesApp extends StatefulWidget {
 class _AllForGamesAppState extends State<AllForGamesApp> {
   late final GoRouter _router = GoRouter(
     initialLocation: widget.initialLocation,
+    // An unknown link (old or mistyped) opens the hub, not an error page.
+    onException: (context, state, router) => router.go('/'),
     routes: [
       GoRoute(
         path: '/',
