@@ -551,7 +551,7 @@
       }
     }
   },
-  "statsResetBody": "This deletes all saved games of this game.",
+  "statsResetBody": "This deletes every finished game recorded for this game. Unlocked achievements stay.",
   "@statsResetBody": {
     "description": "Body of the dialog that confirms deleting the statistics of a game."
   },
@@ -953,7 +953,7 @@
   },
   "skins": "Skins",
   "@skins": {
-    "description": "Title of the skins page (card backs and Mahjong tiles), and tooltip of its button on the hub."
+    "description": "Title of the skins page (card backs, Mahjong tiles, Minesweeper themes), and tooltip of its button on the hub."
   },
   "mahjongTileStyles": "Mahjong tiles",
   "@mahjongTileStyles": {
@@ -969,7 +969,7 @@
   },
   "skinSelected": "Selected",
   "@skinSelected": {
-    "description": "Skins page: label of the card back or tile style the games use."
+    "description": "Skins page: label of the skin (card back, tile style or theme) the games use."
   },
   "skinLocked": "Locked",
   "@skinLocked": {
@@ -1850,10 +1850,6 @@
   "minesweeperBoardValuePerSecond": "3BV/s",
   "@minesweeperBoardValuePerSecond": {
     "description": "3BV divided by the time in seconds, in the win dialog."
-  },
-  "minesweeperClicks": "Clicks",
-  "@minesweeperClicks": {
-    "description": "Minesweeper statistic: opens, chords and flags."
   },
   "minesweeperEfficiency": "Efficiency (%)",
   "@minesweeperEfficiency": {

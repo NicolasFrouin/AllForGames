@@ -424,7 +424,7 @@ class _MinesweeperBoardState extends State<MinesweeperBoard>
         );
       case MinesweeperAction.lose when sameBoard && from != null:
         added.addAll(_revealMotions(previous, state, from));
-        final lostAt = _lossMotions(previous, state, added);
+        final lostAt = _lossMotions(state, added);
         _addMotions(added, lostAt: lostAt);
         return;
       case MinesweeperAction.win when sameBoard && from != null:
@@ -515,11 +515,7 @@ class _MinesweeperBoardState extends State<MinesweeperBoard>
 
   /// The opened mine bursts, the other mines show one after the other from
   /// it, then the wrong flags get their cross. Returns when it is over.
-  double _lossMotions(
-    MinesweeperState previous,
-    MinesweeperState state,
-    Map<int, CellMotion> added,
-  ) {
+  double _lossMotions(MinesweeperState state, Map<int, CellMotion> added) {
     final grid = state.grid;
     final hit = state.exploded!;
     added[hit] = const CellMotion(

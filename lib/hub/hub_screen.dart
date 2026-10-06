@@ -250,7 +250,7 @@ class _Header extends StatelessWidget {
   }
 }
 
-/// Achievements, skins and language, at the top right.
+/// All statistics, achievements, skins and language, at the top right.
 class _HeaderActions extends StatelessWidget {
   const _HeaderActions({required this.settings});
 

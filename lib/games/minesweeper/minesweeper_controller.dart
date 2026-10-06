@@ -19,7 +19,6 @@ enum MinesweeperAction { none, deal, open, flag, unflag, lose, win }
 /// Keys of the Minesweeper-specific counters in [GameRecord.details].
 abstract final class MinesweeperStatKeys {
   static const boardValue = 'boardValue';
-  static const clicks = 'clicks';
   static const efficiency = 'efficiency';
   static const chords = 'chords';
   static const flagsPlaced = 'flagsPlaced';
@@ -28,7 +27,6 @@ abstract final class MinesweeperStatKeys {
 
   static final labels = <String, String Function(AppLocalizations)>{
     boardValue: (l10n) => l10n.minesweeperBoardValue,
-    clicks: (l10n) => l10n.minesweeperClicks,
     efficiency: (l10n) => l10n.minesweeperEfficiency,
     chords: (l10n) => l10n.minesweeperChords,
     flagsPlaced: (l10n) => l10n.minesweeperFlagsPlaced,
@@ -461,8 +459,8 @@ class MinesweeperController extends ChangeNotifier {
       difficulty: _difficulty.name,
       details: {
         MinesweeperStatKeys.boardValue: _state.boardValue,
-        MinesweeperStatKeys.clicks: _clicks,
-        // Of the part of the board cleared: 100 is the fewest clicks.
+        // Board value cleared per 100 clicks (flags and chords count):
+        // chords can take it above 100.
         MinesweeperStatKeys.efficiency: _clicks == 0
             ? 0
             : (solved * 100 / _clicks).round(),

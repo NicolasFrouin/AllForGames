@@ -3,9 +3,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../skins/card_backs.dart';
-import '../skins/minesweeper_themes.dart';
-import '../skins/tile_styles.dart';
 import '../stats/game_record.dart';
 import 'achievements.dart';
 
@@ -48,6 +45,11 @@ class AchievementStore extends ChangeNotifier {
   }
 
   bool isUnlocked(String id) => _unlockedAt.containsKey(id);
+
+  /// Whether a skin that names [achievementId] as its key (null: free) can
+  /// be used.
+  bool isUnlockedBy(String? achievementId) =>
+      achievementId == null || isUnlocked(achievementId);
 
   DateTime? unlockedAt(String id) => _unlockedAt[id];
 
@@ -93,22 +95,4 @@ class AchievementStore extends ChangeNotifier {
     }
     notifyListeners();
   }
-}
-
-bool isCardBackUnlocked(CardBackSkin skin, AchievementStore store) {
-  final id = skin.unlockedBy;
-  return id == null || store.isUnlocked(id);
-}
-
-bool isTileStyleUnlocked(TileStyle style, AchievementStore store) {
-  final id = style.unlockedBy;
-  return id == null || store.isUnlocked(id);
-}
-
-bool isMinesweeperThemeUnlocked(
-  MinesweeperTheme theme,
-  AchievementStore store,
-) {
-  final id = theme.unlockedBy;
-  return id == null || store.isUnlocked(id);
 }

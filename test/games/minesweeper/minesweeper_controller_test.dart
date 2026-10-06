@@ -153,7 +153,6 @@ void main() {
     expect(record.score, 3 * MinesweeperController.pointsPerBoardValue);
     expect(record.details, {
       MinesweeperStatKeys.boardValue: 3,
-      MinesweeperStatKeys.clicks: 4,
       MinesweeperStatKeys.efficiency: 75,
       MinesweeperStatKeys.chords: 0,
       MinesweeperStatKeys.flagsPlaced: 1,

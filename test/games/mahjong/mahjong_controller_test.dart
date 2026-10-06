@@ -162,7 +162,7 @@ void main() {
       final (a, b) = game.hint()!;
 
       expect(game.state.canMatch(a, b), isTrue);
-      expect(game.hintPair, (a, b));
+      expect(game.hintedTiles, [a, b]);
       expect(game.hints, 1);
       expect(abandonAfterMatch(game).details[MahjongStatKeys.hints], 1);
     });

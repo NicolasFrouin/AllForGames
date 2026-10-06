@@ -2,7 +2,6 @@ import 'dart:math';
 
 import 'package:material_ui/material_ui.dart';
 
-import '../achievements/achievement_store.dart';
 import '../achievements/achievement_texts.dart';
 import '../achievements/achievements.dart';
 import '../achievements/achievements_screen.dart';
@@ -82,7 +81,7 @@ _KindTab _tabOf(SkinKind kind) => switch (kind) {
           name: cardBackName(skin.id, l10n),
           preview: _CardBackPreview(skin),
           selected: skin.id == stores.settings.cardBackId,
-          unlocked: isCardBackUnlocked(skin, stores.achievements),
+          unlocked: stores.achievements.isUnlockedBy(skin.unlockedBy),
           unlockedBy: skin.unlockedBy,
           select: () => stores.settings.setCardBack(skin.id),
         ),
@@ -102,7 +101,7 @@ _KindTab _tabOf(SkinKind kind) => switch (kind) {
             child: TileStylePreview(style: style, width: _SkinPreview.width),
           ),
           selected: style.id == stores.settings.tileStyleId,
-          unlocked: isTileStyleUnlocked(style, stores.achievements),
+          unlocked: stores.achievements.isUnlockedBy(style.unlockedBy),
           unlockedBy: style.unlockedBy,
           select: () => stores.settings.setTileStyle(style.id),
         ),
@@ -125,7 +124,7 @@ _KindTab _tabOf(SkinKind kind) => switch (kind) {
             ),
           ),
           selected: theme.id == stores.settings.minesweeperThemeId,
-          unlocked: isMinesweeperThemeUnlocked(theme, stores.achievements),
+          unlocked: stores.achievements.isUnlockedBy(theme.unlockedBy),
           unlockedBy: theme.unlockedBy,
           select: () => stores.settings.setMinesweeperTheme(theme.id),
         ),

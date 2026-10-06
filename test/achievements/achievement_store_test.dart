@@ -203,12 +203,12 @@ void main() {
   test('a card back is unlocked when free or by its achievement', () async {
     final store = await createStore();
     final crimson = cardBackById('crimson');
-    expect(isCardBackUnlocked(classicCardBack, store), isTrue);
-    expect(isCardBackUnlocked(crimson, store), isFalse);
+    expect(store.isUnlockedBy(classicCardBack.unlockedBy), isTrue);
+    expect(store.isUnlockedBy(crimson.unlockedBy), isFalse);
 
     store.check(wins(1));
-    expect(isCardBackUnlocked(crimson, store), isTrue);
-    expect(isCardBackUnlocked(cardBackById('gold'), store), isFalse);
+    expect(store.isUnlockedBy(crimson.unlockedBy), isTrue);
+    expect(store.isUnlockedBy(cardBackById('gold').unlockedBy), isFalse);
   });
 
   test('a Hard win unlocks Expert and the obsidian card back', () async {
@@ -220,11 +220,11 @@ void main() {
       game(1, difficulty: 'medium'),
       game(2, difficulty: 'hard', outcome: GameOutcome.abandoned),
     ]);
-    expect(isCardBackUnlocked(obsidian, store), isFalse);
+    expect(store.isUnlockedBy(obsidian.unlockedBy), isFalse);
 
     expect(ids(store.check([game(3, difficulty: 'hard')])), [
       'klondike.hardWin',
     ]);
-    expect(isCardBackUnlocked(obsidian, store), isTrue);
+    expect(store.isUnlockedBy(obsidian.unlockedBy), isTrue);
   });
 }

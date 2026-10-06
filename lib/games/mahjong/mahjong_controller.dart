@@ -221,10 +221,6 @@ class MahjongController extends ChangeNotifier {
   /// The tile the player picked first, waiting for its match.
   int? get selected => _selected;
 
-  /// The pair of the last hint (classic mode), until the next action.
-  TilePair? get hintPair =>
-      !isTray && _hint.length == 2 ? (_hint[0], _hint[1]) : null;
-
   /// The tiles the last hint lights, until the next action: a pair in
   /// classic mode; in tray mode the tile to pick, and the tile of the tray
   /// it clears.

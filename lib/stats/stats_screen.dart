@@ -309,17 +309,12 @@ class _RecentGames extends StatelessWidget {
           for (final record in recent)
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: Icon(switch (record.outcome) {
-                GameOutcome.won => Icons.emoji_events,
-                GameOutcome.abandoned => Icons.flag_outlined,
-                GameOutcome.lost => Icons.close,
-              }, color: record.won ? Colors.amber : null),
+              leading: Icon(
+                record.outcome.icon,
+                color: record.won ? Colors.amber : null,
+              ),
               title: Text(
-                '${switch (record.outcome) {
-                  GameOutcome.won => l10n.recordWon,
-                  GameOutcome.abandoned => l10n.recordAbandoned,
-                  GameOutcome.lost => l10n.recordLost,
-                }}'
+                '${record.outcome.label(l10n)}'
                 ' · ${formatClock(record.playTime)}',
               ),
               subtitle: Text(
@@ -338,4 +333,19 @@ class _RecentGames extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The icon and text of a game's outcome in the lists of games.
+extension GameOutcomeView on GameOutcome {
+  IconData get icon => switch (this) {
+    GameOutcome.won => Icons.emoji_events,
+    GameOutcome.abandoned => Icons.flag_outlined,
+    GameOutcome.lost => Icons.close,
+  };
+
+  String label(AppLocalizations l10n) => switch (this) {
+    GameOutcome.won => l10n.recordWon,
+    GameOutcome.abandoned => l10n.recordAbandoned,
+    GameOutcome.lost => l10n.recordLost,
+  };
 }

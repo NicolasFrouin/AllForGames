@@ -12,6 +12,7 @@ import '../l10n/app_localizations.dart';
 import 'game_record.dart';
 import 'game_stats.dart';
 import 'overview_stats.dart';
+import 'stats_screen.dart';
 
 const _gap = 16.0;
 const _wonColor = Colors.amber;
@@ -931,11 +932,7 @@ class _RecentRow extends StatelessWidget {
         game?.difficulties[difficulty]?.call(l10n) ?? difficulty,
     ].join(' · ');
     final details = [
-      switch (record.outcome) {
-        GameOutcome.won => l10n.recordWon,
-        GameOutcome.abandoned => l10n.recordAbandoned,
-        GameOutcome.lost => l10n.recordLost,
-      },
+      record.outcome.label(l10n),
       formatClock(record.playTime),
       l10n.recordMoves(record.moves),
     ].join(' · ');
@@ -978,11 +975,7 @@ class _RecentRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            Icon(switch (record.outcome) {
-              GameOutcome.won => Icons.emoji_events,
-              GameOutcome.abandoned => Icons.flag_outlined,
-              GameOutcome.lost => Icons.close,
-            }, color: record.won ? _wonColor : muted),
+            Icon(record.outcome.icon, color: record.won ? _wonColor : muted),
           ],
         ),
       ),
