@@ -1,5 +1,7 @@
 import 'package:all_for_games/app.dart';
 import 'package:all_for_games/games/win_dialog.dart';
+import 'package:all_for_games/skins/card_backs.dart';
+import 'package:all_for_games/skins/minesweeper_themes.dart';
 import 'package:all_for_games/skins/tile_styles.dart';
 import 'package:all_for_games/stats/game_record.dart';
 import 'package:all_for_games/stats/game_stats.dart';
@@ -90,5 +92,78 @@ void main() {
       findsOneWidget,
     );
     expect(unlocked('freecell.fastWin'), findsNothing);
+  });
+
+  testWidgets('a TriPeaks win shows the card backs it unlocks', (tester) async {
+    await showWin(
+      tester,
+      record(
+        gameId: 'tripeaks',
+        variant: 'classic',
+        difficulty: 'hard',
+        details: {'longestRun': 12, 'stockLeft': 4},
+      ),
+    );
+
+    for (final (id, name) in [
+      ('tripeaks.firstWin', 'Peaks'),
+      ('tripeaks.hardWin', 'Aurora'),
+      ('tripeaks.run10', 'Ember'),
+      ('tripeaks.noUndoWin', 'Tide'),
+    ]) {
+      expect(
+        find.descendant(
+          of: unlocked(id),
+          matching: find.text('New card back: $name'),
+        ),
+        findsOneWidget,
+        reason: id,
+      );
+    }
+    final preview = tester.widget<CardBackView>(
+      find.descendant(
+        of: unlocked('tripeaks.firstWin'),
+        matching: find.byType(CardBackView),
+      ),
+    );
+    expect(preview.skin.id, 'peaks');
+    expect(unlocked('tripeaks.stock10Win'), findsNothing);
+    expect(unlocked('tripeaks.wins10'), findsNothing);
+  });
+
+  testWidgets('a Minesweeper win shows the themes it unlocks', (tester) async {
+    // A fast Beginner win, with flags: first win and fast win.
+    await showWin(
+      tester,
+      record(
+        gameId: 'minesweeper',
+        variant: 'classic',
+        difficulty: 'easy',
+        playTime: const Duration(seconds: 25),
+        details: {'flagsPlaced': 3},
+      ),
+    );
+
+    for (final (id, name) in [
+      ('minesweeper.firstWin', 'Ocean'),
+      ('minesweeper.fastWin', 'Candy'),
+    ]) {
+      expect(
+        find.descendant(
+          of: unlocked(id),
+          matching: find.text('New Minesweeper theme: $name'),
+        ),
+        findsOneWidget,
+        reason: id,
+      );
+    }
+    final preview = tester.widget<MinesweeperThemePreview>(
+      find.descendant(
+        of: unlocked('minesweeper.firstWin'),
+        matching: find.byType(MinesweeperThemePreview),
+      ),
+    );
+    expect(preview.theme.id, 'ocean');
+    expect(unlocked('minesweeper.noFlagWin'), findsNothing);
   });
 }

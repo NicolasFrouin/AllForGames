@@ -4,6 +4,7 @@ import 'package:all_for_games/app_stores.dart';
 import 'package:all_for_games/games/klondike/klondike_screen.dart';
 import 'package:all_for_games/settings/settings_store.dart';
 import 'package:all_for_games/skins/card_backs.dart';
+import 'package:all_for_games/skins/minesweeper_themes.dart';
 import 'package:all_for_games/skins/skins_screen.dart';
 import 'package:all_for_games/skins/tile_styles.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,6 +17,9 @@ import 'widget_test_helpers.dart';
 Finder cardBackTile(String id) => find.byKey(ValueKey('card-back-$id'));
 
 Finder tileStyleTile(String id) => find.byKey(ValueKey('tile-style-$id'));
+
+Finder minesweeperThemeTile(String id) =>
+    find.byKey(ValueKey('minesweeper-theme-$id'));
 
 /// The text [text] in [tile].
 Finder textIn(Finder tile, String text) =>
@@ -165,6 +169,36 @@ void main() {
     expect(await storedCardBackId(), 'classic');
   });
 
+  testWidgets('a Minesweeper win unlocks ocean; lava stays locked', (
+    tester,
+  ) async {
+    final stores = await seededStores([
+      record(
+        gameId: 'minesweeper',
+        variant: 'classic',
+        difficulty: 'easy',
+        playTime: const Duration(minutes: 2),
+        details: {'flagsPlaced': 4},
+      ),
+    ]);
+    await openSkins(tester, stores);
+    await openTab(tester, 'minesweeperTheme');
+    final ocean = minesweeperThemeTile('ocean');
+    final lava = minesweeperThemeTile('lava');
+    expect(textIn(minesweeperThemeTile('classic'), 'Selected'), findsOneWidget);
+    expect(textIn(lava, 'Bomb squad'), findsOneWidget);
+
+    await tapTile(tester, lava);
+    expect(find.text('Unlock it with: Bomb squad'), findsOneWidget);
+    expect(stores.settings.minesweeperThemeId, 'classic');
+
+    await tapTile(tester, ocean);
+    expect(textIn(ocean, 'Selected'), findsOneWidget);
+    expect(stores.settings.minesweeperThemeId, 'ocean');
+    expect((await SettingsStore.load()).minesweeperThemeId, 'ocean');
+    expect(await storedTileStyleId(), 'classic');
+  });
+
   testWidgets('the skins of each tab are grouped by where they come from', (
     tester,
   ) async {
@@ -190,10 +224,17 @@ void main() {
       for (final style in tileStyles)
         'tile-style-${style.id}': style.unlockedBy,
     });
+
+    await openTab(tester, 'minesweeperTheme');
+    expectGroupedBySource(tester, {
+      for (final theme in minesweeperThemes)
+        'minesweeper-theme-${theme.id}': theme.unlockedBy,
+    });
   });
 
   const locations = {
     '/skins?kind=tileStyle': 'tile-style-classic',
+    '/skins?kind=minesweeperTheme': 'minesweeper-theme-classic',
     '/skins?kind=cardBack': 'card-back-classic',
     '/skins?kind=unknown': 'card-back-classic',
     '/skins': 'card-back-classic',

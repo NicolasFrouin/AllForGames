@@ -104,7 +104,7 @@ void main() {
     final stores = await seededStores([
       // A fast Klondike win without undo: 3 of 8.
       record(endedMinute: 1),
-      // A Mahjong win on the Turtle, with hints: 2 of 6.
+      // A Mahjong win on the Turtle, with hints: 2 of 10.
       record(
         gameId: 'mahjong',
         variant: 'turtle',
@@ -128,7 +128,9 @@ void main() {
       'klondike': ('Klondike', '3/8', '3 / 8 unlocked'),
       'freecell': ('FreeCell', '0/6', '0 / 6 unlocked'),
       'spider': ('Spider', '0/6', '0 / 6 unlocked'),
-      'mahjong': ('Mahjong', '2/6', '2 / 6 unlocked'),
+      'tripeaks': ('TriPeaks', '0/6', '0 / 6 unlocked'),
+      'mahjong': ('Mahjong', '2/10', '2 / 10 unlocked'),
+      'minesweeper': ('Minesweeper', '0/6', '0 / 6 unlocked'),
       'all': ('All games', '0/3', '0 / 3 unlocked'),
     };
     for (final MapEntry(key: gameId, value: (title, tabCount, count))
@@ -147,7 +149,7 @@ void main() {
           if (achievement.gameId == gameId) achievement.id,
       }, reason: gameId);
     }
-    expect(textIn('all.everyGame', 'progress'), '2 / 4');
+    expect(textIn('all.everyGame', 'progress'), '2 / 6');
 
     await openTab(tester, 'mahjong');
     expect(

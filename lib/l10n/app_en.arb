@@ -1069,6 +1069,30 @@
   "@cardBackAmber": {
     "description": "Name of a card back design, shown on the skins page and as a reward."
   },
+  "cardBackPeaks": "Peaks",
+  "@cardBackPeaks": {
+    "description": "Name of a card back design, shown on the skins page and as a reward."
+  },
+  "cardBackSunrise": "Sunrise",
+  "@cardBackSunrise": {
+    "description": "Name of a card back design, shown on the skins page and as a reward."
+  },
+  "cardBackAurora": "Aurora",
+  "@cardBackAurora": {
+    "description": "Name of a card back design, shown on the skins page and as a reward."
+  },
+  "cardBackEmber": "Ember",
+  "@cardBackEmber": {
+    "description": "Name of a card back design, shown on the skins page and as a reward."
+  },
+  "cardBackMosaic": "Mosaic",
+  "@cardBackMosaic": {
+    "description": "Name of a card back design, shown on the skins page and as a reward."
+  },
+  "cardBackTide": "Tide",
+  "@cardBackTide": {
+    "description": "Name of a card back design, shown on the skins page and as a reward."
+  },
   "cardBackPrism": "Prism",
   "@cardBackPrism": {
     "description": "Name of a card back design, shown on the skins page and as a reward."
@@ -1269,6 +1293,54 @@
   "@achievementSpiderStreak3Description": {
     "description": "How to unlock the Spider achievement for 3 games won in a row."
   },
+  "achievementTripeaksFirstWinTitle": "Summit",
+  "@achievementTripeaksFirstWinTitle": {
+    "description": "Title of the TriPeaks achievement for the first won game."
+  },
+  "achievementTripeaksFirstWinDescription": "Win a game of TriPeaks.",
+  "@achievementTripeaksFirstWinDescription": {
+    "description": "How to unlock the TriPeaks achievement for the first won game."
+  },
+  "achievementTripeaksWins10Title": "Mountaineer",
+  "@achievementTripeaksWins10Title": {
+    "description": "Title of the TriPeaks achievement for the 10 games won."
+  },
+  "achievementTripeaksWins10Description": "Win 10 games of TriPeaks.",
+  "@achievementTripeaksWins10Description": {
+    "description": "How to unlock the TriPeaks achievement for the 10 games won."
+  },
+  "achievementTripeaksHardWinTitle": "Thin air",
+  "@achievementTripeaksHardWinTitle": {
+    "description": "Title of the TriPeaks achievement for the won Hard game."
+  },
+  "achievementTripeaksHardWinDescription": "Win a Hard TriPeaks game.",
+  "@achievementTripeaksHardWinDescription": {
+    "description": "How to unlock the TriPeaks achievement for the won Hard game."
+  },
+  "achievementTripeaksRun10Title": "Avalanche",
+  "@achievementTripeaksRun10Title": {
+    "description": "Title of the TriPeaks achievement for the run of 10 cards played from the peaks without a draw."
+  },
+  "achievementTripeaksRun10Description": "Play 10 cards from the peaks in a row, without drawing.",
+  "@achievementTripeaksRun10Description": {
+    "description": "How to unlock the TriPeaks achievement for the run of 10 cards played from the peaks without a draw."
+  },
+  "achievementTripeaksStock10WinTitle": "Nest egg",
+  "@achievementTripeaksStock10WinTitle": {
+    "description": "Title of the TriPeaks achievement for the win with 10 cards or more left in the stock."
+  },
+  "achievementTripeaksStock10WinDescription": "Win a TriPeaks game with 10 or more cards left in the stock.",
+  "@achievementTripeaksStock10WinDescription": {
+    "description": "How to unlock the TriPeaks achievement for the win with 10 cards or more left in the stock."
+  },
+  "achievementTripeaksNoUndoWinTitle": "Sure-footed",
+  "@achievementTripeaksNoUndoWinTitle": {
+    "description": "Title of the TriPeaks achievement for the Medium or Hard game won without undo."
+  },
+  "achievementTripeaksNoUndoWinDescription": "Win a Medium or Hard TriPeaks game without any undo.",
+  "@achievementTripeaksNoUndoWinDescription": {
+    "description": "How to unlock the TriPeaks achievement for the Medium or Hard game won without undo."
+  },
   "achievementMahjongFirstWinTitle": "Clean table",
   "@achievementMahjongFirstWinTitle": {
     "description": "Title of the Mahjong achievement for the first won game."
@@ -1317,11 +1389,59 @@
   "@achievementMahjongWins10Description": {
     "description": "How to unlock the Mahjong achievement for 10 won games."
   },
+  "achievementMahjongTrayWinTitle": "Tidy tray",
+  "@achievementMahjongTrayWinTitle": {
+    "description": "Title of the Mahjong achievement for the first game won in tray mode."
+  },
+  "achievementMahjongTrayWinDescription": "Win a Mahjong game in Tray mode.",
+  "@achievementMahjongTrayWinDescription": {
+    "description": "How to unlock the Mahjong achievement for the first game won in tray mode."
+  },
+  "achievementMahjongTrayHardWinTitle": "Juggler",
+  "@achievementMahjongTrayHardWinTitle": {
+    "description": "Title of the Mahjong achievement for a Hard game won in tray mode."
+  },
+  "achievementMahjongTrayHardWinDescription": "Win a Hard Mahjong game in Tray mode.",
+  "@achievementMahjongTrayHardWinDescription": {
+    "description": "How to unlock the Mahjong achievement for a Hard game won in tray mode."
+  },
+  "achievementMahjongTrayNoUndoWinTitle": "Steady hand",
+  "@achievementMahjongTrayNoUndoWinTitle": {
+    "description": "Title of the Mahjong achievement for a Medium or Hard game won in tray mode without undo or hint."
+  },
+  "achievementMahjongTrayNoUndoWinDescription": "Win a Medium or Hard Tray game without undo or hint.",
+  "@achievementMahjongTrayNoUndoWinDescription": {
+    "description": "How to unlock the Mahjong achievement for a Medium or Hard game won in tray mode without undo or hint."
+  },
+  "achievementMahjongTrayWins10Title": "Tray master",
+  "@achievementMahjongTrayWins10Title": {
+    "description": "Title of the Mahjong achievement for 10 games won in tray mode."
+  },
+  "achievementMahjongTrayWins10Description": "Win 10 Mahjong games in Tray mode.",
+  "@achievementMahjongTrayWins10Description": {
+    "description": "How to unlock the Mahjong achievement for 10 games won in tray mode."
+  },
+  "tileStylePorcelain": "Porcelain",
+  "@tileStylePorcelain": {
+    "description": "Name of a Mahjong tile style, shown on the skins page and as a reward."
+  },
+  "tileStyleMidnight": "Midnight",
+  "@tileStyleMidnight": {
+    "description": "Name of a Mahjong tile style, shown on the skins page and as a reward."
+  },
+  "tileStyleMarble": "Marble",
+  "@tileStyleMarble": {
+    "description": "Name of a Mahjong tile style, shown on the skins page and as a reward."
+  },
+  "tileStyleSakura": "Sakura",
+  "@tileStyleSakura": {
+    "description": "Name of a Mahjong tile style, shown on the skins page and as a reward."
+  },
   "achievementAllEveryGameTitle": "Collector",
   "@achievementAllEveryGameTitle": {
     "description": "Title of the cross-game achievement for a win in each game."
   },
-  "achievementAllEveryGameDescription": "Win a game of each of the 4 games.",
+  "achievementAllEveryGameDescription": "Win at least once in every game.",
   "@achievementAllEveryGameDescription": {
     "description": "How to unlock the cross-game achievement for a win in each game."
   },
@@ -1340,6 +1460,104 @@
   "achievementAllHours10Description": "Play for 10 hours in total.",
   "@achievementAllHours10Description": {
     "description": "How to unlock the cross-game achievement for 10 hours of play, all games together."
+  },
+  "achievementMinesweeperFirstWinTitle": "All clear",
+  "@achievementMinesweeperFirstWinTitle": {
+    "description": "Title of the Minesweeper achievement for a first Minesweeper win."
+  },
+  "achievementMinesweeperFirstWinDescription": "Win a game of Minesweeper.",
+  "@achievementMinesweeperFirstWinDescription": {
+    "description": "How to unlock the Minesweeper achievement for a first Minesweeper win."
+  },
+  "achievementMinesweeperIntermediateWinTitle": "Field engineer",
+  "@achievementMinesweeperIntermediateWinTitle": {
+    "description": "Title of the Minesweeper achievement for a won Intermediate Minesweeper game."
+  },
+  "achievementMinesweeperIntermediateWinDescription": "Win an Intermediate Minesweeper game.",
+  "@achievementMinesweeperIntermediateWinDescription": {
+    "description": "How to unlock the Minesweeper achievement for a won Intermediate Minesweeper game."
+  },
+  "achievementMinesweeperExpertWinTitle": "Bomb squad",
+  "@achievementMinesweeperExpertWinTitle": {
+    "description": "Title of the Minesweeper achievement for a won Expert Minesweeper game."
+  },
+  "achievementMinesweeperExpertWinDescription": "Win an Expert Minesweeper game.",
+  "@achievementMinesweeperExpertWinDescription": {
+    "description": "How to unlock the Minesweeper achievement for a won Expert Minesweeper game."
+  },
+  "achievementMinesweeperFastWinTitle": "Quick sweep",
+  "@achievementMinesweeperFastWinTitle": {
+    "description": "Title of the Minesweeper achievement for a Beginner Minesweeper game won in under 30 seconds."
+  },
+  "achievementMinesweeperFastWinDescription": "Win a Beginner game in under 30 seconds.",
+  "@achievementMinesweeperFastWinDescription": {
+    "description": "How to unlock the Minesweeper achievement for a Beginner Minesweeper game won in under 30 seconds."
+  },
+  "achievementMinesweeperNoFlagWinTitle": "No flags needed",
+  "@achievementMinesweeperNoFlagWinTitle": {
+    "description": "Title of the Minesweeper achievement for an Intermediate or Expert Minesweeper game won without placing a flag."
+  },
+  "achievementMinesweeperNoFlagWinDescription": "Win an Intermediate or Expert game without placing a flag.",
+  "@achievementMinesweeperNoFlagWinDescription": {
+    "description": "How to unlock the Minesweeper achievement for an Intermediate or Expert Minesweeper game won without placing a flag."
+  },
+  "achievementMinesweeperWins10Title": "Veteran sweeper",
+  "@achievementMinesweeperWins10Title": {
+    "description": "Title of the Minesweeper achievement for 10 won Minesweeper games."
+  },
+  "achievementMinesweeperWins10Description": "Win 10 games of Minesweeper.",
+  "@achievementMinesweeperWins10Description": {
+    "description": "How to unlock the Minesweeper achievement for 10 won Minesweeper games."
+  },
+  "minesweeperThemes": "Minesweeper themes",
+  "@minesweeperThemes": {
+    "description": "Title of the Minesweeper tab of the skins page."
+  },
+  "minesweeperThemeClassic": "Classic",
+  "@minesweeperThemeClassic": {
+    "description": "Name of a Minesweeper board theme, shown on the skins page and as a reward."
+  },
+  "minesweeperThemeOcean": "Ocean",
+  "@minesweeperThemeOcean": {
+    "description": "Name of a Minesweeper board theme, shown on the skins page and as a reward."
+  },
+  "minesweeperThemeMeadow": "Meadow",
+  "@minesweeperThemeMeadow": {
+    "description": "Name of a Minesweeper board theme, shown on the skins page and as a reward."
+  },
+  "minesweeperThemeLava": "Lava",
+  "@minesweeperThemeLava": {
+    "description": "Name of a Minesweeper board theme, shown on the skins page and as a reward."
+  },
+  "minesweeperThemeCandy": "Candy",
+  "@minesweeperThemeCandy": {
+    "description": "Name of a Minesweeper board theme, shown on the skins page and as a reward."
+  },
+  "minesweeperThemeNight": "Night",
+  "@minesweeperThemeNight": {
+    "description": "Name of a Minesweeper board theme, shown on the skins page and as a reward."
+  },
+  "minesweeperThemeRetro": "Retro",
+  "@minesweeperThemeRetro": {
+    "description": "Name of a Minesweeper board theme, shown on the skins page and as a reward."
+  },
+  "achievementRewardMinesweeperTheme": "Reward: {name} theme",
+  "@achievementRewardMinesweeperTheme": {
+    "description": "What an achievement unlocks: a Minesweeper board theme.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "newMinesweeperTheme": "New Minesweeper theme: {name}",
+  "@newMinesweeperTheme": {
+    "description": "In the win dialog: the Minesweeper theme an achievement just unlocked.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "hint": "Hint",
   "@hint": {

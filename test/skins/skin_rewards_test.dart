@@ -1,6 +1,7 @@
 import 'package:all_for_games/achievements/achievements.dart';
 import 'package:all_for_games/l10n/app_localizations.dart';
 import 'package:all_for_games/skins/card_backs.dart';
+import 'package:all_for_games/skins/minesweeper_themes.dart';
 import 'package:all_for_games/skins/skin_rewards.dart';
 import 'package:all_for_games/skins/tile_styles.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,6 +15,8 @@ void main() {
           if (skin.unlockedBy == achievement.id) skin.id,
         for (final style in tileStyles)
           if (style.unlockedBy == achievement.id) style.id,
+        for (final theme in minesweeperThemes)
+          if (theme.unlockedBy == achievement.id) theme.id,
       ];
       expect(skins, hasLength(1), reason: achievement.id);
     }
@@ -24,6 +27,8 @@ void main() {
     expect((azure.kind, azure.id), (SkinKind.cardBack, 'azure'));
     final jade = skinRewardOf('mahjong.firstWin')!;
     expect((jade.kind, jade.id), (SkinKind.tileStyle, 'jade'));
+    final ocean = skinRewardOf('minesweeper.firstWin')!;
+    expect((ocean.kind, ocean.id), (SkinKind.minesweeperTheme, 'ocean'));
     expect(skinRewardOf('unknown'), isNull);
   });
 
@@ -38,6 +43,11 @@ void main() {
     expect(jade.rewardText(fr), 'Récompense : tuiles Jade');
     expect(jade.unlockedText(en), 'New tile style: Jade');
     expect(jade.unlockedText(fr), 'Nouveau style de tuiles : Jade');
+    final retro = skinRewardOf('minesweeper.wins10')!;
+    expect(retro.rewardText(en), 'Reward: Retro theme');
+    expect(retro.rewardText(fr), 'Récompense : thème Rétro');
+    expect(retro.unlockedText(en), 'New Minesweeper theme: Retro');
+    expect(retro.unlockedText(fr), 'Nouveau thème de Démineur : Rétro');
   });
 
   testWidgets('every reward has a preview', (tester) async {
@@ -55,6 +65,10 @@ void main() {
     expect(
       find.byType(TileStylePreview),
       findsNWidgets(count(SkinKind.tileStyle)),
+    );
+    expect(
+      find.byType(MinesweeperThemePreview),
+      findsNWidgets(count(SkinKind.minesweeperTheme)),
     );
   });
 }

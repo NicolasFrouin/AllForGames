@@ -29,6 +29,12 @@ enum CardBackPattern {
   bands,
   guilloche,
   nebula,
+  mountains,
+  horizon,
+  aurora,
+  triangles,
+  seigaiha,
+  embers,
 }
 
 /// The look of the face-down cards.
@@ -266,6 +272,68 @@ const cardBacks = [
     unlockedBy: 'spider.streak3',
   ),
   CardBackSkin(
+    id: 'peaks',
+    colors: [Color(0xFF0E2340), Color(0xFF2F5F8F), Color(0xFF9CC3E4)],
+    gradientBegin: Alignment.topCenter,
+    gradientEnd: Alignment.bottomCenter,
+    pattern: CardBackPattern.mountains,
+    patternColor: Color(0xFFF4F8FC),
+    borderColor: Color(0x80FFFFFF),
+    accentColor: Color(0xFF14304F),
+    unlockedBy: 'tripeaks.firstWin',
+  ),
+  CardBackSkin(
+    id: 'sunrise',
+    colors: [Color(0xFF1B0B3A), Color(0xFF5E1A6B), Color(0xFFE0584A)],
+    gradientBegin: Alignment.topCenter,
+    gradientEnd: Alignment.bottomCenter,
+    pattern: CardBackPattern.horizon,
+    patternColor: Color(0xFFFF5E7E),
+    borderColor: Color(0x80FFE3A3),
+    accentColor: Color(0xFFFFE066),
+    unlockedBy: 'tripeaks.wins10',
+  ),
+  CardBackSkin(
+    id: 'aurora',
+    colors: [Color(0xFF06131F), Color(0xFF0B2A33), Color(0xFF101A3A)],
+    gradientBegin: Alignment.topCenter,
+    gradientEnd: Alignment.bottomCenter,
+    pattern: CardBackPattern.aurora,
+    patternColor: Color(0xFF5CFFB0),
+    borderColor: Color(0x665CFFB0),
+    accentColor: Color(0xFFB388FF),
+    unlockedBy: 'tripeaks.hardWin',
+  ),
+  CardBackSkin(
+    id: 'ember',
+    colors: [Color(0xFF1C0F0B), Color(0xFF0B0605), Color(0xFF2B0F07)],
+    gradientBegin: Alignment.topCenter,
+    gradientEnd: Alignment.bottomCenter,
+    pattern: CardBackPattern.embers,
+    patternColor: Color(0xFFFFC46B),
+    borderColor: Color(0x80FF8A3D),
+    accentColor: Color(0xFFFF4D00),
+    unlockedBy: 'tripeaks.run10',
+  ),
+  CardBackSkin(
+    id: 'mosaic',
+    colors: [Color(0xFF16324F), Color(0xFF0B1D30), Color(0xFF1B3B5C)],
+    pattern: CardBackPattern.triangles,
+    patternColor: Color(0xD92EC4B6),
+    borderColor: Color(0x99FFFFFF),
+    accentColor: Color(0xE6F2B33D),
+    unlockedBy: 'tripeaks.stock10Win',
+  ),
+  CardBackSkin(
+    id: 'tide',
+    colors: [Color(0xFF0B3D63), Color(0xFF072A45), Color(0xFF0D4A75)],
+    pattern: CardBackPattern.seigaiha,
+    patternColor: Color(0xCCDCEFFB),
+    borderColor: Color(0x99DCEFFB),
+    accentColor: Color(0xFF0E4C7D),
+    unlockedBy: 'tripeaks.noUndoWin',
+  ),
+  CardBackSkin(
     id: 'prism',
     colors: [Color(0xFF2B2B31), Color(0xFF111114), Color(0xFF26262C)],
     pattern: CardBackPattern.bands,
@@ -413,6 +481,18 @@ class _PatternPainter extends CustomPainter {
         _guilloche(canvas, inner, stroke);
       case CardBackPattern.nebula:
         _nebula(canvas, inner, fill);
+      case CardBackPattern.mountains:
+        _mountains(canvas, inner);
+      case CardBackPattern.horizon:
+        _horizon(canvas, inner);
+      case CardBackPattern.aurora:
+        _aurora(canvas, inner, stroke);
+      case CardBackPattern.triangles:
+        _triangles(canvas, inner, stroke);
+      case CardBackPattern.seigaiha:
+        _seigaiha(canvas, inner, stroke);
+      case CardBackPattern.embers:
+        _embers(canvas, inner);
     }
   }
 
@@ -1582,6 +1662,453 @@ class _PatternPainter extends CustomPainter {
         ).createShader(body),
     );
     drawRing(front: true);
+  }
+
+  /// The TriPeaks skyline: three snowy peaks in front of two fainter ranges,
+  /// under a few stars.
+  void _mountains(Canvas canvas, Rect inner) {
+    Offset at((double, double) point) =>
+        inner.topLeft + Offset(inner.width * point.$1, inner.height * point.$2);
+    Path range(List<(double, double)> points) {
+      final path = Path()..moveTo(inner.left, inner.bottom);
+      for (final point in points.map(at)) {
+        path.lineTo(point.dx, point.dy);
+      }
+      return path
+        ..lineTo(inner.right, inner.bottom)
+        ..close();
+    }
+
+    final stars = Path();
+    for (final (x, y, size) in const [
+      (0.14, 0.1, 1.0),
+      (0.32, 0.2, 0.7),
+      (0.56, 0.08, 0.8),
+      (0.78, 0.17, 1.0),
+      (0.9, 0.06, 0.6),
+      (0.44, 0.27, 0.5),
+    ]) {
+      stars.addOval(
+        Rect.fromCircle(
+          center: at((x, y)),
+          radius: max(0.5, width * 0.012 * size),
+        ),
+      );
+    }
+    const far = [
+      (0.0, 0.5),
+      (0.14, 0.38),
+      (0.3, 0.48),
+      (0.48, 0.34),
+      (0.66, 0.46),
+      (0.84, 0.36),
+      (1.0, 0.46),
+    ];
+    const middle = [
+      (0.0, 0.62),
+      (0.2, 0.5),
+      (0.4, 0.6),
+      (0.6, 0.47),
+      (0.8, 0.58),
+      (1.0, 0.52),
+    ];
+    const near = [
+      (0.0, 0.84),
+      (0.17, 0.56),
+      (0.33, 0.78),
+      (0.5, 0.46),
+      (0.67, 0.78),
+      (0.83, 0.56),
+      (1.0, 0.84),
+    ];
+    canvas
+      ..drawPath(stars, Paint()..color = skin.patternColor.withAlpha(0xB3))
+      ..drawPath(range(far), Paint()..color = skin.patternColor.withAlpha(0x38))
+      ..drawPath(
+        range(middle),
+        Paint()..color = Color.lerp(skin.accentColor, skin.colors[1], 0.45)!,
+      )
+      ..drawPath(range(near), Paint()..color = skin.accentColor);
+    final shade = Path();
+    final snow = Path();
+    final dip = width * 0.03;
+    for (final i in const [1, 3, 5]) {
+      final peak = at(near[i]);
+      final left = at(near[i - 1]);
+      final right = at(near[i + 1]);
+      // The right face is in the shade, down to the foot of the ridge.
+      shade.addPolygon([
+        peak,
+        right,
+        Offset(peak.dx + (right.dx - peak.dx) * 0.2, inner.bottom),
+      ], true);
+      final capLeft = Offset.lerp(peak, left, 0.34)!;
+      final capRight = Offset.lerp(peak, right, 0.34)!;
+      Offset edge(double t, double down) =>
+          Offset.lerp(capRight, capLeft, t)! + Offset(0, down);
+      snow.addPolygon([
+        peak,
+        capRight,
+        edge(0.25, -dip),
+        edge(0.5, dip * 0.6),
+        edge(0.75, -dip),
+        capLeft,
+      ], true);
+    }
+    canvas
+      ..drawPath(shade, Paint()..color = const Color(0x40000000))
+      ..drawPath(snow, Paint()..color = skin.patternColor);
+  }
+
+  /// A sun rising from the sea, cut by bands, over its broken reflection.
+  void _horizon(Canvas canvas, Rect inner) {
+    final horizon = inner.top + inner.height * 0.62;
+    final center = Offset(inner.center.dx, horizon);
+    final radius = width * 0.3;
+    final glow = Rect.fromCircle(center: center, radius: radius * 2.2);
+    canvas.drawOval(
+      glow,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            skin.patternColor.withAlpha(0x73),
+            skin.patternColor.withAlpha(0),
+          ],
+        ).createShader(glow),
+    );
+    final stars = Path();
+    for (final (x, y) in const [
+      (0.16, 0.08),
+      (0.38, 0.16),
+      (0.7, 0.06),
+      (0.86, 0.2),
+      (0.1, 0.26),
+    ]) {
+      stars.addOval(
+        Rect.fromCircle(
+          center: inner.topLeft + Offset(inner.width * x, inner.height * y),
+          radius: max(0.5, width * 0.01),
+        ),
+      );
+    }
+    canvas.drawPath(stars, Paint()..color = skin.accentColor.withAlpha(0xB3));
+    final cuts = Path()
+      ..addRect(Rect.fromLTRB(inner.left, horizon, inner.right, inner.bottom));
+    for (var i = 0; i < 5; i++) {
+      final y = horizon - radius * (0.62 - i * 0.135);
+      cuts.addRect(
+        Rect.fromLTWH(inner.left, y, inner.width, width * (0.01 + 0.007 * i)),
+      );
+    }
+    final sun = Path.combine(
+      PathOperation.difference,
+      Path()..addOval(Rect.fromCircle(center: center, radius: radius)),
+      cuts,
+    );
+    canvas.drawPath(
+      sun,
+      Paint()
+        ..shader =
+            LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [skin.accentColor, skin.patternColor],
+            ).createShader(
+              Rect.fromLTRB(
+                center.dx - radius,
+                horizon - radius,
+                center.dx + radius,
+                horizon,
+              ),
+            ),
+    );
+    final sea = Rect.fromLTRB(inner.left, horizon, inner.right, inner.bottom);
+    canvas.drawRect(
+      sea,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color.lerp(skin.colors.first, skin.colors[1], 0.6)!,
+            skin.colors.first,
+          ],
+        ).createShader(sea),
+    );
+    final gap = sea.height / 7;
+    for (var k = 0; k < 7; k++) {
+      final half = radius * (0.95 - k * 0.11) * (k.isEven ? 1 : 0.8);
+      final shift = width * (k.isEven ? -0.02 : 0.03);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(
+            center: Offset(center.dx + shift, horizon + gap * (k + 0.5)),
+            width: half * 2,
+            height: width * 0.014 * (1 + k * 0.15),
+          ),
+          Radius.circular(width * 0.01),
+        ),
+        Paint()
+          ..color = Color.lerp(
+            skin.accentColor,
+            skin.patternColor,
+            k / 6,
+          )!.withAlpha(0xD9 - k * 0x16),
+      );
+    }
+  }
+
+  /// Curtains of northern lights over a dark forest.
+  void _aurora(Canvas canvas, Rect inner, Paint stroke) {
+    final stars = Path();
+    final random = DealRandom(23);
+    for (var i = 0; i < 18; i++) {
+      stars.addOval(
+        Rect.fromCircle(
+          center:
+              inner.topLeft +
+              Offset(
+                inner.width * random.nextInt(1000) / 1000,
+                inner.height * random.nextInt(1000) / 1000 * 0.7,
+              ),
+          radius: max(0.4, width * 0.0035 * (1 + random.nextInt(3))),
+        ),
+      );
+    }
+    canvas.drawPath(stars, Paint()..color = const Color(0x99FFFFFF));
+    for (final (top, amplitude, depth, phase, color) in [
+      (0.14, 0.07, 0.4, 0.0, skin.patternColor),
+      (0.36, 0.05, 0.24, 2.4, skin.accentColor),
+    ]) {
+      const steps = 48;
+      final edge = [
+        for (var i = 0; i <= steps; i++)
+          inner.topLeft +
+              Offset(
+                inner.width * i / steps,
+                inner.height *
+                    (top + amplitude * sin(i / steps * 2.4 * pi + phase)),
+              ),
+      ];
+      final drop = inner.height * depth;
+      final bounds = Rect.fromLTRB(
+        inner.left,
+        inner.top + inner.height * (top - amplitude),
+        inner.right,
+        inner.top + inner.height * (top + amplitude) + drop,
+      );
+      final shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [color.withAlpha(0), color.withAlpha(0x8C), color.withAlpha(0)],
+        stops: const [0, 0.22, 1],
+      ).createShader(bounds);
+      final rays = Path();
+      for (final (i, point) in edge.indexed) {
+        final length = drop * (0.6 + 0.4 * sin(i * 1.7 + phase).abs());
+        rays
+          ..moveTo(point.dx, point.dy)
+          ..lineTo(point.dx, point.dy + length);
+      }
+      canvas
+        ..drawPath(
+          Path()..addPolygon([
+            ...edge,
+            for (final point in edge.reversed) point + Offset(0, drop),
+          ], true),
+          Paint()
+            ..shader = shader
+            ..color = const Color(0x80000000),
+        )
+        ..drawPath(
+          rays,
+          Paint()
+            ..shader = shader
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = _hairline(0.012, 0.6),
+        )
+        ..drawPath(
+          Path()..addPolygon(edge, false),
+          stroke
+            ..color = color.withAlpha(0x8C)
+            ..strokeWidth = _hairline(0.01, 0.6),
+        );
+    }
+    final ground = inner.top + inner.height * 0.9;
+    final forest = Path()
+      ..moveTo(inner.left, inner.bottom)
+      ..lineTo(inner.left, ground);
+    for (final (x, height) in const [
+      (0.06, 0.1),
+      (0.15, 0.15),
+      (0.24, 0.09),
+      (0.36, 0.12),
+      (0.62, 0.1),
+      (0.72, 0.16),
+      (0.82, 0.11),
+      (0.93, 0.14),
+    ]) {
+      final trunk = inner.left + inner.width * x;
+      final top = ground - inner.height * height;
+      final half = width * 0.06 * height / 0.12;
+      // Three tiers of branches.
+      for (var tier = 0; tier < 3; tier++) {
+        final tierTop = top + (ground - top) * tier * 0.28;
+        final tierHalf = half * (0.55 + tier * 0.25);
+        forest
+          ..moveTo(trunk, tierTop)
+          ..lineTo(trunk + tierHalf, tierTop + (ground - top) * 0.45)
+          ..lineTo(trunk - tierHalf, tierTop + (ground - top) * 0.45)
+          ..close();
+      }
+    }
+    forest.addRect(
+      Rect.fromLTRB(inner.left, ground, inner.right, inner.bottom),
+    );
+    canvas.drawPath(forest, Paint()..color = const Color(0xFF02070B));
+  }
+
+  /// A quilt of triangles in two tones, some left open, under a gloss.
+  void _triangles(Canvas canvas, Rect inner, Paint stroke) {
+    final side = width / 4.5;
+    final rise = side * sqrt(3) / 2;
+    final center = inner.center;
+    final rows = (inner.height / rise / 2).ceil() + 1;
+    final cols = (inner.width / side).ceil() + 2;
+    final tones = [Path(), Path(), Path()];
+    final lines = Path();
+    for (var row = -rows; row <= rows; row++) {
+      final top = center.dy + (row - 0.5) * rise;
+      for (var col = -cols; col <= cols; col++) {
+        final x = center.dx + col * side / 2 + (row.isOdd ? side / 2 : 0);
+        final points = col.isEven
+            ? [
+                Offset(x, top),
+                Offset(x + side / 2, top + rise),
+                Offset(x - side / 2, top + rise),
+              ]
+            : [
+                Offset(x - side / 2, top),
+                Offset(x + side / 2, top),
+                Offset(x, top + rise),
+              ];
+        final triangle = Path()..addPolygon(points, true);
+        lines.addPath(triangle, Offset.zero);
+        final tone = DealRandom((row + 100) * 1000 + col + 500).nextInt(5);
+        if (tone < tones.length) tones[tone].addPath(triangle, Offset.zero);
+      }
+    }
+    canvas
+      ..drawPath(tones[0], Paint()..color = skin.patternColor)
+      ..drawPath(tones[1], Paint()..color = skin.accentColor)
+      ..drawPath(tones[2], Paint()..color = skin.patternColor.withAlpha(0x4D))
+      ..drawPath(
+        lines,
+        stroke
+          ..color = skin.borderColor.withAlpha(0x59)
+          ..strokeWidth = _hairline(0.008, 0.5)
+          ..strokeJoin = StrokeJoin.round,
+      )
+      ..drawRect(
+        inner,
+        Paint()
+          ..shader = const RadialGradient(
+            center: Alignment(-0.5, -0.6),
+            radius: 1,
+            colors: [Color(0x40FFFFFF), Color(0x00FFFFFF), Color(0x33000000)],
+            stops: [0, 0.55, 1],
+          ).createShader(inner),
+      );
+  }
+
+  /// Seigaiha: rows of fans of concentric arcs, like waves on the sea.
+  void _seigaiha(Canvas canvas, Rect inner, Paint stroke) {
+    final radius = width / 4.8;
+    final light = Paint()..color = skin.accentColor;
+    final dark = Paint()
+      ..color = Color.lerp(skin.accentColor, const Color(0xFF000000), 0.18)!;
+    stroke.strokeWidth = _hairline(0.012, 0.7);
+    final rows = (inner.height / (radius / 2)).ceil() + 2;
+    final cols = (inner.width / (radius * 2)).ceil() + 1;
+    final left = inner.center.dx - cols * radius;
+    // Each row covers the bottom of the row above it.
+    for (var row = 0; row <= rows; row++) {
+      final y = inner.top + (row - 1) * radius / 2;
+      for (var col = -1; col <= cols + 1; col++) {
+        final center = Offset(
+          left + col * radius * 2 + (row.isOdd ? radius : 0),
+          y,
+        );
+        canvas.drawCircle(center, radius, row % 4 < 2 ? light : dark);
+        for (var ring = 4; ring >= 1; ring--) {
+          canvas.drawCircle(center, radius * (ring - 0.35) / 4, stroke);
+        }
+      }
+    }
+  }
+
+  /// Glowing embers rising from a fire below the card.
+  void _embers(Canvas canvas, Rect inner) {
+    final glow = Rect.fromCenter(
+      center: inner.bottomCenter,
+      width: inner.width * 2.2,
+      height: inner.height * 1.4,
+    );
+    canvas.drawRect(
+      inner,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            skin.accentColor.withAlpha(0xC0),
+            skin.accentColor.withAlpha(0x38),
+            skin.accentColor.withAlpha(0),
+          ],
+          stops: const [0, 0.45, 1],
+        ).createShader(glow),
+    );
+    final random = DealRandom(31);
+    final sparks = Path();
+    final streaks = Path();
+    final halos = <Rect>[];
+    for (var i = 0; i < 46; i++) {
+      final x = random.nextInt(1000) / 1000;
+      // More sparks, and bigger ones, low on the card.
+      final y = 1 - pow(random.nextInt(1000) / 1000, 1.7).toDouble();
+      final center = inner.topLeft + Offset(inner.width * x, inner.height * y);
+      final radius = max(0.5, width * 0.011 * (0.5 + y));
+      sparks.addOval(Rect.fromCircle(center: center, radius: radius));
+      if (i % 4 == 0) {
+        halos.add(Rect.fromCircle(center: center, radius: radius * 5));
+      }
+      if (i % 5 == 0) {
+        final length = width * (0.04 + 0.04 * y);
+        streaks
+          ..moveTo(center.dx, center.dy + length * 1.2)
+          ..lineTo(center.dx - length * 0.25, center.dy + length * 0.2);
+      }
+    }
+    for (final halo in halos) {
+      canvas.drawOval(
+        halo,
+        Paint()
+          ..shader = RadialGradient(
+            colors: [
+              skin.accentColor.withAlpha(0x80),
+              skin.accentColor.withAlpha(0),
+            ],
+          ).createShader(halo),
+      );
+    }
+    canvas
+      ..drawPath(
+        streaks,
+        Paint()
+          ..color = skin.patternColor.withAlpha(0x80)
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeWidth = _hairline(0.008, 0.5),
+      )
+      ..drawPath(sparks, Paint()..color = skin.patternColor);
   }
 
   @override

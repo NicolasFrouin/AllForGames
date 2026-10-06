@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../skins/card_backs.dart';
+import '../skins/minesweeper_themes.dart';
 import '../skins/tile_styles.dart';
 import '../stats/game_record.dart';
 import 'achievements.dart';
@@ -101,5 +102,13 @@ bool isCardBackUnlocked(CardBackSkin skin, AchievementStore store) {
 
 bool isTileStyleUnlocked(TileStyle style, AchievementStore store) {
   final id = style.unlockedBy;
+  return id == null || store.isUnlocked(id);
+}
+
+bool isMinesweeperThemeUnlocked(
+  MinesweeperTheme theme,
+  AchievementStore store,
+) {
+  final id = theme.unlockedBy;
   return id == null || store.isUnlocked(id);
 }

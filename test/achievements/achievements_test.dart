@@ -63,7 +63,14 @@ GameRecord perfect(String gameId, {String? variant}) => game(
   playTime: const Duration(minutes: 1),
   undos: 0,
   difficulty: 'hard',
-  details: const {'mostFreeCellsUsed': 0, 'hints': 0, 'bestCombo': 50},
+  details: const {
+    'mostFreeCellsUsed': 0,
+    'hints': 0,
+    'bestCombo': 50,
+    'longestRun': 28,
+    'stockLeft': 23,
+    'flagsPlaced': 0,
+  },
 );
 
 /// Slow FreeCell, Spider (2 suits) and Mahjong (Pyramid) wins with an undo,
@@ -155,7 +162,14 @@ void main() {
   });
 
   test('records of another game are ignored', () {
-    const games = ['klondike', 'freecell', 'spider', 'mahjong'];
+    const games = [
+      'klondike',
+      'freecell',
+      'spider',
+      'tripeaks',
+      'mahjong',
+      'minesweeper',
+    ];
     for (final gameId in games) {
       final others = [
         for (final other in games)
@@ -299,6 +313,90 @@ void main() {
     });
   });
 
+  group('TriPeaks', () {
+    /// By default a Medium win with an undo, a short run and few stock cards
+    /// left: it reaches only the win counts.
+    GameRecord tripeaks({
+      GameOutcome outcome = GameOutcome.won,
+      String? difficulty = 'medium',
+      int undos = 1,
+      int longestRun = 6,
+      int stockLeft = 3,
+    }) => game(
+      gameId: 'tripeaks',
+      variant: 'classic',
+      outcome: outcome,
+      difficulty: difficulty,
+      undos: undos,
+      details: {'longestRun': longestRun, 'stockLeft': stockLeft},
+    );
+
+    test('win counts count only won TriPeaks games', () {
+      final records = [
+        for (var i = 0; i < 10; i++) tripeaks(),
+        tripeaks(outcome: GameOutcome.abandoned),
+        game(),
+      ];
+      expect(progress('tripeaks.firstWin', records), 1);
+      expect(progress('tripeaks.wins10', records), 10);
+      expect(progress('tripeaks.wins10', records.sublist(1)), 9);
+      for (final id in [
+        'tripeaks.hardWin',
+        'tripeaks.stock10Win',
+        'tripeaks.noUndoWin',
+      ]) {
+        expect(progress(id, records), 0, reason: id);
+      }
+    });
+
+    test('hardWin needs a won Hard game', () {
+      final records = [
+        tripeaks(),
+        tripeaks(outcome: GameOutcome.abandoned, difficulty: 'hard'),
+      ];
+      expect(progress('tripeaks.hardWin', records), 0);
+      final hard = tripeaks(difficulty: 'hard');
+      expect(progress('tripeaks.hardWin', [...records, hard]), 1);
+    });
+
+    test('run10 is the longest run of any TriPeaks game, won or not', () {
+      final records = [
+        tripeaks(longestRun: 9),
+        tripeaks(outcome: GameOutcome.abandoned, longestRun: 7),
+        game(details: const {'longestRun': 12}),
+      ];
+      expect(progress('tripeaks.run10', records), 9);
+      final long = tripeaks(outcome: GameOutcome.abandoned, longestRun: 11);
+      expect(progress('tripeaks.run10', [...records, long]), 10);
+    });
+
+    test('stock10Win needs a win with 10 stock cards left or more', () {
+      final records = [
+        tripeaks(stockLeft: 9),
+        tripeaks(outcome: GameOutcome.abandoned, stockLeft: 23),
+      ];
+      expect(progress('tripeaks.stock10Win', records), 0);
+      final saved = tripeaks(stockLeft: 10);
+      expect(progress('tripeaks.stock10Win', [...records, saved]), 1);
+    });
+
+    test('noUndoWin needs a Medium or Hard win without any undo', () {
+      final records = [
+        tripeaks(),
+        tripeaks(difficulty: 'easy', undos: 0),
+        tripeaks(difficulty: null, undos: 0),
+        tripeaks(outcome: GameOutcome.abandoned, undos: 0),
+      ];
+      expect(progress('tripeaks.noUndoWin', records), 0);
+      expect(
+        progress('tripeaks.noUndoWin', [...records, tripeaks(undos: 0)]),
+        1,
+      );
+      final hard = tripeaks(difficulty: 'hard', undos: 0);
+      expect(progress('tripeaks.noUndoWin', [...records, hard]), 1);
+    });
+  });
+
   group('Mahjong', () {
     test('win counts count only won Mahjong games', () {
       final records = [
@@ -359,9 +457,167 @@ void main() {
       expect(progress('mahjong.combo10', [combo(12, gameId: 'freecell')]), 0);
       expect(progress('mahjong.combo10', [combo(7), combo(12)]), 10);
     });
+
+    test('turtleWin counts a Turtle win in either mode', () {
+      final pyramid = game(gameId: 'mahjong', variant: 'tray-pyramid');
+      expect(progress('mahjong.turtleWin', [pyramid]), 0);
+      final turtle = game(gameId: 'mahjong', variant: 'tray-turtle');
+      expect(progress('mahjong.turtleWin', [pyramid, turtle]), 1);
+    });
+
+    group('in tray mode', () {
+      /// A tray game, by default a Medium Turtle win with an undo and a hint.
+      GameRecord tray({
+        GameOutcome outcome = GameOutcome.won,
+        String difficulty = 'medium',
+        int undos = 1,
+        int hints = 1,
+      }) => game(
+        gameId: 'mahjong',
+        variant: 'tray-turtle',
+        outcome: outcome,
+        undos: undos,
+        difficulty: difficulty,
+        details: {'hints': hints},
+      );
+
+      test('win counts count only won Tray games', () {
+        final records = [
+          for (var i = 0; i < 9; i++) tray(),
+          tray(outcome: GameOutcome.lost),
+          tray(outcome: GameOutcome.abandoned),
+          for (var i = 0; i < 3; i++) mahjong(),
+        ];
+        expect(progress('mahjong.trayWin', records.sublist(9)), 0);
+        expect(progress('mahjong.trayWin', records), 1);
+        expect(progress('mahjong.trayWins10', records), 9);
+        expect(progress('mahjong.trayWins10', [...records, tray()]), 10);
+        expect(progress('mahjong.wins10', records), 10, reason: 'both modes');
+      });
+
+      test('trayHardWin needs a won Hard Tray game', () {
+        final records = [
+          tray(),
+          tray(difficulty: 'hard', outcome: GameOutcome.lost),
+          perfect('mahjong'),
+        ];
+        expect(progress('mahjong.trayHardWin', records), 0);
+        expect(
+          progress('mahjong.trayHardWin', [
+            ...records,
+            tray(difficulty: 'hard'),
+          ]),
+          1,
+        );
+      });
+
+      test('trayNoUndoWin needs a Medium or Hard Tray win without undo or '
+          'hint', () {
+        final records = [
+          tray(undos: 0),
+          tray(hints: 0),
+          tray(undos: 0, hints: 0, difficulty: 'easy'),
+          tray(undos: 0, hints: 0, outcome: GameOutcome.lost),
+          perfect('mahjong'),
+        ];
+        expect(progress('mahjong.trayNoUndoWin', records), 0);
+        expect(
+          progress('mahjong.trayNoUndoWin', [
+            ...records,
+            tray(undos: 0, hints: 0),
+          ]),
+          1,
+        );
+      });
+    });
+  });
+
+  group('Minesweeper', () {
+    GameRecord minesweeper({
+      String difficulty = 'easy',
+      Duration playTime = const Duration(minutes: 2),
+      int flags = 3,
+      GameOutcome outcome = GameOutcome.won,
+    }) => game(
+      gameId: 'minesweeper',
+      variant: 'classic',
+      outcome: outcome,
+      playTime: playTime,
+      undos: 0,
+      difficulty: difficulty,
+      details: {'flagsPlaced': flags},
+    );
+
+    test('win counts count only won Minesweeper games', () {
+      final records = [
+        minesweeper(),
+        minesweeper(outcome: GameOutcome.lost),
+        minesweeper(outcome: GameOutcome.abandoned),
+      ];
+      expect(progress('minesweeper.firstWin', records), 1);
+      expect(progress('minesweeper.wins10', records), 1);
+      final ten = [for (var i = 0; i < 10; i++) minesweeper()];
+      expect(progress('minesweeper.wins10', ten), 10);
+    });
+
+    test('intermediateWin and expertWin need a win at that level', () {
+      final lost = [
+        minesweeper(difficulty: 'medium', outcome: GameOutcome.lost),
+        minesweeper(difficulty: 'hard', outcome: GameOutcome.lost),
+        minesweeper(),
+      ];
+      expect(progress('minesweeper.intermediateWin', lost), 0);
+      expect(progress('minesweeper.expertWin', lost), 0);
+
+      final medium = [...lost, minesweeper(difficulty: 'medium')];
+      expect(progress('minesweeper.intermediateWin', medium), 1);
+      expect(progress('minesweeper.expertWin', medium), 0);
+      final hard = [...lost, minesweeper(difficulty: 'hard')];
+      expect(progress('minesweeper.expertWin', hard), 1);
+    });
+
+    test('fastWin needs a Beginner win in under 30 seconds', () {
+      final slow = [
+        minesweeper(playTime: const Duration(seconds: 30)),
+        minesweeper(difficulty: 'medium', playTime: const Duration(seconds: 9)),
+        minesweeper(
+          playTime: const Duration(seconds: 9),
+          outcome: GameOutcome.lost,
+        ),
+      ];
+      expect(progress('minesweeper.fastWin', slow), 0);
+      final fast = minesweeper(playTime: const Duration(seconds: 29));
+      expect(progress('minesweeper.fastWin', [...slow, fast]), 1);
+    });
+
+    test('noFlagWin needs an Intermediate or Expert win without a flag', () {
+      final others = [
+        minesweeper(flags: 0),
+        minesweeper(difficulty: 'medium', flags: 1),
+        minesweeper(difficulty: 'hard', flags: 0, outcome: GameOutcome.lost),
+      ];
+      expect(progress('minesweeper.noFlagWin', others), 0);
+      for (final difficulty in ['medium', 'hard']) {
+        final clean = minesweeper(difficulty: difficulty, flags: 0);
+        expect(
+          progress('minesweeper.noFlagWin', [...others, clean]),
+          1,
+          reason: difficulty,
+        );
+      }
+    });
   });
 
   group('all games', () {
+    test('everyGame needs a win in each game of the achievements', () {
+      final games = achievementGameIds.where((id) => id != allGamesId);
+      final everyGame = achievementById('all.everyGame')!;
+      expect(everyGame.goal, games.length);
+      final wins = [for (final gameId in games) perfect(gameId)];
+      expect(everyGame.isReached(wins), isTrue);
+      expect(everyGame.isReached(wins.skip(1).toList()), isFalse);
+    });
+
     test('everyGame counts the games won at least once', () {
       final records = [
         game(),

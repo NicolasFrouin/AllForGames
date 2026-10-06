@@ -11,10 +11,13 @@ import '../games/freecell/freecell_controller.dart';
 import '../games/game_catalog.dart';
 import '../games/klondike/klondike_controller.dart';
 import '../games/mahjong/mahjong_controller.dart';
+import '../games/minesweeper/minesweeper_controller.dart';
 import '../games/spider/spider_controller.dart';
+import '../games/tripeaks/tripeaks_controller.dart';
 import '../l10n/app_localizations.dart';
 import '../stats/game_record.dart';
 import 'card_backs.dart';
+import 'minesweeper_themes.dart';
 import 'skin_rewards.dart';
 import 'tile_styles.dart';
 
@@ -70,6 +73,7 @@ _KindTab _tabOf(SkinKind kind) => switch (kind) {
       KlondikeController.gameId,
       FreeCellController.gameId,
       SpiderController.gameId,
+      TriPeaksController.gameId,
     ],
     skins: (stores, l10n) => [
       for (final skin in cardBacks)
@@ -104,7 +108,29 @@ _KindTab _tabOf(SkinKind kind) => switch (kind) {
         ),
     ],
   ),
-
+  SkinKind.minesweeperTheme => _KindTab(
+    label: (l10n) => l10n.minesweeperTitle,
+    icon: Icons.flag,
+    title: (l10n) => l10n.minesweeperThemes,
+    gameIds: const [MinesweeperController.gameId],
+    skins: (stores, l10n) => [
+      for (final theme in minesweeperThemes)
+        _Skin(
+          key: 'minesweeper-theme-${theme.id}',
+          name: minesweeperThemeName(theme.id, l10n),
+          preview: Center(
+            child: MinesweeperThemePreview(
+              theme: theme,
+              width: _SkinPreview.width,
+            ),
+          ),
+          selected: theme.id == stores.settings.minesweeperThemeId,
+          unlocked: isMinesweeperThemeUnlocked(theme, stores.achievements),
+          unlockedBy: theme.unlockedBy,
+          select: () => stores.settings.setMinesweeperTheme(theme.id),
+        ),
+    ],
+  ),
 };
 
 /// [skins] by where they come from: the free ones first (key null), then
@@ -125,7 +151,7 @@ Map<String?, List<_Skin>> _bySource(List<_Skin> skins) {
   return groups..removeWhere((_, list) => list.isEmpty);
 }
 
-/// Every card back and Mahjong tile style, one tab per
+/// Every card back, Mahjong tile style and Minesweeper theme, one tab per
 /// [SkinKind]: tapping an unlocked one selects it for the games.
 class SkinsScreen extends StatelessWidget {
   const SkinsScreen({super.key, required this.stores, this.kind});
