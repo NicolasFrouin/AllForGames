@@ -28,6 +28,10 @@
   "@newGameAbandons": {
     "description": "New game sheet: shown when the game on screen has moves and is not won."
   },
+  "tryAgain": "Try again",
+  "@tryAgain": {
+    "description": "Button after a lost game: deals the same game again."
+  },
   "newGameDraw": "Draw",
   "@newGameDraw": {
     "description": "New game sheet: heading of the choice of how many cards are drawn from the stock at a time."
@@ -562,6 +566,10 @@
   "recordAbandoned": "Abandoned",
   "@recordAbandoned": {
     "description": "Outcome of one game replaced by a new game, in the recent games list."
+  },
+  "recordLost": "Lost",
+  "@recordLost": {
+    "description": "Outcome of a lost game (Minesweeper, Mahjong tray mode) in the lists of games of the statistics pages."
   },
   "recordMoves": "{count, plural, =1{{count} move} other{{count} moves}}",
   "@recordMoves": {

@@ -309,12 +309,17 @@ class _RecentGames extends StatelessWidget {
           for (final record in recent)
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: Icon(
-                record.won ? Icons.emoji_events : Icons.flag_outlined,
-                color: record.won ? Colors.amber : null,
-              ),
+              leading: Icon(switch (record.outcome) {
+                GameOutcome.won => Icons.emoji_events,
+                GameOutcome.abandoned => Icons.flag_outlined,
+                GameOutcome.lost => Icons.close,
+              }, color: record.won ? Colors.amber : null),
               title: Text(
-                '${record.won ? l10n.recordWon : l10n.recordAbandoned}'
+                '${switch (record.outcome) {
+                  GameOutcome.won => l10n.recordWon,
+                  GameOutcome.abandoned => l10n.recordAbandoned,
+                  GameOutcome.lost => l10n.recordLost,
+                }}'
                 ' · ${formatClock(record.playTime)}',
               ),
               subtitle: Text(

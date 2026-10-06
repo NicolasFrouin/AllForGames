@@ -1,6 +1,8 @@
-enum GameOutcome { won, abandoned }
+/// A game that ends without a win is abandoned (the player started another
+/// one), or lost (a mine in Minesweeper, a full tray in Mahjong's tray mode).
+enum GameOutcome { won, abandoned, lost }
 
-/// One finished (won or abandoned) game, for any game of the app.
+/// One finished (won, abandoned or lost) game, for any game of the app.
 ///
 /// [details] holds the game-specific counters (for example stock recycles in
 /// Klondike). Keys ending with `Ms` are durations in milliseconds.
