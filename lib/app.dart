@@ -14,6 +14,7 @@ import 'games/spider/spider_screen.dart';
 import 'hub/hub_screen.dart';
 import 'l10n/app_localizations.dart';
 import 'skins/skins_screen.dart';
+import 'stats/overview_screen.dart';
 import 'stats/stats_screen.dart';
 
 /// The texts of the app, then the Material, Cupertino and widgets texts.
@@ -106,6 +107,10 @@ class _AllForGamesAppState extends State<AllForGamesApp> {
                 seed: int.tryParse(query['seed'] ?? ''),
               );
             },
+          ),
+          GoRoute(
+            path: 'stats',
+            builder: (context, state) => OverviewScreen(stores: widget.stores),
           ),
           GoRoute(
             path: 'stats/:gameId',

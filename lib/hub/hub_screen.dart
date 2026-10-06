@@ -263,6 +263,13 @@ class _HeaderActions extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         IconButton(
+          key: const ValueKey('overview-stats-button'),
+          tooltip: l10n.overviewTitle,
+          color: Colors.white70,
+          onPressed: () => context.go('/stats'),
+          icon: const Icon(Icons.insights),
+        ),
+        IconButton(
           key: const ValueKey('achievements-button'),
           tooltip: l10n.achievements,
           color: Colors.white70,
@@ -370,39 +377,46 @@ class _OverallChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0x14FFFFFF),
+    // Every chip opens the statistics of every game.
+    return Material(
+      color: const Color(0x14FFFFFF),
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0x22FFFFFF)),
+        side: const BorderSide(color: Color(0x22FFFFFF)),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: Colors.white70, size: 20),
-          const SizedBox(width: 10),
-          // The label goes under the value when both do not fit on one line
-          // (large text, long French durations).
-          Flexible(
-            child: Wrap(
-              spacing: 6,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Text(
-                  value,
-                  key: const ValueKey('value'),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                  ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => context.go('/stats'),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: Colors.white70, size: 20),
+              const SizedBox(width: 10),
+              // The label goes under the value when both do not fit on one
+              // line (large text, long French durations).
+              Flexible(
+                child: Wrap(
+                  spacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      value,
+                      key: const ValueKey('value'),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(label, style: const TextStyle(color: Colors.white60)),
+                  ],
                 ),
-                Text(label, style: const TextStyle(color: Colors.white60)),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

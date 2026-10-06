@@ -32,6 +32,7 @@ void main() {
     '/stats/freecell': Size(360, 640),
     '/achievements': Size(360, 19500),
     '/skins': Size(360, 7500),
+    '/stats': Size(360, 6000),
   };
   for (final MapEntry(key: location, value: size) in pages.entries) {
     for (final language in ['en', 'fr']) {

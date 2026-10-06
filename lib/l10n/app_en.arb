@@ -598,6 +598,182 @@
       }
     }
   },
+  "overviewTitle": "All statistics",
+  "@overviewTitle": {
+    "description": "Title of the statistics page of every game together, and tooltip of its button on the hub."
+  },
+  "overviewAverageGameTime": "Average game time",
+  "@overviewAverageGameTime": {
+    "description": "Statistic: average play time of a finished game, won or not, of every game."
+  },
+  "overviewWinStreak": "Wins in a row",
+  "@overviewWinStreak": {
+    "description": "Statistic: games won in a row up to the last one, every game together."
+  },
+  "overviewBestWinStreak": "Most wins in a row",
+  "@overviewBestWinStreak": {
+    "description": "Statistic: most games won in a row, every game together."
+  },
+  "overviewDaysPlayed": "Days played",
+  "@overviewDaysPlayed": {
+    "description": "Statistic: calendar days with at least one finished game."
+  },
+  "overviewDayStreak": "Days in a row",
+  "@overviewDayStreak": {
+    "description": "Statistic: days in a row with a finished game, up to today (or yesterday while no game is finished today)."
+  },
+  "overviewBestDayStreak": "Most days in a row",
+  "@overviewBestDayStreak": {
+    "description": "Statistic: most days in a row with a finished game."
+  },
+  "overviewSeeAchievements": "See achievements",
+  "@overviewSeeAchievements": {
+    "description": "Button of the all statistics page that opens the achievements page."
+  },
+  "overviewGameSummary": "{played} played · {won} won ({percent})",
+  "@overviewGameSummary": {
+    "description": "All statistics page: finished and won games of one game, and its win rate.",
+    "placeholders": {
+      "played": {
+        "type": "int"
+      },
+      "won": {
+        "type": "int"
+      },
+      "percent": {
+        "type": "String",
+        "example": "50%"
+      }
+    }
+  },
+  "overviewNotPlayed": "Not played yet",
+  "@overviewNotPlayed": {
+    "description": "All statistics page: a game without a finished game."
+  },
+  "overviewBest": "Best {time}",
+  "@overviewBest": {
+    "description": "All statistics page: best time of one game.",
+    "placeholders": {
+      "time": {
+        "type": "String",
+        "example": "3:05"
+      }
+    }
+  },
+  "overviewTimePlayed": "{time} played",
+  "@overviewTimePlayed": {
+    "description": "All statistics page: play time of one game.",
+    "placeholders": {
+      "time": {
+        "type": "String",
+        "example": "1h 05m"
+      }
+    }
+  },
+  "overviewLastPlayed": "Last played {date}",
+  "@overviewLastPlayed": {
+    "description": "All statistics page: date of the last finished game of one game.",
+    "placeholders": {
+      "date": {
+        "type": "String",
+        "example": "10/5/2026"
+      }
+    }
+  },
+  "overviewLast30Days": "Last 30 days",
+  "@overviewLast30Days": {
+    "description": "All statistics page: heading of the chart of the finished games of each of the last 30 days."
+  },
+  "overviewActivitySummary": "{count, plural, =1{{count} game} other{{count} games}}, {won} won",
+  "@overviewActivitySummary": {
+    "description": "All statistics page: finished and won games of the last 30 days.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "won": {
+        "type": "int"
+      }
+    }
+  },
+  "overviewNotWon": "Not won",
+  "@overviewNotWon": {
+    "description": "Chart legend: games lost or abandoned."
+  },
+  "overviewToday": "Today",
+  "@overviewToday": {
+    "description": "Chart axis: the last day of the chart."
+  },
+  "overviewDayEntry": "{date}: {won} won, {notWon} not won",
+  "@overviewDayEntry": {
+    "description": "Chart of the last 30 days, for screen readers: games of one day.",
+    "placeholders": {
+      "date": {
+        "type": "String",
+        "example": "Oct 5"
+      },
+      "won": {
+        "type": "int"
+      },
+      "notWon": {
+        "type": "int"
+      }
+    }
+  },
+  "overviewWhenYouPlay": "When you play",
+  "@overviewWhenYouPlay": {
+    "description": "All statistics page: heading of the charts of the games by hour and by weekday."
+  },
+  "overviewByHour": "Games by hour of the day",
+  "@overviewByHour": {
+    "description": "Chart heading: finished games by the hour they ended."
+  },
+  "overviewByWeekday": "Games by day of the week",
+  "@overviewByWeekday": {
+    "description": "Chart heading: finished games by the weekday they ended."
+  },
+  "overviewChartEntry": "{label}: {count}",
+  "@overviewChartEntry": {
+    "description": "Chart, for screen readers: games of one hour or weekday.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Mon"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "overviewFastestWin": "Fastest win",
+  "@overviewFastestWin": {
+    "description": "Record: the won game with the shortest play time, of every game."
+  },
+  "overviewLongestGame": "Longest game",
+  "@overviewLongestGame": {
+    "description": "Record: the game with the longest play time, won or not."
+  },
+  "overviewMostMovesWin": "Most moves in a win",
+  "@overviewMostMovesWin": {
+    "description": "Record: the won game with the most moves."
+  },
+  "overviewMostPlayed": "Most played game",
+  "@overviewMostPlayed": {
+    "description": "Record: the game with the most finished games."
+  },
+  "overviewMostTime": "Most time played",
+  "@overviewMostTime": {
+    "description": "Record: the game with the most play time."
+  },
+  "overviewGames": "{count, plural, =1{{count} game} other{{count} games}}",
+  "@overviewGames": {
+    "description": "A number of finished games.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "durationHoursMinutes": "{hours}h {minutes}m",
   "@durationHoursMinutes": {
     "description": "A duration of an hour or more.",

@@ -31,6 +31,36 @@ String formatLongDuration(Duration duration, AppLocalizations l10n) {
 String formatDateTime(DateTime dateTime, String localeName) =>
     DateFormat.yMd(localeName).add_Hm().format(dateTime.toLocal());
 
+/// Local date in the style of [localeName]: `10/5/2026` in English.
+String formatDate(DateTime dateTime, String localeName) =>
+    DateFormat.yMd(localeName).format(dateTime.toLocal());
+
+/// Day and month: `Oct 5` in English, `5 oct.` in French.
+String formatShortDate(DateTime dateTime, String localeName) =>
+    DateFormat.MMMd(localeName).format(dateTime.toLocal());
+
+/// An hour of the day: `6 AM` in English, `06 h` in French.
+String formatHour(int hour, String localeName) =>
+    DateFormat.j(localeName).format(DateTime(2000, 1, 1, hour));
+
+/// Short name of [weekday] (`DateTime.monday` to `DateTime.sunday`): `Mon`
+/// in English.
+String formatWeekday(int weekday, String localeName) =>
+    // January 1, 2024 is a Monday.
+    DateFormat.E(localeName).format(DateTime(2024, 1, weekday));
+
+/// The weekdays (`DateTime.monday` to `DateTime.sunday`) in the order of a
+/// week in [localeName]: Sunday first in English, Monday first in French.
+List<int> weekdaysInOrder(String localeName) {
+  final first = DateFormat.E(localeName).dateSymbols.FIRSTDAYOFWEEK;
+  // FIRSTDAYOFWEEK counts from Monday = 0.
+  return [for (var i = 0; i < 7; i++) (first + i) % 7 + DateTime.monday];
+}
+
+/// `12,345` in English, `12 345` in French.
+String formatCount(int value, String localeName) =>
+    NumberFormat.decimalPattern(localeName).format(value);
+
 /// `33%` in English, `33 %` in French.
 String formatPercent(double ratio, String localeName) =>
     NumberFormat.percentPattern(localeName).format(ratio);

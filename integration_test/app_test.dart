@@ -181,6 +181,23 @@ void main() {
     expect(backs, isNotEmpty);
     expect({for (final back in backs) back.skin.id}, {'crimson'});
   });
+
+  testFlow('the overview of every game opens the page of a game', (
+    tester,
+  ) async {
+    await startApp(tester, records: [wonGame()]);
+
+    await tester.tap(find.byKey(const ValueKey('overview-stats-button')));
+    await tester.pumpAndSettle();
+    expect(valueOf(tester, 'overview-stat-won'), '1');
+
+    await tester.tap(find.byKey(const ValueKey('overview-game-klondike')));
+    await tester.pumpAndSettle();
+    expect(valueOf(tester, 'stat-won'), '1');
+
+    await goBack(tester);
+    expect(valueOf(tester, 'overview-stat-played'), '1');
+  });
 }
 
 /// A Klondike game won before the app starts. It unlocks only the first win
