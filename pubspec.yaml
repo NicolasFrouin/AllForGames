@@ -52,6 +52,8 @@ dev_dependencies:
   flutter_driver:
     sdk: flutter
   shared_preferences_platform_interface: ^2.4.2
+  # App icons for every platform from assets/icon/ (scripts/make_icons.sh).
+  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="1024" height="1024">
+  <!-- Android adaptive icon background: the felt of icon.svg, full bleed. -->
+  <defs>
+    <radialGradient id="felt" cx="0.5" cy="0.42" r="0.7">
+      <stop offset="0" stop-color="#3B8F40"/>
+      <stop offset="0.55" stop-color="#2E7D32"/>
+      <stop offset="1" stop-color="#1E5E22"/>
+    </radialGradient>
+  </defs>
+  <rect width="108" height="108" fill="url(#felt)"/>
+</svg>

@@ -1,0 +1,11 @@
+# Android launcher icons. Run scripts/make_icons.sh: it renders assets/icon/*.svg into build/icon/, runs this
+# config, then writes the iOS, macOS, web and Windows icons itself (this tool breaks the iOS project, gives the
+# maskable web icons the rounded icon and writes a single-size Windows .ico).
+flutter_launcher_icons:
+  image_path: "build/icon/icon.png"
+  android: true
+  adaptive_icon_background: "build/icon/background.png"
+  adaptive_icon_foreground: "build/icon/foreground.png"
+  # The SVG layers already keep the art inside the safe zone.
+  adaptive_icon_foreground_inset: 0
+  adaptive_icon_monochrome: "build/icon/monochrome.png"

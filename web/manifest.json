@@ -5,7 +5,7 @@
     "display": "standalone",
     "background_color": "#0A1F1A",
     "theme_color": "#0E3B2C",
-    "description": "A compilation of classic games",
+    "description": "Classic games: solitaires, Mahjong and more",
     "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
