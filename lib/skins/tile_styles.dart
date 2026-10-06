@@ -12,10 +12,12 @@ class TileInk {
     required this.blue,
     required this.black,
     required this.hollow,
-    required this.flowers,
-    required this.seasons,
-    required this.flowerMark,
-    required this.seasonMark,
+    required this.petal,
+    required this.petalEdge,
+    required this.heart,
+    required this.twig,
+    required this.sun,
+    required this.sunRays,
   });
 
   /// Coins, sticks, numerals and dragons.
@@ -30,13 +32,15 @@ class TileInk {
   /// face.
   final Color hollow;
 
-  /// The icon of each flower and season, by rank.
-  final List<Color> flowers;
-  final List<Color> seasons;
+  /// The flower: blossoms with outlined petals and a heart, on a twig.
+  final Color petal;
+  final Color petalEdge;
+  final Color heart;
+  final Color twig;
 
-  /// The corner number and band that tell a flower from a season.
-  final Color flowerMark;
-  final Color seasonMark;
+  /// The season: a sun disc in a ring of rays.
+  final Color sun;
+  final Color sunRays;
 }
 
 const _classicInk = TileInk(
@@ -45,20 +49,12 @@ const _classicInk = TileInk(
   blue: Color(0xFF1C4E9E),
   black: Color(0xFF1B2440),
   hollow: Color(0xFFFFFDF4),
-  flowers: [
-    Color(0xFFD81B60),
-    Color(0xFF8E24AA),
-    Color(0xFFEF8F00),
-    Color(0xFF2E7D32),
-  ],
-  seasons: [
-    Color(0xFF43A047),
-    Color(0xFFF57C00),
-    Color(0xFFB5541C),
-    Color(0xFF1E88E5),
-  ],
-  flowerMark: Color(0xFFC2185B),
-  seasonMark: Color(0xFF1565C0),
+  petal: Color(0xFFF06D97),
+  petalEdge: Color(0xFFB81E52),
+  heart: Color(0xFFFFC21A),
+  twig: Color(0xFF6B4630),
+  sun: Color(0xFFFFB300),
+  sunRays: Color(0xFFEF6C00),
 );
 
 /// The look of the Mahjong tiles.
@@ -137,20 +133,12 @@ const tileStyles = [
       blue: Color(0xFF1F4F8F),
       black: Color(0xFF3B2A14),
       hollow: Color(0xFFF7F5DA),
-      flowers: [
-        Color(0xFFD81B60),
-        Color(0xFF8E24AA),
-        Color(0xFFE67E00),
-        Color(0xFF2E7D32),
-      ],
-      seasons: [
-        Color(0xFF43A047),
-        Color(0xFFE66A00),
-        Color(0xFFA14A16),
-        Color(0xFF1E88E5),
-      ],
-      flowerMark: Color(0xFFB0174F),
-      seasonMark: Color(0xFF1F5E9E),
+      petal: Color(0xFFF06D97),
+      petalEdge: Color(0xFFB0174F),
+      heart: Color(0xFFFFC21A),
+      twig: Color(0xFF5A3A1E),
+      sun: Color(0xFFFFA000),
+      sunRays: Color(0xFFE05A00),
     ),
     unlockedBy: 'mahjong.turtleWin',
   ),
@@ -169,20 +157,12 @@ const tileStyles = [
       blue: Color(0xFF72B4FF),
       black: Color(0xFFF3E9D6),
       hollow: Color(0xFF2A221D),
-      flowers: [
-        Color(0xFFFF77A6),
-        Color(0xFFD594FF),
-        Color(0xFFFFB74D),
-        Color(0xFF7FD67F),
-      ],
-      seasons: [
-        Color(0xFF8BD86B),
-        Color(0xFFFFA040),
-        Color(0xFFE8915C),
-        Color(0xFF6EC1FF),
-      ],
-      flowerMark: Color(0xFFFF7AA8),
-      seasonMark: Color(0xFF7FB8FF),
+      petal: Color(0xFFFF8DB4),
+      petalEdge: Color(0xFFC2416F),
+      heart: Color(0xFFFFD54F),
+      twig: Color(0xFFC49A74),
+      sun: Color(0xFFFFCA45),
+      sunRays: Color(0xFFFF9A3C),
     ),
     unlockedBy: 'mahjong.hardWin',
   ),
@@ -192,6 +172,20 @@ const tileStyles = [
     edgeColor: Color(0xFFE0A79E),
     bodyColors: [Color(0xFFEBAFA4), Color(0xFFF6D0C8)],
     backColors: [Color(0xFFB53A2C), Color(0xFFE2624F)],
+    // Deeper petals: pink ones fade into the face.
+    ink: TileInk(
+      red: Color(0xFFC62828),
+      green: Color(0xFF23803A),
+      blue: Color(0xFF1C4E9E),
+      black: Color(0xFF1B2440),
+      hollow: Color(0xFFFFFDF4),
+      petal: Color(0xFFE2457C),
+      petalEdge: Color(0xFF9E1046),
+      heart: Color(0xFFFFC21A),
+      twig: Color(0xFF6B4630),
+      sun: Color(0xFFFFB300),
+      sunRays: Color(0xFFEF6C00),
+    ),
     unlockedBy: 'mahjong.noHintWin',
   ),
   TileStyle(
@@ -211,6 +205,20 @@ const tileStyles = [
     rimColor: Color(0xFFB98A16),
     selectedFaceColors: [Color(0xFFFFF1E0), Color(0xFFFFB36B)],
     selectedEdgeColor: Color(0xFFE05A00),
+    // A red sun: a golden one fades into the face.
+    ink: TileInk(
+      red: Color(0xFFC62828),
+      green: Color(0xFF23803A),
+      blue: Color(0xFF1C4E9E),
+      black: Color(0xFF1B2440),
+      hollow: Color(0xFFFFFDF4),
+      petal: Color(0xFFF06D97),
+      petalEdge: Color(0xFFB81E52),
+      heart: Color(0xFFFFC21A),
+      twig: Color(0xFF6B4630),
+      sun: Color(0xFFFF6A1A),
+      sunRays: Color(0xFFC62828),
+    ),
     unlockedBy: 'mahjong.wins10',
   ),
 ];

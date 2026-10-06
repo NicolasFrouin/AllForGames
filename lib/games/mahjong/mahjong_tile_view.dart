@@ -18,8 +18,8 @@ const _b = _Hue.blue;
 
 /// A Mahjong tile seen from above, a little from the bottom right: a face
 /// in [style], and its thickness (the body, then the back) below and to the
-/// right of it. Drawn with vector shapes, Material icons and Latin letters
-/// only: no emoji and no CJK font, which the web does not always have.
+/// right of it. Drawn with vector shapes and Latin letters only: no emoji
+/// and no CJK font, which the web does not always have.
 ///
 /// The widget is [faceSize] plus [depth] on the right and at the bottom.
 /// The board paints the glow of a hint around it ([paintHintHalo],
@@ -158,19 +158,6 @@ class _TilePainter extends CustomPainter {
   final bool dimmed;
   final String windLetter;
 
-  static const _flowerIcons = [
-    Icons.local_florist,
-    Icons.spa,
-    Icons.filter_vintage,
-    Icons.grass,
-  ];
-  static const _seasonIcons = [
-    Icons.emoji_nature,
-    Icons.wb_sunny,
-    Icons.eco,
-    Icons.ac_unit,
-  ];
-
   @override
   void paint(Canvas canvas, Size size) {
     final w = faceSize.width;
@@ -272,24 +259,12 @@ class _TilePainter extends CustomPainter {
         );
       case TileSuit.dragons:
         _paintDragon(canvas, art, face.rank);
+      // Any flower matches any flower, and any season any season: one art
+      // each, whatever the rank.
       case TileSuit.flowers:
-        _paintFlowerOrSeason(
-          canvas,
-          art,
-          face.rank,
-          _flowerIcons[face.rank - 1],
-          _ink.flowers[face.rank - 1],
-          _ink.flowerMark,
-        );
+        _paintFlower(canvas, art);
       case TileSuit.seasons:
-        _paintFlowerOrSeason(
-          canvas,
-          art,
-          face.rank,
-          _seasonIcons[face.rank - 1],
-          _ink.seasons[face.rank - 1],
-          _ink.seasonMark,
-        );
+        _paintSeason(canvas, art);
     }
   }
 
@@ -506,52 +481,66 @@ class _TilePainter extends CustomPainter {
     }
   }
 
-  /// A red numeral over a mark that stands for the character "wan".
+  /// A red numeral over a mark drawn after the character "wan" (萬): grass,
+  /// a field with a cross, then a frame with a hook around a bent stroke.
   void _paintCharacter(Canvas canvas, Rect art, int rank) {
     _paintText(
       canvas,
       '$rank',
-      _in(art, 0.5, 0.27),
-      art.height * 0.5,
+      _in(art, 0.5, 0.2),
+      art.height * 0.42,
       _ink.red,
       weight: FontWeight.w900,
     );
-    final mark = Rect.fromLTRB(
-      art.left + art.width * 0.14,
-      art.top + art.height * 0.56,
-      art.right - art.width * 0.14,
-      art.bottom - art.height * 0.02,
+    final size = min(art.width * 0.86, art.height * 0.52);
+    final mark = Rect.fromCenter(
+      center: _in(art, 0.5, 0.72),
+      width: size,
+      height: size,
     );
-    final ink = Paint()
+    Path strokes(List<List<(double, double)>> lines) {
+      final path = Path();
+      for (final line in lines) {
+        final (x, y) = line.first;
+        path.moveTo(mark.left + mark.width * x, mark.top + mark.height * y);
+        for (final (x, y) in line.skip(1)) {
+          path.lineTo(mark.left + mark.width * x, mark.top + mark.height * y);
+        }
+      }
+      return path;
+    }
+
+    Paint pen(double width) => Paint()
       ..color = _ink.black
       ..style = PaintingStyle.stroke
-      ..strokeWidth = max(1.0, art.width * 0.075)
+      ..strokeWidth = width
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
-    Offset p(double x, double y) => _in(mark, x, y);
-    final path = Path()
-      // The grass on top.
-      ..moveTo(p(0.05, 0.12).dx, p(0.05, 0.12).dy)
-      ..lineTo(p(0.95, 0.12).dx, p(0.95, 0.12).dy)
-      ..moveTo(p(0.32, 0).dx, p(0.32, 0).dy)
-      ..lineTo(p(0.32, 0.26).dx, p(0.32, 0.26).dy)
-      ..moveTo(p(0.68, 0).dx, p(0.68, 0).dy)
-      ..lineTo(p(0.68, 0.26).dx, p(0.68, 0.26).dy)
-      // The field in the middle.
-      ..addRect(Rect.fromPoints(p(0.24, 0.36), p(0.76, 0.6)))
-      ..moveTo(p(0.5, 0.36).dx, p(0.5, 0.36).dy)
-      ..lineTo(p(0.5, 0.6).dx, p(0.5, 0.6).dy)
-      // The legs, with a hook.
-      ..moveTo(p(0.12, 1).dx, p(0.12, 1).dy)
-      ..lineTo(p(0.12, 0.72).dx, p(0.12, 0.72).dy)
-      ..lineTo(p(0.88, 0.72).dx, p(0.88, 0.72).dy)
-      ..lineTo(p(0.88, 0.96).dx, p(0.88, 0.96).dy)
-      ..lineTo(p(0.74, 0.9).dx, p(0.74, 0.9).dy)
-      ..moveTo(p(0.5, 0.72).dx, p(0.5, 0.72).dy)
-      ..lineTo(p(0.36, 0.92).dx, p(0.36, 0.92).dy)
-      ..lineTo(p(0.62, 0.9).dx, p(0.62, 0.9).dy);
-    canvas.drawPath(path, ink);
+    // Thin across and thick down, as in a printed character: the gaps
+    // between the many rows stay open on small tiles.
+    canvas.drawPath(strokes(_wanAcross), pen(max(0.8, size * 0.065)));
+    canvas.drawPath(strokes(_wanDown), pen(max(1.1, size * 0.095)));
   }
+
+  /// The strokes of the "wan" mark in a unit square.
+  static const _wanAcross = [
+    [(0.04, 0.12), (0.96, 0.12)],
+    [(0.2, 0.29), (0.8, 0.29)],
+    [(0.2, 0.41), (0.8, 0.41)],
+    [(0.2, 0.53), (0.8, 0.53)],
+    [(0.08, 0.65), (0.92, 0.65)],
+    [(0.32, 0.9), (0.72, 0.88)],
+  ];
+  static const _wanDown = [
+    [(0.32, 0.0), (0.32, 0.22)],
+    [(0.68, 0.0), (0.68, 0.22)],
+    [(0.2, 0.29), (0.2, 0.53)],
+    [(0.8, 0.29), (0.8, 0.53)],
+    [(0.5, 0.29), (0.5, 0.73), (0.32, 0.9)],
+    [(0.08, 0.65), (0.08, 1.0)],
+    [(0.92, 0.65), (0.92, 0.97), (0.83, 0.92)],
+    [(0.62, 0.77), (0.7, 0.85)],
+  ];
 
   /// Red: a box with a stroke through it. Green: a leaf in a ring. White: a
   /// blue frame.
@@ -640,42 +629,133 @@ class _TilePainter extends CustomPainter {
     }
   }
 
-  static void _paintFlowerOrSeason(
-    Canvas canvas,
-    Rect art,
-    int rank,
-    IconData icon,
-    Color color,
-    Color kind,
-  ) {
-    _paintText(
-      canvas,
-      String.fromCharCode(icon.codePoint),
-      _in(art, 0.5, 0.46),
-      min(art.width * 1.05, art.height * 0.72),
-      color,
-      fontFamily: icon.fontFamily,
-      package: icon.fontPackage,
-    );
-    _paintText(
-      canvas,
-      '$rank',
-      _in(art, 0.1, 0.06),
-      art.height * 0.2,
-      kind,
-      weight: FontWeight.w800,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTRB(
-          art.left + art.width * 0.1,
-          art.bottom - art.height * 0.07,
-          art.right - art.width * 0.1,
-          art.bottom,
-        ),
-        Radius.circular(art.height * 0.04),
+  /// A plum twig: a big blossom, and a small one on a side twig.
+  void _paintFlower(Canvas canvas, Rect art) {
+    final unit = min(art.width, art.height / 1.3);
+    final twig = Paint()..color = _ink.twig;
+    final center = _in(art, 0.56, 0.36);
+    final foot = _in(art, 0.06, 1.02);
+    final bend = _in(art, 0.24, 0.62);
+    canvas.drawPath(_twig(foot, bend, center, unit * 0.13), twig);
+    final small = _in(art, 0.78, 0.82);
+    canvas.drawPath(
+      _twig(
+        _bezier(foot, bend, center, 0.3),
+        _in(art, 0.5, 0.88),
+        small,
+        unit * 0.07,
       ),
-      Paint()..color = kind,
+      twig,
+    );
+    _blossom(canvas, small, unit * 0.19, stamens: false);
+    _blossom(canvas, center, unit * 0.38);
+  }
+
+  /// Point [t] of the curve from [a] to [b] pulled towards [c].
+  static Offset _bezier(Offset a, Offset c, Offset b, double t) =>
+      a * ((1 - t) * (1 - t)) + c * (2 * t * (1 - t)) + b * (t * t);
+
+  /// A twig along a curve from [from] to [to], [width] wide at [from] and
+  /// thinner and thinner.
+  static Path _twig(Offset from, Offset control, Offset to, double width) {
+    const steps = 12;
+    final left = <Offset>[];
+    final right = <Offset>[];
+    for (var i = 0; i <= steps; i++) {
+      final t = i / steps;
+      final at = _bezier(from, control, to, t);
+      final tangent = (control - from) * (1 - t) + (to - control) * t;
+      final normal = Offset(-tangent.dy, tangent.dx) / tangent.distance;
+      final half = max(0.5, width * (1 - 0.6 * t) / 2);
+      left.add(at + normal * half);
+      right.add(at - normal * half);
+    }
+    return Path()..addPolygon([...left, ...right.reversed], true);
+  }
+
+  /// Five round petals around a heart.
+  void _blossom(
+    Canvas canvas,
+    Offset center,
+    double radius, {
+    bool stamens = true,
+  }) {
+    var petals = Path();
+    for (var i = 0; i < 5; i++) {
+      final at =
+          center +
+          Offset.fromDirection(-pi / 2 + i * 2 * pi / 5, radius * 0.56);
+      petals = Path.combine(
+        PathOperation.union,
+        petals,
+        Path()..addOval(Rect.fromCircle(center: at, radius: radius * 0.44)),
+      );
+    }
+    canvas.drawPath(
+      petals,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [Color.lerp(_ink.petal, Colors.white, 0.55)!, _ink.petal],
+          stops: const [0.2, 0.8],
+        ).createShader(Rect.fromCircle(center: center, radius: radius)),
+    );
+    canvas.drawPath(
+      petals,
+      Paint()
+        ..color = _ink.petalEdge
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(0.7, radius * 0.07)
+        ..strokeJoin = StrokeJoin.round,
+    );
+    if (stamens) {
+      final stamen = Paint()
+        ..color = _ink.petalEdge
+        ..strokeWidth = max(0.5, radius * 0.035)
+        ..strokeCap = StrokeCap.round;
+      for (var i = 0; i < 10; i++) {
+        final tip = center + Offset.fromDirection(i * pi / 5, radius * 0.4);
+        canvas.drawLine(center, tip, stamen);
+        canvas.drawCircle(tip, radius * 0.055, Paint()..color = _ink.heart);
+      }
+    }
+    canvas.drawCircle(center, radius * 0.2, Paint()..color = _ink.heart);
+  }
+
+  /// A sun: a disc in a ring of long and short rays.
+  void _paintSeason(Canvas canvas, Rect art) {
+    final center = art.center;
+    final radius = min(art.width, art.height) * 0.48;
+    final disc = radius * 0.5;
+    final rays = Path();
+    for (var i = 0; i < 12; i++) {
+      final angle = -pi / 2 + i * pi / 6;
+      final base = disc * 1.25;
+      final tip =
+          center + Offset.fromDirection(angle, radius * (i.isEven ? 1 : 0.8));
+      final left = center + Offset.fromDirection(angle - pi / 12, base);
+      final right = center + Offset.fromDirection(angle + pi / 12, base);
+      rays
+        ..moveTo(left.dx, left.dy)
+        ..lineTo(tip.dx, tip.dy)
+        ..lineTo(right.dx, right.dy)
+        ..close();
+    }
+    canvas.drawPath(rays, Paint()..color = _ink.sunRays);
+    canvas.drawCircle(
+      center,
+      disc,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [Color.lerp(_ink.sun, Colors.white, 0.5)!, _ink.sun],
+        ).createShader(Rect.fromCircle(center: center, radius: disc)),
+    );
+    canvas.drawCircle(
+      center,
+      disc,
+      Paint()
+        ..color = _ink.sunRays
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(0.8, disc * 0.14),
     );
   }
 
@@ -686,8 +766,6 @@ class _TilePainter extends CustomPainter {
     double size,
     Color color, {
     FontWeight weight = FontWeight.w400,
-    String? fontFamily,
-    String? package,
   }) {
     final painter = TextPainter(
       text: TextSpan(
@@ -696,8 +774,6 @@ class _TilePainter extends CustomPainter {
           fontSize: size,
           color: color,
           fontWeight: weight,
-          fontFamily: fontFamily,
-          package: package,
           height: 1,
         ),
       ),
