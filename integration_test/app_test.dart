@@ -17,12 +17,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'freecell_flows.dart';
 import 'fast_animations.dart';
 import 'mahjong_flows.dart';
+import 'minesweeper_flows.dart';
 import 'spider_flows.dart';
 import 'tripeaks_flows.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   mahjongFlows();
+  minesweeperFlows();
   spiderFlows();
   freecellFlows();
   tripeaksFlows();

@@ -103,6 +103,32 @@ void main() {
   });
 
   test(
+    'the Minesweeper theme is classic until one is chosen, and stays',
+    () async {
+      final store = await createStore();
+      expect(store.minesweeperThemeId, 'classic');
+
+      final saving = store.setMinesweeperTheme('retro');
+      expect(store.minesweeperThemeId, 'retro');
+      await saving;
+      expect((await SettingsStore.load()).minesweeperThemeId, 'retro');
+      expect(await SharedPreferencesAsync().getAll(), {
+        SettingsStore.minesweeperThemeKey: 'retro',
+      });
+    },
+  );
+
+  test('a Minesweeper theme the app does not have is classic', () async {
+    final store = await createStore({
+      SettingsStore.minesweeperThemeKey: 'neon',
+    });
+    expect(store.minesweeperThemeId, 'classic');
+
+    await store.setMinesweeperTheme('neon');
+    expect((await SettingsStore.load()).minesweeperThemeId, 'classic');
+  });
+
+  test(
     'a new Klondike game is Draw 1, Medium without a saved choice',
     () async {
       final store = await createStore();

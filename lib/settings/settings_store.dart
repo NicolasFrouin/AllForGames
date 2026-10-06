@@ -6,10 +6,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../games/freecell/freecell_difficulty.dart';
 import '../games/klondike/klondike_difficulty.dart';
 import '../games/mahjong/mahjong_difficulty.dart';
+import '../games/minesweeper/minesweeper_difficulty.dart';
 import '../games/spider/spider_difficulty.dart';
 import '../games/tripeaks/tripeaks_difficulty.dart';
 import '../l10n/app_localizations.dart';
 import '../skins/card_backs.dart';
+import '../skins/minesweeper_themes.dart';
 import '../skins/tile_styles.dart';
 
 /// The player's settings, one storage key per setting.
@@ -26,6 +28,8 @@ class SettingsStore extends ChangeNotifier {
     this._freecellDifficulty,
     this._spiderDifficulty,
     this._tripeaksDifficulty,
+    this._minesweeperDifficulty,
+    this._minesweeperThemeId,
   );
 
   static const localeKey = 'settings.locale';
@@ -38,6 +42,8 @@ class SettingsStore extends ChangeNotifier {
   static const freecellDifficultyKey = 'settings.freecell.difficulty';
   static const spiderDifficultyKey = 'settings.spider.difficulty';
   static const tripeaksDifficultyKey = 'settings.tripeaks.difficulty';
+  static const minesweeperDifficultyKey = 'settings.minesweeper.difficulty';
+  static const minesweeperThemeKey = 'settings.minesweeperTheme';
 
   static const _defaultDrawCount = 1;
   static const _defaultDifficulty = KlondikeDifficulty.medium;
@@ -53,6 +59,8 @@ class SettingsStore extends ChangeNotifier {
   FreeCellDifficulty _freecellDifficulty;
   SpiderDifficulty _spiderDifficulty;
   TriPeaksDifficulty _tripeaksDifficulty;
+  MinesweeperDifficulty _minesweeperDifficulty;
+  String _minesweeperThemeId;
 
   static Future<SettingsStore> load([SharedPreferencesAsync? prefs]) async {
     prefs ??= SharedPreferencesAsync();
@@ -66,6 +74,8 @@ class SettingsStore extends ChangeNotifier {
     var freecellDifficulty = FreeCellDifficulty.medium;
     var spiderDifficulty = SpiderDifficulty.medium;
     var tripeaksDifficulty = TriPeaksDifficulty.medium;
+    var minesweeperDifficulty = MinesweeperDifficulty.medium;
+    var minesweeperThemeId = classicMinesweeperTheme.id;
     try {
       locale = _supportedLocale(await prefs.getString(localeKey));
       cardBackId = _knownCardBack(await prefs.getString(cardBackKey));
@@ -99,6 +109,14 @@ class SettingsStore extends ChangeNotifier {
             tripeaksDifficultyKey,
           )] ??
           TriPeaksDifficulty.medium;
+      minesweeperDifficulty =
+          MinesweeperDifficulty.values.asNameMap()[await prefs.getString(
+            minesweeperDifficultyKey,
+          )] ??
+          MinesweeperDifficulty.medium;
+      minesweeperThemeId = _knownMinesweeperTheme(
+        await prefs.getString(minesweeperThemeKey),
+      );
     } on Object catch (error) {
       // Storage can be blocked (for example site data off in the browser).
       // The app still works, it only keeps the settings of this session.
@@ -116,6 +134,8 @@ class SettingsStore extends ChangeNotifier {
       freecellDifficulty,
       spiderDifficulty,
       tripeaksDifficulty,
+      minesweeperDifficulty,
+      minesweeperThemeId,
     );
   }
 
@@ -152,6 +172,13 @@ class SettingsStore extends ChangeNotifier {
   /// Difficulty of the last new TriPeaks game the player dealt, for the
   /// next one.
   TriPeaksDifficulty get tripeaksDifficulty => _tripeaksDifficulty;
+
+  /// Level of the last new Minesweeper game the player dealt, for the next
+  /// one.
+  MinesweeperDifficulty get minesweeperDifficulty => _minesweeperDifficulty;
+
+  /// Id of the theme Minesweeper draws its board with.
+  String get minesweeperThemeId => _minesweeperThemeId;
 
   /// Listeners are told after the write, never during the call, like the
   /// other stores.
@@ -248,6 +275,28 @@ class SettingsStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setMinesweeperDifficulty(
+    MinesweeperDifficulty difficulty,
+  ) async {
+    _minesweeperDifficulty = difficulty;
+    await _guard(
+      'save the Minesweeper level',
+      () => _prefs.setString(minesweeperDifficultyKey, difficulty.name),
+    );
+    notifyListeners();
+  }
+
+  /// Selects the Minesweeper theme [id] (classic for an unknown id). The
+  /// caller checks that the player has unlocked it.
+  Future<void> setMinesweeperTheme(String id) async {
+    _minesweeperThemeId = _knownMinesweeperTheme(id);
+    await _guard(
+      'save the Minesweeper theme',
+      () => _prefs.setString(minesweeperThemeKey, _minesweeperThemeId),
+    );
+    notifyListeners();
+  }
+
   /// Null for a language the app does not have (for example saved by a newer
   /// app version).
   static Locale? _supportedLocale(String? languageCode) {
@@ -262,6 +311,10 @@ class SettingsStore extends ChangeNotifier {
 
   /// Classic for a tile style the app does not have.
   static String _knownTileStyle(String? id) => tileStyleById(id ?? '').id;
+
+  /// Classic for a Minesweeper theme the app does not have.
+  static String _knownMinesweeperTheme(String? id) =>
+      minesweeperThemeById(id ?? '').id;
 
   static int _knownDrawCount(int? drawCount) =>
       drawCount == 3 ? 3 : _defaultDrawCount;

@@ -10,6 +10,9 @@ import 'klondike/klondike_difficulty_texts.dart';
 import 'mahjong/mahjong_controller.dart';
 import 'mahjong/mahjong_difficulty.dart';
 import 'mahjong/mahjong_difficulty_texts.dart';
+import 'minesweeper/minesweeper_controller.dart';
+import 'minesweeper/minesweeper_difficulty.dart';
+import 'minesweeper/minesweeper_difficulty_texts.dart';
 import 'spider/spider_controller.dart';
 import 'spider/spider_difficulty_texts.dart';
 import 'tripeaks/tripeaks_controller.dart';
@@ -124,6 +127,22 @@ final gameCatalog = [
         difficulty.name: difficulty.label,
     },
     detailLabels: MahjongStatKeys.labels,
+  ),
+  GameInfo(
+    id: MinesweeperController.gameId,
+    title: (l10n) => l10n.minesweeperTitle,
+    tagline: (l10n) => l10n.minesweeperTagline,
+    icon: Icons.flag,
+    color: const Color(0xFFEF6C00),
+    route: '/minesweeper',
+    variants: {
+      MinesweeperController.variant: (l10n) => l10n.minesweeperClassic,
+    },
+    difficulties: {
+      for (final difficulty in MinesweeperDifficulty.values)
+        difficulty.name: difficulty.label,
+    },
+    detailLabels: MinesweeperStatKeys.labels,
   ),
 ];
 

@@ -9,6 +9,8 @@ import 'games/game_catalog.dart';
 import 'games/klondike/klondike_screen.dart';
 import 'games/mahjong/mahjong_difficulty.dart';
 import 'games/mahjong/mahjong_screen.dart';
+import 'games/minesweeper/minesweeper_difficulty.dart';
+import 'games/minesweeper/minesweeper_screen.dart';
 import 'games/spider/spider_difficulty.dart';
 import 'games/spider/spider_screen.dart';
 import 'games/tripeaks/tripeaks_difficulty.dart';
@@ -92,6 +94,20 @@ class _AllForGamesAppState extends State<AllForGamesApp> {
                 stores: widget.stores,
                 mode: MahjongMode.values.asNameMap()[query['mode']],
                 difficulty: MahjongDifficulty.values
+                    .asNameMap()[query['difficulty']],
+                seed: int.tryParse(query['seed'] ?? ''),
+              );
+            },
+          ),
+          GoRoute(
+            path: 'minesweeper',
+            // Query parameters start a given game: /minesweeper?difficulty=
+            // hard&seed=42. Without them, the saved game continues.
+            builder: (context, state) {
+              final query = state.uri.queryParameters;
+              return MinesweeperScreen(
+                stores: widget.stores,
+                difficulty: MinesweeperDifficulty.values
                     .asNameMap()[query['difficulty']],
                 seed: int.tryParse(query['seed'] ?? ''),
               );

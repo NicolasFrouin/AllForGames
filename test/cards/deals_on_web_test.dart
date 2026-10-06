@@ -10,6 +10,7 @@ import '../games/freecell/freecell_state_test.dart' as freecell;
 import '../games/klondike/klondike_state_test.dart' as klondike;
 import '../games/mahjong/mahjong_generator_test.dart' as mahjong;
 import '../games/mahjong/mahjong_tray_test.dart' as tray;
+import '../games/minesweeper/minesweeper_generator_test.dart' as minesweeper;
 import '../games/spider/spider_state_test.dart' as spider;
 import '../games/tripeaks/tripeaks_state_test.dart' as tripeaks;
 
@@ -50,5 +51,9 @@ void main() {
       faces.take(tray.seed1MediumTrayFaces.length),
       tray.seed1MediumTrayFaces,
     );
+  });
+
+  test('Minesweeper', () {
+    expect(minesweeper.seed1Hard(), minesweeper.seed1HardMines);
   });
 }

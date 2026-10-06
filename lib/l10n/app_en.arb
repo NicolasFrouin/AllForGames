@@ -1553,5 +1553,108 @@
   "mahjongTilesHeld": "Tiles put in the tray",
   "@mahjongTilesHeld": {
     "description": "Mahjong statistic (tray mode): tiles that went into the tray to wait for their partner."
+  },
+  "minesweeperTitle": "Minesweeper",
+  "@minesweeperTitle": {
+    "description": "Name of the Minesweeper game."
+  },
+  "minesweeperTagline": "Open every safe cell: the numbers tell where the mines are.",
+  "@minesweeperTagline": {
+    "description": "Short description of Minesweeper on the hub."
+  },
+  "minesweeperClassic": "Classic",
+  "@minesweeperClassic": {
+    "description": "Name of the only Minesweeper variant, on the statistics page."
+  },
+  "minesweeperBeginner": "Beginner",
+  "@minesweeperBeginner": {
+    "description": "Easiest Minesweeper level (9 x 9, 10 mines)."
+  },
+  "minesweeperIntermediate": "Intermediate",
+  "@minesweeperIntermediate": {
+    "description": "Middle Minesweeper level (16 x 16, 40 mines)."
+  },
+  "minesweeperExpert": "Expert",
+  "@minesweeperExpert": {
+    "description": "Hardest Minesweeper level (30 x 16, 99 mines)."
+  },
+  "minesweeperLevelHint": "{columns} × {rows} cells, {mines, plural, =1{1 mine} other{{mines} mines}}.",
+  "@minesweeperLevelHint": {
+    "description": "Size of a Minesweeper level, in the new game sheet.",
+    "placeholders": {
+      "columns": {
+        "type": "int"
+      },
+      "rows": {
+        "type": "int"
+      },
+      "mines": {
+        "type": "int"
+      }
+    }
+  },
+  "minesweeperNoGuess": "Logic alone wins every game: the first tap is safe, and you never have to guess.",
+  "@minesweeperNoGuess": {
+    "description": "Note of the Minesweeper new game sheet."
+  },
+  "minesweeperPlay": "Play",
+  "@minesweeperPlay": {
+    "description": "Button of the Minesweeper new game sheet: starts the chosen level."
+  },
+  "minesweeperMinesLeft": "Mines left",
+  "@minesweeperMinesLeft": {
+    "description": "Mines not flagged yet, in the Minesweeper status bar."
+  },
+  "minesweeperFlagMode": "Flag mode: a tap flags a cell",
+  "@minesweeperFlagMode": {
+    "description": "Tooltip of the button that makes taps place flags."
+  },
+  "minesweeperBoardLabel": "Minefield of {columns} by {rows} cells",
+  "@minesweeperBoardLabel": {
+    "description": "Name of the Minesweeper board, for screen readers.",
+    "placeholders": {
+      "columns": {
+        "type": "int"
+      },
+      "rows": {
+        "type": "int"
+      }
+    }
+  },
+  "minesweeperLost": "Boom! You opened a mine.",
+  "@minesweeperLost": {
+    "description": "Banner after a Minesweeper game is lost."
+  },
+  "minesweeperBoardValue": "3BV (clicks needed)",
+  "@minesweeperBoardValue": {
+    "description": "Fewest clicks that clear a Minesweeper board (Bechtel's Board Benchmark Value)."
+  },
+  "minesweeperBoardValuePerSecond": "3BV/s",
+  "@minesweeperBoardValuePerSecond": {
+    "description": "3BV divided by the time in seconds, in the win dialog."
+  },
+  "minesweeperClicks": "Clicks",
+  "@minesweeperClicks": {
+    "description": "Minesweeper statistic: opens, chords and flags."
+  },
+  "minesweeperEfficiency": "Efficiency (%)",
+  "@minesweeperEfficiency": {
+    "description": "Minesweeper statistic: 3BV cleared per click, in percent."
+  },
+  "minesweeperChords": "Chords",
+  "@minesweeperChords": {
+    "description": "Minesweeper statistic: taps on a number that open its neighbors."
+  },
+  "minesweeperFlagsPlaced": "Flags placed",
+  "@minesweeperFlagsPlaced": {
+    "description": "Minesweeper statistic."
+  },
+  "minesweeperHints": "Hints",
+  "@minesweeperHints": {
+    "description": "Minesweeper statistic."
+  },
+  "minesweeperCellsRevealed": "Cells opened",
+  "@minesweeperCellsRevealed": {
+    "description": "Minesweeper statistic: safe cells opened."
   }
 }
