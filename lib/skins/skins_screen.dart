@@ -5,30 +5,144 @@ import 'package:material_ui/material_ui.dart';
 import '../achievements/achievement_store.dart';
 import '../achievements/achievement_texts.dart';
 import '../achievements/achievements.dart';
+import '../achievements/achievements_screen.dart';
 import '../app_stores.dart';
+import '../games/freecell/freecell_controller.dart';
+import '../games/game_catalog.dart';
+import '../games/klondike/klondike_controller.dart';
+import '../games/mahjong/mahjong_controller.dart';
+import '../games/spider/spider_controller.dart';
 import '../l10n/app_localizations.dart';
 import '../stats/game_record.dart';
 import 'card_backs.dart';
+import 'skin_rewards.dart';
 import 'tile_styles.dart';
 
-/// Every card back and Mahjong tile style: tapping an unlocked one selects
-/// it for the games.
+/// A skin as the page shows it.
+class _Skin {
+  const _Skin({
+    required this.key,
+    required this.name,
+    required this.preview,
+    required this.selected,
+    required this.unlocked,
+    required this.unlockedBy,
+    required this.select,
+  });
+
+  /// Key of its tile.
+  final String key;
+  final String name;
+  final Widget preview;
+  final bool selected;
+  final bool unlocked;
+
+  /// Id of the achievement that unlocks it, null when it is free.
+  final String? unlockedBy;
+  final VoidCallback select;
+}
+
+/// The tab of a kind of skin.
+class _KindTab {
+  const _KindTab({
+    required this.label,
+    required this.icon,
+    required this.title,
+    required this.gameIds,
+    required this.skins,
+  });
+
+  final LocalizedText label;
+  final IconData icon;
+  final LocalizedText title;
+
+  /// The games that draw these skins.
+  final List<String> gameIds;
+  final List<_Skin> Function(AppStores stores, AppLocalizations l10n) skins;
+}
+
+_KindTab _tabOf(SkinKind kind) => switch (kind) {
+  SkinKind.cardBack => _KindTab(
+    label: (l10n) => l10n.skinsCards,
+    icon: Icons.style,
+    title: (l10n) => l10n.cardBacks,
+    gameIds: const [
+      KlondikeController.gameId,
+      FreeCellController.gameId,
+      SpiderController.gameId,
+    ],
+    skins: (stores, l10n) => [
+      for (final skin in cardBacks)
+        _Skin(
+          key: 'card-back-${skin.id}',
+          name: cardBackName(skin.id, l10n),
+          preview: _CardBackPreview(skin),
+          selected: skin.id == stores.settings.cardBackId,
+          unlocked: isCardBackUnlocked(skin, stores.achievements),
+          unlockedBy: skin.unlockedBy,
+          select: () => stores.settings.setCardBack(skin.id),
+        ),
+    ],
+  ),
+  SkinKind.tileStyle => _KindTab(
+    label: (l10n) => l10n.mahjongTitle,
+    icon: Icons.grid_view,
+    title: (l10n) => l10n.mahjongTileStyles,
+    gameIds: const [MahjongController.gameId],
+    skins: (stores, l10n) => [
+      for (final style in tileStyles)
+        _Skin(
+          key: 'tile-style-${style.id}',
+          name: tileStyleName(style.id, l10n),
+          preview: Center(
+            child: TileStylePreview(style: style, width: _SkinPreview.width),
+          ),
+          selected: style.id == stores.settings.tileStyleId,
+          unlocked: isTileStyleUnlocked(style, stores.achievements),
+          unlockedBy: style.unlockedBy,
+          select: () => stores.settings.setTileStyle(style.id),
+        ),
+    ],
+  ),
+
+};
+
+/// [skins] by where they come from: the free ones first (key null), then
+/// by game of the achievement that unlocks them, in the order of the
+/// achievements page.
+Map<String?, List<_Skin>> _bySource(List<_Skin> skins) {
+  final groups = <String?, List<_Skin>>{
+    null: [],
+    for (final gameId in achievementGameIds) gameId: [],
+  };
+  for (final skin in skins) {
+    final unlockedBy = skin.unlockedBy;
+    final source = unlockedBy == null
+        ? null
+        : achievementById(unlockedBy)?.gameId ?? allGamesId;
+    (groups[source] ??= []).add(skin);
+  }
+  return groups..removeWhere((_, list) => list.isEmpty);
+}
+
+/// Every card back and Mahjong tile style, one tab per
+/// [SkinKind]: tapping an unlocked one selects it for the games.
 class SkinsScreen extends StatelessWidget {
-  const SkinsScreen({super.key, required this.stores});
+  const SkinsScreen({super.key, required this.stores, this.kind});
 
   final AppStores stores;
+
+  /// The kind of the tab that opens first: the first tab when null.
+  final SkinKind? kind;
 
   static const _padding = 16.0;
   static const _spacing = 12.0;
   static const _minTileWidth = 160.0;
 
-  void _select(
-    BuildContext context, {
-    required String? unlockedBy,
-    required VoidCallback select,
-  }) {
-    if (unlockedBy == null || stores.achievements.isUnlocked(unlockedBy)) {
-      select();
+  void _select(BuildContext context, _Skin skin) {
+    final unlockedBy = skin.unlockedBy;
+    if (skin.unlocked || unlockedBy == null) {
+      skin.select();
       return;
     }
     final l10n = AppLocalizations.of(context);
@@ -41,85 +155,99 @@ class SkinsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Scaffold(
-      appBar: AppBar(title: Text(l10n.skins)),
-      body: SafeArea(
-        child: ListenableBuilder(
-          listenable: Listenable.merge([
-            stores.settings,
-            stores.achievements,
-            stores.stats,
-          ]),
-          builder: (context, _) {
-            final settings = stores.settings;
-            final achievementStore = stores.achievements;
-            final records = stores.stats.records;
-            final cardBackTiles = [
-              for (final skin in cardBacks)
-                _SkinTile(
-                  key: ValueKey('card-back-${skin.id}'),
-                  name: cardBackName(skin.id, l10n),
-                  preview: _CardBackPreview(skin),
-                  selected: skin.id == settings.cardBackId,
-                  unlocked: isCardBackUnlocked(skin, achievementStore),
-                  unlockedBy: skin.unlockedBy,
-                  records: records,
-                  onTap: () => _select(
-                    context,
-                    unlockedBy: skin.unlockedBy,
-                    select: () => settings.setCardBack(skin.id),
+    return DefaultTabController(
+      // A new ?kind= on the open page selects its tab.
+      key: ValueKey(kind),
+      length: SkinKind.values.length,
+      initialIndex: kind?.index ?? 0,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(l10n.skins),
+          bottom: TabBar(
+            isScrollable: true,
+            tabAlignment: TabAlignment.center,
+            tabs: [
+              for (final kind in SkinKind.values)
+                Tab(
+                  key: ValueKey('skins-tab-${kind.name}'),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(_tabOf(kind).icon, size: 18),
+                      const SizedBox(width: 8),
+                      Text(_tabOf(kind).label(l10n)),
+                    ],
                   ),
                 ),
-            ];
-            final tileStyleTiles = [
-              for (final style in tileStyles)
-                _SkinTile(
-                  key: ValueKey('tile-style-${style.id}'),
-                  name: tileStyleName(style.id, l10n),
-                  preview: Center(
-                    child: TileStylePreview(
-                      style: style,
-                      width: _SkinPreview.width,
-                    ),
-                  ),
-                  selected: style.id == settings.tileStyleId,
-                  unlocked: isTileStyleUnlocked(style, achievementStore),
-                  unlockedBy: style.unlockedBy,
-                  records: records,
-                  onTap: () => _select(
-                    context,
-                    unlockedBy: style.unlockedBy,
-                    select: () => settings.setTileStyle(style.id),
-                  ),
-                ),
-            ];
-            return Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 760),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final columns = max(
-                      2,
-                      ((constraints.maxWidth - _padding * 2 + _spacing) /
-                              (_minTileWidth + _spacing))
-                          .floor(),
-                    );
-                    final rows = [
-                      _SectionTitle(l10n.cardBacks),
-                      ..._rows(cardBackTiles, columns),
-                      _SectionTitle(l10n.mahjongTileStyles),
-                      ..._rows(tileStyleTiles, columns),
-                    ];
-                    return ListView.separated(
-                      padding: const EdgeInsets.all(_padding),
-                      itemCount: rows.length,
-                      separatorBuilder: (context, _) =>
-                          const SizedBox(height: _spacing),
-                      itemBuilder: (context, index) => rows[index],
-                    );
-                  },
-                ),
+            ],
+          ),
+        ),
+        body: SafeArea(
+          child: ListenableBuilder(
+            listenable: Listenable.merge([
+              stores.settings,
+              stores.achievements,
+              stores.stats,
+            ]),
+            builder: (context, _) => TabBarView(
+              children: [
+                for (final kind in SkinKind.values)
+                  _kindPage(context, kind, l10n),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _kindPage(BuildContext context, SkinKind kind, AppLocalizations l10n) {
+    final tab = _tabOf(kind);
+    final records = stores.stats.records;
+    final groups = _bySource(tab.skins(stores, l10n));
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 760),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final columns = max(
+              2,
+              ((constraints.maxWidth - _padding * 2 + _spacing) /
+                      (_minTileWidth + _spacing))
+                  .floor(),
+            );
+            final rows = [
+              _KindTitle(
+                title: tab.title(l10n),
+                // A tab named after its only game needs no list.
+                gameIds: tab.gameIds.length > 1 ? tab.gameIds : const [],
               ),
+              for (final MapEntry(key: source, value: skins)
+                  in groups.entries) ...[
+                if (groups.length > 1) _SourceHeader(source),
+                ..._rows([
+                  for (final skin in skins)
+                    _SkinTile(
+                      key: ValueKey(skin.key),
+                      name: skin.name,
+                      preview: skin.preview,
+                      selected: skin.selected,
+                      unlocked: skin.unlocked,
+                      unlockedBy: skin.unlockedBy,
+                      records: records,
+                      onTap: () => _select(context, skin),
+                    ),
+                ], columns),
+              ],
+            ];
+            return ListView.separated(
+              // Each tab keeps its scroll position.
+              key: PageStorageKey(kind),
+              padding: const EdgeInsets.all(_padding),
+              itemCount: rows.length,
+              separatorBuilder: (context, _) =>
+                  const SizedBox(height: _spacing),
+              itemBuilder: (context, index) => rows[index],
             );
           },
         ),
@@ -145,19 +273,89 @@ class SkinsScreen extends StatelessWidget {
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.text);
+/// The title of a tab, over the games that use its skins.
+class _KindTitle extends StatelessWidget {
+  const _KindTitle({required this.title, required this.gameIds});
 
-  final String text;
+  final String title;
+  final List<String> gameIds;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        if (gameIds.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 16,
+            runSpacing: 4,
+            children: [
+              for (final gameId in gameIds)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AchievementGroupIcon(gameId),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        achievementGroupName(gameId, l10n),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// The header of the free skins ([gameId] null), or of the skins that the
+/// achievements of [gameId] unlock.
+class _SourceHeader extends StatelessWidget {
+  const _SourceHeader(this.gameId);
+
+  final String? gameId;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final gameId = this.gameId;
     return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: Text(
-        text,
-        style: Theme.of(context).textTheme.titleLarge
-            ?.copyWith(fontWeight: FontWeight.w700),
+      key: ValueKey('skins-group-${gameId ?? 'free'}'),
+      padding: const EdgeInsets.only(top: 12),
+      child: Row(
+        children: [
+          if (gameId == null)
+            Icon(Icons.redeem, size: 20, color: theme.colorScheme.primary)
+          else
+            AchievementGroupIcon(gameId, size: 20),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              gameId == null
+                  ? l10n.skinsFree
+                  : achievementGroupName(gameId, l10n),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -895,6 +895,14 @@
   "@mahjongTileStyles": {
     "description": "Skins page: title of the section of the Mahjong tile styles."
   },
+  "skinsCards": "Cards",
+  "@skinsCards": {
+    "description": "Skins page: label of the tab of the card backs, shared by the card games."
+  },
+  "skinsFree": "Free",
+  "@skinsFree": {
+    "description": "Skins page: header of the skins available from the start, before the ones that achievements unlock."
+  },
   "skinSelected": "Selected",
   "@skinSelected": {
     "description": "Skins page: label of the card back or tile style the games use."

@@ -173,6 +173,8 @@
   "cardBacks": "Dos de cartes",
   "skins": "Apparences",
   "mahjongTileStyles": "Tuiles de Mahjong",
+  "skinsCards": "Cartes",
+  "skinsFree": "De base",
   "skinSelected": "Sélectionné",
   "skinLocked": "Verrouillé",
   "skinUnlockWith": "À débloquer avec : {achievement}",

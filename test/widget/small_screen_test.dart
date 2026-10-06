@@ -1,5 +1,7 @@
+import 'package:all_for_games/achievements/achievements.dart';
 import 'package:all_for_games/app.dart';
 import 'package:all_for_games/settings/settings_store.dart';
+import 'package:all_for_games/skins/skin_rewards.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -30,11 +32,19 @@ void main() {
     '/stats/spider': Size(360, 640),
     '/stats/klondike': Size(360, 640),
     '/stats/freecell': Size(360, 640),
-    '/achievements': Size(360, 19500),
-    '/skins': Size(360, 7500),
     '/stats': Size(360, 6000),
   };
-  for (final MapEntry(key: location, value: size) in pages.entries) {
+  // A tab lays out only its own page.
+  final tabPages = {
+    for (final gameId in achievementGameIds)
+      '/achievements?game=$gameId': const Size(360, 6000),
+    for (final kind in SkinKind.values)
+      '/skins?kind=${kind.name}': const Size(360, 7500),
+  };
+  for (final MapEntry(key: location, value: size) in {
+    ...pages,
+    ...tabPages,
+  }.entries) {
     for (final language in ['en', 'fr']) {
       for (final textScale in textScales) {
         testWidgets(

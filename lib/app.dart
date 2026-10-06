@@ -13,6 +13,7 @@ import 'games/spider/spider_difficulty.dart';
 import 'games/spider/spider_screen.dart';
 import 'hub/hub_screen.dart';
 import 'l10n/app_localizations.dart';
+import 'skins/skin_rewards.dart';
 import 'skins/skins_screen.dart';
 import 'stats/overview_screen.dart';
 import 'stats/stats_screen.dart';
@@ -123,12 +124,18 @@ class _AllForGamesAppState extends State<AllForGamesApp> {
           ),
           GoRoute(
             path: 'achievements',
-            builder: (context, state) =>
-                AchievementsScreen(stores: widget.stores),
+            builder: (context, state) => AchievementsScreen(
+              stores: widget.stores,
+              gameId: state.uri.queryParameters['game'],
+            ),
           ),
           GoRoute(
             path: 'skins',
-            builder: (context, state) => SkinsScreen(stores: widget.stores),
+            builder: (context, state) => SkinsScreen(
+              stores: widget.stores,
+              kind: SkinKind.values
+                  .asNameMap()[state.uri.queryParameters['kind']],
+            ),
           ),
         ],
       ),
