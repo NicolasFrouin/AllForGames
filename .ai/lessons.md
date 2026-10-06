@@ -12,3 +12,6 @@ Project conventions live in `CLAUDE.md`. Add here only lessons learned that appl
   tear-down callbacks run.
 - The dev shell is zsh: `$VAR` holding several paths is not split into words. Use bash arrays (`bash -c`) for
   multi-file commands, and check a chain stopped where you think before going on.
+- An Android release build fails with "package dev.flutter.plugins.integration_test does not exist" when the plugin
+  registrant was written by a debug-mode flutter command (pub get, test) during the build or after it: with
+  `--no-pub`, or in a working tree shared with other running flutter commands. Build in an isolated copy then.
