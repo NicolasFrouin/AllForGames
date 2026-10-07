@@ -150,6 +150,13 @@ class _NewGameSheetState extends State<_NewGameSheet> {
           ),
           const SizedBox(height: 4),
           note(Icons.verified_outlined, colors.primary, l10n.newGameWinnable),
+          if (_difficulty.hiddenPercent > 0)
+            note(
+              Icons.visibility_off_outlined,
+              colors.primary,
+              l10n.mahjongHiddenNote,
+              key: const ValueKey('new-game-hidden-note'),
+            ),
           if (widget.abandons)
             note(
               Icons.flag_outlined,

@@ -18,6 +18,7 @@ MahjongDeal generateDeal(
   MahjongLayout layout,
   int seed, {
   int trapPercent = 50,
+  int hiddenPercent = 0,
 }) {
   final random = DealRandom(seed);
   final order = removalOrder(
@@ -41,9 +42,20 @@ MahjongDeal generateDeal(
       layout: layout,
       faces: faces,
       slots: [for (var i = 0; i < layout.length; i++) i],
+      hidden: hiddenTiles(layout.length, seed, hiddenPercent),
     ),
     solution: order,
   );
+}
+
+/// [percent] of the [count] tiles of a deal of [seed], picked to lie face
+/// down. Their own random numbers: the faces of a seed stay the same.
+Set<int> hiddenTiles(int count, int seed, int percent) {
+  if (percent <= 0) return const {};
+  final ids = _shuffle([
+    for (var id = 0; id < count; id++) id,
+  ], DealRandom(seed ^ 0x68696465));
+  return ids.take((count * percent / 100).round()).toSet();
 }
 
 /// Moves the tiles of [state] to other places, so that the board can be

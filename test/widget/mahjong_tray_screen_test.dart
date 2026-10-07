@@ -7,6 +7,7 @@ import 'package:all_for_games/games/mahjong/mahjong_moving_tile.dart';
 import 'package:all_for_games/games/mahjong/mahjong_screen.dart';
 import 'package:all_for_games/games/mahjong/mahjong_state.dart';
 import 'package:all_for_games/games/mahjong/mahjong_tiles.dart';
+import 'package:all_for_games/games/mahjong/mahjong_tile_view.dart';
 import 'package:all_for_games/games/mahjong/mahjong_tray.dart';
 import 'package:all_for_games/hub/hub_screen.dart';
 import 'package:all_for_games/settings/settings_store.dart';
@@ -90,6 +91,14 @@ Finder tile(int id) => byKey('tile-$id');
 Future<void> tapTile(WidgetTester tester, int id) async {
   await tester.tap(tile(id));
   await tester.pumpAndSettle();
+}
+
+/// Turns tile [id] over when it lies face down: the next tap takes it.
+Future<void> reveal(WidgetTester tester, int id) async {
+  final view = tester.widget<MahjongTileView>(
+    find.descendant(of: tile(id), matching: find.byType(MahjongTileView)),
+  );
+  if (view.faceDown) await tapTile(tester, id);
 }
 
 /// Whether tile [id] rests in place [slot] of the tray.
@@ -240,9 +249,11 @@ void main() {
       ).state.faces;
       final picks = fourStrangers(6);
       for (final id in picks.take(3)) {
+        await reveal(tester, id);
         await tapTile(tester, id);
       }
 
+      await reveal(tester, picks.last);
       await tester.tap(tile(picks.last));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 700));
@@ -274,6 +285,7 @@ void main() {
         location: '/mahjong?mode=tray&difficulty=hard&shape=classic&seed=6',
       );
       for (final id in fourStrangers(6)) {
+        await reveal(tester, id);
         await tester.tap(tile(id));
         await tester.pump();
       }
@@ -382,6 +394,7 @@ void main() {
       location: '/mahjong?mode=tray&difficulty=hard&shape=classic&seed=6',
     );
     for (final id in fourStrangers(6)) {
+      await reveal(tester, id);
       await tapTile(tester, id);
     }
     await tester.tap(byKey('try-again'));

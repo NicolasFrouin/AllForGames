@@ -1655,6 +1655,14 @@
   "@mahjongShapeClassicHint": {
     "description": "Below the shape choice when the classic shape (Pyramid or Turtle) is selected."
   },
+  "mahjongHiddenTile": "Hidden tile",
+  "@mahjongHiddenTile": {
+    "description": "Name of a face-down Mahjong tile, for screen readers."
+  },
+  "mahjongHiddenNote": "Some tiles lie face down: tap one to turn it over (one at a time), then tap it again to take it.",
+  "@mahjongHiddenNote": {
+    "description": "Note in the Mahjong new game sheet for the levels with face-down tiles."
+  },
   "mahjongEasyHint": "Small, low shapes, with few traps.",
   "@mahjongEasyHint": {
     "description": "New game sheet: what an Easy Mahjong deal is."

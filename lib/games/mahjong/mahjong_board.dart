@@ -213,6 +213,7 @@ typedef _TileLook = ({
   bool leaving,
   bool selected,
   bool dimmed,
+  bool faceDown,
   bool hinted,
   TileMotion? motion,
 });
@@ -337,6 +338,9 @@ class _MahjongBoardState extends State<MahjongBoard>
   MahjongBoardGeometry? _geometry;
   int? _seenSerial;
   int? _seenHint;
+
+  /// The hidden tiles face up at the last build, to see which turn.
+  Set<int> _faceUp = const {};
 
   MahjongController get _controller => widget.controller;
   double get _now => _clock.value;
@@ -544,6 +548,16 @@ class _MahjongBoardState extends State<MahjongBoard>
         );
       }
     }
+    for (final id in _turnedTiles(state)) {
+      if (action != MahjongAction.deal) {
+        added[id] ??= TileMotion(
+          kind: TileMotionKind.turn,
+          start: 0,
+          duration: 240,
+          height: geometry.tileHeight * 0.08,
+        );
+      }
+    }
     _sortByDepth();
     if (won) {
       _celebrate(added, geometry);
@@ -555,6 +569,22 @@ class _MahjongBoardState extends State<MahjongBoard>
     } else {
       _addMotions(added);
     }
+  }
+
+  /// The hidden tiles on the board that turned over or back since the last
+  /// build.
+  Set<int> _turnedTiles(MahjongState state) {
+    final faceUp = {
+      for (final id in state.hidden)
+        if (state.positionOf(id) != null && _controller.isFaceUp(id)) id,
+    };
+    final turned = {
+      ...faceUp.difference(_faceUp),
+      for (final id in _faceUp.difference(faceUp))
+        if (state.positionOf(id) != null) id,
+    };
+    _faceUp = faceUp;
+    return turned;
   }
 
   _Target _target(MahjongState state, int id, MahjongBoardGeometry geometry) {
@@ -806,6 +836,8 @@ class _MahjongBoardState extends State<MahjongBoard>
         leaving: leaving,
         selected: !leaving && _controller.selected == id,
         dimmed: !leaving && !target.inTray && !state.isFree(id),
+        // Matched tiles leave face up; the tray shows every face.
+        faceDown: !leaving && !target.inTray && !_controller.isFaceUp(id),
         // The hint pulses, then stays softly lit until the next action.
         hinted: !leaving && hint.contains(id),
         motion: _motions[id],
@@ -831,7 +863,8 @@ class _MahjongBoardState extends State<MahjongBoard>
     AppLocalizations l10n, {
     required bool animate,
   }) {
-    final (:target, :leaving, :selected, :dimmed, :hinted, :motion) = look;
+    final (:target, :leaving, :selected, :dimmed, :faceDown, :hinted, :motion) =
+        look;
     final id = target.id;
     final margin = geometry.margin;
     final faceSize = Size(geometry.tileWidth, geometry.tileHeight);
@@ -869,6 +902,7 @@ class _MahjongBoardState extends State<MahjongBoard>
                           style: widget.tileStyle,
                           selected: selected,
                           dimmed: dimmed,
+                          faceDown: faceDown,
                         ),
                       ),
                     ),
@@ -881,7 +915,9 @@ class _MahjongBoardState extends State<MahjongBoard>
                     width: faceSize.width,
                     height: faceSize.height,
                     child: Semantics(
-                      label: tileName(target.face, l10n),
+                      label: faceDown
+                          ? l10n.mahjongHiddenTile
+                          : tileName(target.face, l10n),
                       button: true,
                       selected: selected,
                       child: GestureDetector(

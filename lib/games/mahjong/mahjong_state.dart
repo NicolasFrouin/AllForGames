@@ -14,11 +14,16 @@ class MahjongState {
     required this.layout,
     required this.faces,
     required List<int> slots,
+    this.hidden = const {},
   }) : slots = List.unmodifiable(slots),
        assert(slots.length == layout.length);
 
   /// Face code ([TileFace.code]) of each tile, by tile id.
   final List<int> faces;
+
+  /// Ids of the tiles that lie face down. They follow the same rules: the
+  /// player turns one over to see it (the controller keeps which one).
+  final Set<int> hidden;
 
   /// The id of the tile on each position of [layout], or [empty].
   final List<int> slots;
@@ -41,6 +46,8 @@ class MahjongState {
 
   TileFace faceOf(int id) => TileFace(faces[id]);
 
+  bool isHidden(int id) => hidden.contains(id);
+
   /// The position of tile [id], or null when it is gone.
   int? positionOf(int id) => _positions[id];
 
@@ -61,7 +68,7 @@ class MahjongState {
 
   /// This board with the tiles on other positions (a shuffle, an undo).
   MahjongState withSlots(List<int> slots) =>
-      MahjongState(layout: layout, faces: faces, slots: slots);
+      MahjongState(layout: layout, faces: faces, slots: slots, hidden: hidden);
 
   /// Every pair of free tiles that match.
   late final List<TilePair> freePairs = _freePairs();

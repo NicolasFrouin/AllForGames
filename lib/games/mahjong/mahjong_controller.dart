@@ -19,8 +19,17 @@ import 'mahjong_tiles.dart';
 import 'mahjong_tray.dart';
 
 /// What a tap on a tile did. In tray mode, a tile [picked] waits in the
-/// tray, a tile [matched] cleared a tile of the tray.
-enum TileTap { selected, deselected, matched, picked, blocked, ignored }
+/// tray, a tile [matched] cleared a tile of the tray. A face-down tile is
+/// [revealed] first.
+enum TileTap {
+  selected,
+  deselected,
+  matched,
+  picked,
+  revealed,
+  blocked,
+  ignored,
+}
 
 /// What changed the board last, so the board can animate it.
 enum MahjongAction { none, deal, match, pick, undo, shuffle }
@@ -184,6 +193,7 @@ class MahjongController extends ChangeNotifier {
   GameRecord? _result;
   bool _finished = false;
   int? _selected;
+  int? _revealed;
   List<int> _hint = const [];
   int _hintSerial = 0;
   MahjongAction _lastAction = MahjongAction.none;
@@ -234,6 +244,14 @@ class MahjongController extends ChangeNotifier {
   /// The tile the player picked first, waiting for its match.
   int? get selected => _selected;
 
+  /// The hidden tile the player turned face up, if any: one at a time.
+  int? get revealed => _revealed;
+
+  /// Whether the face of tile [id] shows: not a hidden tile, or the one
+  /// turned over, or the selected one.
+  bool isFaceUp(int id) =>
+      !_state.isHidden(id) || id == _revealed || id == _selected;
+
   /// The tiles the last hint lights, until the next action: a pair in
   /// classic mode; in tray mode the tile to pick, and the tile of the tray
   /// it clears.
@@ -251,18 +269,29 @@ class MahjongController extends ChangeNotifier {
   /// Classic mode: selects a free tile, or matches it with the selected
   /// one. A tap on the selected tile unselects it, a tap on a free tile that
   /// does not match selects that one instead. Tray mode: picks the tile.
+  ///
+  /// A free face-down tile turns over first (the one turned over before
+  /// turns back, unless it is selected); the next tap takes it.
   TileTap tap(int id) {
     if (_finished || _state.positionOf(id) == null) return TileTap.ignored;
     if (!_state.isFree(id)) return TileTap.blocked;
+    if (!isFaceUp(id)) {
+      _revealed = id;
+      notifyListeners();
+      return TileTap.revealed;
+    }
     if (isTray) return _pick(id);
     final selected = _selected;
     if (selected == id) {
       _selected = null;
+      // It stays face up, as the tile turned over.
+      if (_state.isHidden(id)) _revealed = id;
       notifyListeners();
       return TileTap.deselected;
     }
     if (selected != null && match(selected, id)) return TileTap.matched;
     _selected = id;
+    if (_revealed == id) _revealed = null;
     notifyListeners();
     return TileTap.selected;
   }
@@ -460,6 +489,8 @@ class MahjongController extends ChangeNotifier {
     ],
     'faces': _state.faces,
     'slots': _state.slots,
+    'hidden': [..._state.hidden],
+    'revealed': _revealed,
     'tray': _tray,
     'solution': isTray ? _picks : _encodePairs(_solution),
     'history': [
@@ -538,7 +569,20 @@ class MahjongController extends ChangeNotifier {
           (layoutId == generatedLayoutId ? 'generated' : 'classic'),
     );
     final (slots, tray) = board(json['slots'], json['tray']);
-    _state = MahjongState(layout: layout, faces: faces, slots: slots);
+    final hidden = {...ints(json['hidden'] ?? const <int>[])};
+    if (hidden.any((id) => id < 0 || id >= faces.length)) {
+      throw const FormatException('Bad Mahjong hidden tiles');
+    }
+    _state = MahjongState(
+      layout: layout,
+      faces: faces,
+      slots: slots,
+      hidden: hidden,
+    );
+    _revealed = switch (json['revealed']) {
+      final int id when hidden.contains(id) => id,
+      _ => null,
+    };
     _tray = tray;
     final solution = json['solution'];
     if (isTray) {
@@ -603,7 +647,12 @@ class MahjongController extends ChangeNotifier {
         _solution = solveMahjong(initialState, budget: _solverBudget);
       }
     } else if (isTray) {
-      final deal = generateTrayDeal(layout, _seed, difficulty.tray);
+      final deal = generateTrayDeal(
+        layout,
+        _seed,
+        difficulty.tray,
+        hiddenPercent: difficulty.hiddenPercent,
+      );
       _state = deal.state;
       _picks = deal.solution;
     } else {
@@ -611,6 +660,7 @@ class MahjongController extends ChangeNotifier {
         layout,
         _seed,
         trapPercent: difficulty.trapPercent,
+        hiddenPercent: difficulty.hiddenPercent,
       );
       _state = deal.state;
       _solution = deal.solution;
@@ -633,6 +683,7 @@ class MahjongController extends ChangeNotifier {
     _result = null;
     _finished = false;
     _selected = null;
+    _revealed = null;
     _hint = const [];
     _lastAction = MahjongAction.deal;
     _actionSerial++;
@@ -644,6 +695,8 @@ class MahjongController extends ChangeNotifier {
   void _apply(MahjongState next, MahjongAction action) {
     _state = next;
     _selected = null;
+    // The tile turned over stays face up while it is on the board, free.
+    if (_revealed case final id? when !next.isFree(id)) _revealed = null;
     _hint = const [];
     _lastAction = action;
     _actionSerial++;

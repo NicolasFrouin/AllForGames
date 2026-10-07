@@ -352,6 +352,8 @@
   "mahjongShapeGenerated": "Aléatoire",
   "mahjongShapeGeneratedHint": "Une nouvelle forme à chaque donne, jusqu'à {layers} étages.",
   "mahjongShapeClassicHint": "La forme classique de ce niveau, toujours la même.",
+  "mahjongHiddenTile": "Tuile cachée",
+  "mahjongHiddenNote": "Certaines tuiles sont face cachée : touchez-en une pour la retourner (une à la fois), puis touchez-la encore pour la prendre.",
   "mahjongEasyHint": "Des formes petites et basses, avec peu de pièges.",
   "mahjongMediumHint": "Des formes plus grandes, avec quelques pièges.",
   "mahjongHardHint": "Des formes grandes et hautes, avec de nombreux pièges : choisissez bien vos paires.",

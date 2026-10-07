@@ -32,6 +32,9 @@ enum TileMotionKind {
 
   /// Tray mode: the tile slides to its new place in the tray.
   slide,
+
+  /// A face-down tile turns over (or back): it rises a little and swells.
+  turn,
 }
 
 /// How a tile looks at a moment of its motion: [offset] from its place on
@@ -139,6 +142,13 @@ class TileMotion {
         return TilePose(offset: Offset(sin(t * pi * 6) * height * (1 - t), 0));
       case TileMotionKind.pulse:
         return TilePose(glow: waiting ? 0 : (1 - cos(2 * pi * 3 * t)) / 2);
+      case TileMotionKind.turn:
+        final lift = sin(pi * t);
+        return TilePose(
+          offset: Offset(0, -height * lift),
+          scale: 1 + 0.1 * lift,
+          elevation: lift * 0.5,
+        );
     }
   }
 

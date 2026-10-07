@@ -88,6 +88,12 @@ Future<void> tapTile(WidgetTester tester, int id) async {
   await tester.pumpAndSettle();
 }
 
+/// Taps [id] like a player: a face-down tile is turned over first.
+Future<void> takeTile(WidgetTester tester, int id) async {
+  if (viewOf(tester, id).faceDown) await tapTile(tester, id);
+  await tapTile(tester, id);
+}
+
 MahjongTileView viewOf(WidgetTester tester, int id) => tester.widget(
   find.descendant(of: tile(id), matching: find.byType(MahjongTileView)),
 );
@@ -359,8 +365,8 @@ void main() {
       stats: stores.stats,
       saves: stores.saves,
     ).hint()!;
-    await tapTile(tester, a);
-    await tapTile(tester, b);
+    await takeTile(tester, a);
+    await takeTile(tester, b);
 
     await leaveGame(tester);
     expect(textOf('resume-mahjong'), startsWith('Continue · 1 move'));
@@ -467,6 +473,33 @@ void main() {
 
       expect(savedData(stores)['transposed'], isFalse);
     });
+  });
+
+  testWidgets('a hidden tile shows its back until a tap turns it over', (
+    tester,
+  ) async {
+    await pumpGame(
+      tester,
+      state: MahjongState(
+        layout: rowBoard.layout,
+        faces: rowBoard.faces,
+        slots: rowBoard.slots,
+        hidden: {0, 3},
+      ),
+    );
+    expect(viewOf(tester, 0).faceDown, isTrue);
+    expect(find.bySemanticsLabel('Hidden tile'), findsNWidgets(2));
+
+    await tapTile(tester, 0);
+    expect(viewOf(tester, 0).faceDown, isFalse);
+    await tapTile(tester, 3);
+    expect(viewOf(tester, 0).faceDown, isTrue, reason: 'one at a time');
+    expect(viewOf(tester, 3).faceDown, isFalse);
+
+    await tapTile(tester, 3);
+    await tapTile(tester, 0);
+    await tapTile(tester, 0);
+    expect(textOf('tiles-value'), '2', reason: 'the two 1s matched');
   });
 
   testWidgets('the tiles take the style of the settings, and its changes', (

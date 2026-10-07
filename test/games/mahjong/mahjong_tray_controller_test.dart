@@ -164,7 +164,7 @@ void main() {
         if (picks.length == TrayState.capacity) break;
       }
       for (final id in picks) {
-        game.tap(id);
+        take(game, id);
       }
       expect(game.isLost, isTrue);
 

@@ -33,6 +33,7 @@ class MahjongTileView extends StatelessWidget {
     required this.style,
     this.selected = false,
     this.dimmed = false,
+    this.faceDown = false,
   });
 
   final TileFace face;
@@ -46,6 +47,9 @@ class MahjongTileView extends StatelessWidget {
   /// Blocked: the face is a little darker.
   final bool dimmed;
 
+  /// A hidden tile: its back shows instead of its face.
+  final bool faceDown;
+
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
@@ -57,6 +61,7 @@ class MahjongTileView extends StatelessWidget {
         style: style,
         selected: selected,
         dimmed: dimmed,
+        faceDown: faceDown,
         windLetter: switch (face.suit) {
           TileSuit.winds => _windLetter(
             AppLocalizations.of(context),
@@ -137,6 +142,7 @@ class _TilePainter extends CustomPainter {
     required this.style,
     required this.selected,
     required this.dimmed,
+    required this.faceDown,
     required this.windLetter,
   });
 
@@ -146,6 +152,7 @@ class _TilePainter extends CustomPainter {
   final TileStyle style;
   final bool selected;
   final bool dimmed;
+  final bool faceDown;
   final String windLetter;
 
   @override
@@ -180,6 +187,11 @@ class _TilePainter extends CustomPainter {
     }
 
     final faceRRect = at(0);
+    if (faceDown) {
+      _paintBack(canvas, faceRRect, back, backTop);
+      if (dimmed) canvas.drawRRect(faceRRect, Paint()..color = style.dimColor);
+      return;
+    }
     canvas.drawRRect(
       faceRRect,
       Paint()
@@ -220,6 +232,48 @@ class _TilePainter extends CustomPainter {
     if (dimmed && !selected) {
       canvas.drawRRect(faceRRect, Paint()..color = style.dimColor);
     }
+  }
+
+  /// The back of a hidden tile, in the colors of the tile's back: a frame
+  /// and a diamond.
+  void _paintBack(Canvas canvas, RRect face, Color back, Color backTop) {
+    final w = faceSize.width;
+    final rect = face.outerRect;
+    canvas.drawRRect(
+      face,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color.lerp(backTop, Colors.white, 0.12)!, back],
+        ).createShader(rect),
+    );
+    final light = Color.lerp(backTop, Colors.white, 0.45)!;
+    canvas.drawRRect(
+      face.deflate(w * 0.12),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(0.8, w * 0.035)
+        ..color = light,
+    );
+    final c = rect.center;
+    final r = w * 0.16;
+    canvas.drawPath(
+      Path()
+        ..moveTo(c.dx, c.dy - r * 1.3)
+        ..lineTo(c.dx + r, c.dy)
+        ..lineTo(c.dx, c.dy + r * 1.3)
+        ..lineTo(c.dx - r, c.dy)
+        ..close(),
+      Paint()..color = light.withValues(alpha: 0.75),
+    );
+    canvas.drawRRect(
+      face.deflate(0.5),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(0.8, w * 0.02)
+        ..color = Color.lerp(back, Colors.black, 0.3)!,
+    );
   }
 
   TileInk get _ink => style.ink;
@@ -786,5 +840,6 @@ class _TilePainter extends CustomPainter {
       old.style != style ||
       old.selected != selected ||
       old.dimmed != dimmed ||
+      old.faceDown != faceDown ||
       old.windLetter != windLetter;
 }

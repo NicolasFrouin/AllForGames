@@ -2,6 +2,7 @@ import 'dart:math';
 
 import '../../cards/deal_random.dart';
 import 'mahjong_difficulty.dart';
+import 'mahjong_generator.dart';
 import 'mahjong_layout.dart';
 import 'mahjong_state.dart';
 import 'mahjong_tiles.dart';
@@ -112,7 +113,12 @@ typedef TrayDeal = ({MahjongState state, List<int> solution});
 /// Tiles of a face that are free at the same time show the player a pair:
 /// the level decides which ones may (pairs free together, decoys); others
 /// are kept apart as much as the layout allows.
-TrayDeal generateTrayDeal(MahjongLayout layout, int seed, TrayLevel level) {
+TrayDeal generateTrayDeal(
+  MahjongLayout layout,
+  int seed,
+  TrayLevel level, {
+  int hiddenPercent = 0,
+}) {
   final random = DealRandom(seed);
   final count = layout.length;
   final occupied = List.filled(count, true);
@@ -281,6 +287,7 @@ TrayDeal generateTrayDeal(MahjongLayout layout, int seed, TrayLevel level) {
       layout: layout,
       faces: faces,
       slots: [for (var i = 0; i < count; i++) i],
+      hidden: hiddenTiles(count, seed, hiddenPercent),
     ),
     solution: order,
   );

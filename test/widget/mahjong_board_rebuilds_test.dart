@@ -84,7 +84,10 @@ void main() {
   ) async {
     final controller = await pumpBoard(tester);
     final (a, b) = controller.state.freePairs.first;
-    controller.tap(a);
+    take(controller, a);
+    await tester.pumpAndSettle();
+    // A face-down tile turns over first.
+    if (!controller.isFaceUp(b)) controller.tap(b);
     await tester.pumpAndSettle();
 
     expectCheap(await buildRates(tester, () => controller.tap(b)));
@@ -144,9 +147,11 @@ void main() {
         }
       }
       for (final id in picks.take(3)) {
-        controller.tap(id);
+        take(controller, id);
         await tester.pumpAndSettle();
       }
+      if (!controller.isFaceUp(picks[3])) controller.tap(picks[3]);
+      await tester.pumpAndSettle();
 
       expectCheap(await buildRates(tester, () => controller.tap(picks[3])));
       expect(controller.isLost, isTrue);

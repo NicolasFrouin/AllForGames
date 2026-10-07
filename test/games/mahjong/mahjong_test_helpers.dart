@@ -1,3 +1,4 @@
+import 'package:all_for_games/games/mahjong/mahjong_controller.dart';
 import 'package:all_for_games/games/mahjong/mahjong_layout.dart';
 import 'package:all_for_games/games/mahjong/mahjong_state.dart';
 import 'package:all_for_games/games/mahjong/mahjong_tiles.dart';
@@ -27,3 +28,9 @@ MahjongLayout layoutOf(List<(int, int, int)> positions) => MahjongLayout(
 /// A row of [count] tiles side by side on the table.
 MahjongLayout row(int count) =>
     layoutOf([for (var i = 0; i < count; i++) (i * 2, 0, 0)]);
+
+/// Taps [id] like a player: a face-down tile is turned over first.
+TileTap take(MahjongController game, int id) {
+  final tap = game.tap(id);
+  return tap == TileTap.revealed ? game.tap(id) : tap;
+}
