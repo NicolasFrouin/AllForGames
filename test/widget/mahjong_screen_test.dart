@@ -133,6 +133,9 @@ Future<void> openFromHub(WidgetTester tester) async {
 Map<String, Object?> savedData(AppStores stores) =>
     stores.saves[MahjongController.gameId]!.data;
 
+/// Settings that deal the classic layout of the level.
+const classicShape = {SettingsStore.mahjongShapeKey: 'classic'};
+
 /// The layout of the game on screen.
 MahjongLayout layoutOnScreen(WidgetTester tester) => tester
     .widget<MahjongBoard>(find.byType(MahjongBoard))
@@ -460,7 +463,12 @@ void main() {
   group('orientation', () {
     testWidgets('a tall screen deals the layout with rows and columns '
         'swapped, and the game keeps it', (tester) async {
-      final stores = await pumpGame(tester, size: const Size(360, 640));
+      // The Turtle, wide: a random shape can be almost square.
+      final stores = await pumpGame(
+        tester,
+        size: const Size(360, 640),
+        data: classicShape,
+      );
       await leaveGame(tester);
       expect(savedData(stores)['transposed'], isTrue);
 
@@ -472,7 +480,7 @@ void main() {
     });
 
     testWidgets('a wide screen deals it as it is', (tester) async {
-      final stores = await pumpGame(tester);
+      final stores = await pumpGame(tester, data: classicShape);
       await leaveGame(tester);
 
       expect(savedData(stores)['transposed'], isFalse);
