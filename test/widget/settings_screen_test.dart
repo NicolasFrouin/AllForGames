@@ -101,6 +101,16 @@ void main() {
     );
   });
 
+  testWidgets('the switch turns the Minesweeper vibration on', (tester) async {
+    await pumpHub(tester);
+    await openSettings(tester);
+
+    await tester.tap(find.byKey(const ValueKey('flag-vibrate')));
+    await tester.pumpAndSettle();
+
+    expect((await SettingsStore.load()).minesweeperVibrate, isTrue);
+  });
+
   testWidgets('the slider sets the time to hold a Minesweeper cell for a '
       'flag', (tester) async {
     await pumpHub(tester);

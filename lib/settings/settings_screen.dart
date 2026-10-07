@@ -5,8 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../l10n/app_localizations.dart';
 import 'settings_store.dart';
 
-/// The settings page: the language, and how long a finger holds a
-/// Minesweeper cell to flag it.
+/// The settings page: the language, and how Minesweeper flags a cell.
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key, required this.settings});
 
@@ -107,6 +106,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
+                    SwitchListTile(
+                      key: const ValueKey('flag-vibrate'),
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(l10n.settingsFlagVibrate),
+                      value: settings.minesweeperVibrate,
+                      onChanged: settings.setMinesweeperVibrate,
+                    ),
                   ],
                 ),
               ],
@@ -127,19 +133,20 @@ class _Section extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(title, style: theme.textTheme.titleMedium),
-          const SizedBox(height: 12),
-          ...children,
-        ],
+    // A Material, not a colored box: the switch row draws its ink on it.
+    return Material(
+      color: theme.colorScheme.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(20),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(title, style: theme.textTheme.titleMedium),
+            const SizedBox(height: 12),
+            ...children,
+          ],
+        ),
       ),
     );
   }

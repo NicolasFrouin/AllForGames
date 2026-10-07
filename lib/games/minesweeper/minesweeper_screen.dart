@@ -9,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../app_stores.dart';
 import '../../common/format.dart';
 import '../../l10n/app_localizations.dart';
+import '../../settings/settings_store.dart';
 import '../../skins/minesweeper_themes.dart';
 import '../win_dialog.dart';
 import 'minesweeper_board.dart';
@@ -241,19 +242,12 @@ class _MinesweeperScreenState extends State<MinesweeperScreen> {
     final settings = widget.stores.settings;
     return ListenableBuilder(
       listenable: settings,
-      builder: (context, _) => _page(
-        context,
-        minesweeperThemeById(settings.minesweeperThemeId),
-        Duration(milliseconds: settings.minesweeperFlagHoldMs),
-      ),
+      builder: (context, _) => _page(context, settings),
     );
   }
 
-  Widget _page(
-    BuildContext context,
-    MinesweeperTheme theme,
-    Duration flagHold,
-  ) {
+  Widget _page(BuildContext context, SettingsStore settings) {
+    final theme = minesweeperThemeById(settings.minesweeperThemeId);
     final l10n = AppLocalizations.of(context);
     final controller = _controller;
     return Scaffold(
@@ -321,7 +315,10 @@ class _MinesweeperScreenState extends State<MinesweeperScreen> {
                           controller: controller,
                           theme: theme,
                           flagMode: _flagMode,
-                          flagHold: flagHold,
+                          flagHold: Duration(
+                            milliseconds: settings.minesweeperFlagHoldMs,
+                          ),
+                          vibrate: settings.minesweeperVibrate,
                           onCelebrated: _showWinDialog,
                           onLost: () => _lossShown.value = true,
                         ),

@@ -6,6 +6,7 @@
   "settings": "Paramètres",
   "settingsFlagHold": "Appui pour un drapeau",
   "settingsFlagHoldValue": "{seconds} s",
+  "settingsFlagVibrate": "Vibrer quand un appui pose un drapeau",
   "settingsFlagHoldHint": "Durée d'appui sur une case couverte pour y poser un drapeau. Plus court, c'est plus rapide, mais un appui lent peut alors aussi poser un drapeau.",
   "cancel": "Annuler",
   "undo": "Annuler",

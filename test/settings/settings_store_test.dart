@@ -288,6 +288,19 @@ void main() {
     expect(store.minesweeperFlagHoldMs, SettingsStore.maxFlagHoldMs);
   });
 
+  test(
+    'the phone does not vibrate for a Minesweeper flag by default',
+    () async {
+      final store = await createStore();
+      expect(store.minesweeperVibrate, isFalse);
+
+      await store.setMinesweeperVibrate(true);
+
+      expect(store.minesweeperVibrate, isTrue);
+      expect((await SettingsStore.load()).minesweeperVibrate, isTrue);
+    },
+  );
+
   test('listeners are told after the write, not during the call', () async {
     final store = await createStore();
     var notified = 0;

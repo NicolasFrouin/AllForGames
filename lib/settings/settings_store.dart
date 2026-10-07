@@ -31,6 +31,7 @@ class SettingsStore extends ChangeNotifier {
     this._minesweeperDifficulty,
     this._minesweeperThemeId,
     this._minesweeperFlagHoldMs,
+    this._minesweeperVibrate,
   );
 
   static const localeKey = 'settings.locale';
@@ -46,6 +47,7 @@ class SettingsStore extends ChangeNotifier {
   static const minesweeperDifficultyKey = 'settings.minesweeper.difficulty';
   static const minesweeperThemeKey = 'settings.minesweeperTheme';
   static const minesweeperFlagHoldKey = 'settings.minesweeper.flagHoldMs';
+  static const minesweeperVibrateKey = 'settings.minesweeper.vibrate';
 
   /// How long a finger holds a Minesweeper cell to flag it, in ms. Flutter's
   /// usual long press (500 ms) felt slow.
@@ -70,6 +72,7 @@ class SettingsStore extends ChangeNotifier {
   MinesweeperDifficulty _minesweeperDifficulty;
   String _minesweeperThemeId;
   int _minesweeperFlagHoldMs;
+  bool _minesweeperVibrate;
 
   static Future<SettingsStore> load([SharedPreferencesAsync? prefs]) async {
     prefs ??= SharedPreferencesAsync();
@@ -86,6 +89,7 @@ class SettingsStore extends ChangeNotifier {
     var minesweeperDifficulty = MinesweeperDifficulty.medium;
     var minesweeperThemeId = classicMinesweeperTheme.id;
     var minesweeperFlagHoldMs = defaultFlagHoldMs;
+    var minesweeperVibrate = false;
     try {
       locale = _supportedLocale(await prefs.getString(localeKey));
       cardBackId = _knownCardBack(await prefs.getString(cardBackKey));
@@ -130,6 +134,7 @@ class SettingsStore extends ChangeNotifier {
       minesweeperFlagHoldMs = _knownFlagHold(
         await prefs.getInt(minesweeperFlagHoldKey),
       );
+      minesweeperVibrate = await prefs.getBool(minesweeperVibrateKey) ?? false;
     } on Object catch (error) {
       // Storage can be blocked (for example site data off in the browser).
       // The app still works, it only keeps the settings of this session.
@@ -150,6 +155,7 @@ class SettingsStore extends ChangeNotifier {
       minesweeperDifficulty,
       minesweeperThemeId,
       minesweeperFlagHoldMs,
+      minesweeperVibrate,
     );
   }
 
@@ -196,6 +202,9 @@ class SettingsStore extends ChangeNotifier {
 
   /// How long a finger holds a Minesweeper cell to flag it, in ms.
   int get minesweeperFlagHoldMs => _minesweeperFlagHoldMs;
+
+  /// Whether the phone buzzes when a hold flags a Minesweeper cell.
+  bool get minesweeperVibrate => _minesweeperVibrate;
 
   /// Listeners are told after the write, never during the call, like the
   /// other stores.
@@ -321,6 +330,15 @@ class SettingsStore extends ChangeNotifier {
     await _guard(
       'save the Minesweeper hold time',
       () => _prefs.setInt(minesweeperFlagHoldKey, _minesweeperFlagHoldMs),
+    );
+    notifyListeners();
+  }
+
+  Future<void> setMinesweeperVibrate(bool vibrate) async {
+    _minesweeperVibrate = vibrate;
+    await _guard(
+      'save the Minesweeper vibration',
+      () => _prefs.setBool(minesweeperVibrateKey, vibrate),
     );
     notifyListeners();
   }

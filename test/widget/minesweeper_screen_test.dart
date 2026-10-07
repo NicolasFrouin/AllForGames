@@ -11,6 +11,7 @@ import 'package:all_for_games/settings/settings_store.dart';
 import 'package:all_for_games/stats/game_record.dart';
 import 'package:all_for_games/stats/stats_screen.dart';
 import 'package:flutter/gestures.dart' show kSecondaryMouseButton;
+import 'package:flutter/services.dart' show SystemChannels;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -192,6 +193,30 @@ void main() {
 
     expect(await holdFlags(tester, 0, 550), isFalse);
     expect(await holdFlags(tester, 0, 650), isTrue);
+  });
+
+  testWidgets('a hold vibrates only once the settings turn it on', (
+    tester,
+  ) async {
+    final vibrations = <String>[];
+    final messenger = tester.binding.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method.startsWith('HapticFeedback')) vibrations.add(call.method);
+      return null;
+    });
+    addTearDown(
+      () => messenger.setMockMethodCallHandler(SystemChannels.platform, null),
+    );
+    final stores = await pumpGame(tester, state: cornerBoard);
+    await tapCell(tester, cornerTap);
+
+    expect(await holdFlags(tester, 0, 400), isTrue);
+    expect(vibrations, isEmpty);
+
+    await stores.settings.setMinesweeperVibrate(true);
+    await tester.pumpAndSettle();
+    expect(await holdFlags(tester, 1, 400), isTrue);
+    expect(vibrations, hasLength(1));
   });
 
   testWidgets('two fingers zoom the board in; a tap opens the cell under it', (

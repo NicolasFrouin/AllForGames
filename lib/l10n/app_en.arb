@@ -34,6 +34,10 @@
   "@settingsFlagHoldHint": {
     "description": "Explanation below the Minesweeper hold time setting."
   },
+  "settingsFlagVibrate": "Vibrate when a hold puts a flag",
+  "@settingsFlagVibrate": {
+    "description": "Minesweeper setting (a switch): the phone buzzes when a held finger puts a flag."
+  },
   "cancel": "Cancel",
   "@cancel": {
     "description": "Dialog button that closes the dialog without doing anything."

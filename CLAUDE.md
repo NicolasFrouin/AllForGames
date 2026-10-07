@@ -67,7 +67,7 @@ lib/
                              the screens; its constructor keeps the achievements in sync with the stats
   l10n/                      app_en.arb (template) + app_fr.arb; app_localizations*.dart are generated (git-ignored)
   settings/                  SettingsStore: player settings (language, card back, tile style, game options), one
-                             storage key per setting; settings_screen (/settings: language, Minesweeper hold time)
+                             storage key per setting; settings_screen (/settings: language, game options)
   achievements/              Achievement definitions (goal + progress from records; achievementGameIds orders the
                              groups), AchievementStore (unlock dates), achievement_texts (id -> title/description,
                              card back and tile style names), achievements page (one tab per achievementGameIds
@@ -146,7 +146,8 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   classic; `settings.tileStyle`: Mahjong tile style id, unknown = classic; `settings.minesweeperTheme`: theme id,
   unknown = classic; `settings.klondike.drawCount`: int 1/3, unknown = 1; `settings.mahjong.mode`: `classic`/`tray`,
   unknown = classic; `settings.<game>.difficulty`: `easy`/`medium`/`hard`, unknown = medium;
-  `settings.minesweeper.flagHoldMs`: int, absent = 300, limited to 150..750),
+  `settings.minesweeper.flagHoldMs`: int, absent = 300, limited to 150..750; `settings.minesweeper.vibrate`: bool,
+  absent = false),
   `achievements.<id>` per unlocked achievement (UTC ISO date).
   Catch storage errors (blocked or full storage must not break the app).
 - **ChangeNotifier stores** notify *after* an `await`, never synchronously in a mutating call:
@@ -237,8 +238,9 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   variant `classic`, moves = clicks (opens, chords, flags), score = 10 per 3BV cleared. The colors are a
   `MinesweeperTheme` (the selected skin); `all.everyGame`'s goal is the number of games (a test checks it). A hold of
   the settings' time flags a cell (`flagHold`, its own `LongPressGestureRecognizer`: Flutter's long press takes
-  500 ms) and buzzes the phone. Two fingers zoom every board (`InteractiveViewer`, cells up to `maxZoomCell`); cells
-  smaller than `minCell` keep that size and the board pans. A new board size resets the zoom.
+  500 ms) and, with the vibration setting (off by default), buzzes the phone. Two fingers zoom every board
+  (`InteractiveViewer`, cells up to `maxZoomCell`); cells smaller than `minCell` keep that size and the board pans. A
+  new board size resets the zoom.
 - **Card suits** are drawn with `SuitIcon` (`lib/cards/`, vector). Text symbols ♥ ♦ render as color emoji on web.
   Face-down cards are drawn with `CardBackView` and the selected skin.
 - **Keys for tests**: widgets that tests drive have `ValueKey`s (`game-<id>`, `stats-<id>`, `stock`, `waste`,
@@ -247,7 +249,7 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   `stat-winRate` or `stat-<detailKey>`, `variant-<id>`, `difficulty-<name>` (and `-all`) on the stats page,
   `overview-stats-button` (hub), `overview-stat-<id>`, `overview-game-<gameId>`, `overview-recent-<i>`,
   `overview-achievements`, `overview-activity` on /stats, `settings-button`, `language-<code>`,
-  `flag-hold`, `flag-hold-value` on /settings,
+  `flag-hold`, `flag-hold-value`, `flag-vibrate` on /settings,
   `achievements-button`, `skins-button`, `achievement-<id>`, `achievement-tab-<gameId>`, `achievements-count` (all)
   and `achievements-count-<gameId>`, `skins-tab-<kind>` (`SkinKind` name), `skins-group-<free|gameId>`,
   `card-back-<id>`, `tile-style-<id>`, `minesweeper-theme-<id>`, `unlocked-<id>` in the win dialog; Mahjong:

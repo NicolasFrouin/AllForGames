@@ -112,6 +112,7 @@ class MinesweeperBoard extends StatefulWidget {
     this.flagHold = const Duration(
       milliseconds: SettingsStore.defaultFlagHoldMs,
     ),
+    this.vibrate = false,
     this.onCelebrated,
     this.onLost,
   });
@@ -124,6 +125,10 @@ class MinesweeperBoard extends StatefulWidget {
 
   /// How long a finger holds a cell to flag it.
   final Duration flagHold;
+
+  /// Whether the phone buzzes when a hold flags a cell: the finger can let
+  /// go.
+  final bool vibrate;
 
   /// Called once after a win, when the celebration has played (at once with
   /// reduced motion): time for the win dialog.
@@ -403,7 +408,7 @@ class _MinesweeperBoardState extends State<MinesweeperBoard>
   void _onSecondaryTapUp(TapUpDetails details) => _flag(details.localPosition);
 
   void _onHold(LongPressStartDetails details) =>
-      _flag(details.localPosition, felt: true);
+      _flag(details.localPosition, held: true);
 
   MinesweeperArt _artFor(double cell) {
     final art = _art;
@@ -669,13 +674,10 @@ class _MinesweeperBoardState extends State<MinesweeperBoard>
     if (!done && refused && !state.isOver && _animate) _shake(cell);
   }
 
-  /// With [felt], the phone buzzes when the flag changes: the finger can
-  /// let go.
-  void _flag(Offset position, {bool felt = false}) {
+  void _flag(Offset position, {bool held = false}) {
     final cell = _geometry?.cellAt(position);
-    if (cell != null && _controller.toggleFlag(cell) && felt) {
-      unawaited(Feedback.forLongPress(context));
-    }
+    if (cell == null || !_controller.toggleFlag(cell)) return;
+    if (held && widget.vibrate) unawaited(Feedback.forLongPress(context));
   }
 
   void _shake(int cell) {
