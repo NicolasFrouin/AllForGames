@@ -15,3 +15,6 @@ Project conventions live in `CLAUDE.md`. Add here only lessons learned that appl
 - An Android release build fails with "package dev.flutter.plugins.integration_test does not exist" when the plugin
   registrant was written by a debug-mode flutter command (pub get, test) during the build or after it: with
   `--no-pub`, or in a working tree shared with other running flutter commands. Build in an isolated copy then.
+- A screen opened without a seed deals at random: a test that checks a deal-specific fact (a layout, a tile's
+  state, an orientation) fails now and then. Give it a seed or a fixed layout, and loop the test file a few
+  times after a change to the deal generators.
