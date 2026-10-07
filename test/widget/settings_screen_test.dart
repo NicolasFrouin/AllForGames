@@ -1,4 +1,5 @@
 import 'package:all_for_games/app.dart';
+import 'package:all_for_games/games/mahjong/mahjong_difficulty.dart';
 import 'package:all_for_games/settings/settings_store.dart';
 import 'package:all_for_games/stats/game_record.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -30,10 +31,13 @@ Future<void> openSettings(WidgetTester tester) async {
 
 /// The selected language on the settings page: `system`, `en` or `fr`.
 String selectedLanguage(WidgetTester tester) {
-  final chip = tester
+  const prefix = 'language-';
+  return tester
       .widgetList<ChoiceChip>(find.byType(ChoiceChip))
-      .singleWhere((chip) => chip.selected);
-  return (chip.key! as ValueKey<String>).value.substring('language-'.length);
+      .where((chip) => chip.selected)
+      .map((chip) => (chip.key! as ValueKey<String>).value)
+      .singleWhere((key) => key.startsWith(prefix))
+      .substring(prefix.length);
 }
 
 Future<void> chooseLanguage(WidgetTester tester, String code) async {
@@ -99,6 +103,16 @@ void main() {
       await SharedPreferencesAsync().getString(SettingsStore.localeKey),
       isNull,
     );
+  });
+
+  testWidgets('a chip puts the Mahjong tray on its side', (tester) async {
+    await pumpHub(tester);
+    await openSettings(tester);
+
+    await tester.tap(find.byKey(const ValueKey('tray-side-right')));
+    await tester.pumpAndSettle();
+
+    expect((await SettingsStore.load()).mahjongTraySide, MahjongTraySide.right);
   });
 
   testWidgets('the switch turns the Minesweeper vibration on', (tester) async {

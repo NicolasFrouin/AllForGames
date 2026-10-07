@@ -2,10 +2,12 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 
+import '../games/mahjong/mahjong_difficulty.dart';
 import '../l10n/app_localizations.dart';
 import 'settings_store.dart';
 
-/// The settings page: the language, and how Minesweeper flags a cell.
+/// The settings page: the language, the place of Mahjong's tray, and how
+/// Minesweeper flags a cell.
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key, required this.settings});
 
@@ -73,6 +75,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           language(
                             languageCode,
                             _names[languageCode] ?? languageCode,
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _Section(
+                  title: l10n.mahjongTitle,
+                  children: [
+                    Text(l10n.settingsTraySide),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final side in MahjongTraySide.values)
+                          ChoiceChip(
+                            key: ValueKey('tray-side-${side.name}'),
+                            label: Text(l10n.settingsTraySideName(side.name)),
+                            selected: side == settings.mahjongTraySide,
+                            onSelected: (_) =>
+                                settings.setMahjongTraySide(side),
                           ),
                       ],
                     ),

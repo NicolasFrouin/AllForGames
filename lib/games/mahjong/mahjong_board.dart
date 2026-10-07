@@ -8,6 +8,7 @@ import '../../cards/confetti.dart';
 import '../../l10n/app_localizations.dart';
 import '../../skins/tile_styles.dart';
 import 'mahjong_controller.dart';
+import 'mahjong_difficulty.dart';
 import 'mahjong_layout.dart';
 import 'mahjong_motion.dart';
 import 'mahjong_moving_tile.dart';
@@ -17,23 +18,23 @@ import 'mahjong_tiles.dart';
 import 'mahjong_tray.dart';
 
 /// The size of the tiles and where each one goes, for a layout in a size,
-/// and in tray mode the places of the tray under the board.
+/// and in tray mode the places of the tray on its side of the board.
 class MahjongBoardGeometry {
   factory MahjongBoardGeometry.fit(
     Size size,
     MahjongLayout layout, {
-    bool tray = false,
+    MahjongTraySide? tray,
   }) {
     final columns = layout.width / 2;
     final rows = layout.height / 2;
     var (width, ratio) = _fit(size, columns, rows, layout.layers);
-    if (tray) {
+    if (tray != null) {
       // The tray takes room from the board, so the tiles shrink a little:
       // the room they need at the first size is enough.
-      final room = Size(
-        size.width,
-        max(1.0, size.height - _trayHeight(width, ratio)),
-      );
+      final thickness = width * _trayThickness(ratio, tray);
+      final room = _isSide(tray)
+          ? Size(max(1.0, size.width - thickness), size.height)
+          : Size(size.width, max(1.0, size.height - thickness));
       (width, ratio) = _fit(room, columns, rows, layout.layers);
     }
     return MahjongBoardGeometry._(width, width * ratio, layout, tray);
@@ -43,43 +44,72 @@ class MahjongBoardGeometry {
     this.tileWidth,
     this.tileHeight,
     MahjongLayout layout,
-    bool tray,
+    MahjongTraySide? tray,
   ) : depth = tileWidth * _depthRatio,
       _layers = layout.layers {
     final board = Size(
       tileWidth * (layout.width / 2 + _depthRatio * layout.layers),
       tileHeight * layout.height / 2 + depth * layout.layers,
     );
-    if (!tray) {
+    if (tray == null) {
       size = board;
       boardOffset = Offset.zero;
       trayRect = null;
       traySlots = const [];
       return;
     }
+    final side = _isSide(tray);
     final padding = tileWidth * _trayPadding;
     final gap = tileWidth * _slotGap;
-    final panel = Size(
-      tileWidth * TrayState.capacity +
-          gap * (TrayState.capacity - 1) +
-          depth +
-          2 * padding,
-      _trayHeight(tileWidth, tileHeight / tileWidth),
-    );
-    size = Size(max(board.width, panel.width), board.height + panel.height);
-    boardOffset = Offset((size.width - board.width) / 2, 0);
-    final panelTop = board.height + tileWidth * _trayGap;
-    trayRect = Rect.fromLTWH(
-      (size.width - panel.width) / 2,
-      panelTop,
-      panel.width,
-      panel.height - tileWidth * _trayGap,
-    );
+    final trayGap = tileWidth * _trayGap;
+    const places = TrayState.capacity;
+    final panel = side
+        ? Size(
+            tileWidth + depth + 2 * padding,
+            places * tileHeight + (places - 1) * gap + depth + 2 * padding,
+          )
+        : Size(
+            places * tileWidth + (places - 1) * gap + depth + 2 * padding,
+            tileHeight + depth + 2 * padding,
+          );
+    size = side
+        ? Size(
+            board.width + trayGap + panel.width,
+            max(board.height, panel.height),
+          )
+        : Size(
+            max(board.width, panel.width),
+            board.height + trayGap + panel.height,
+          );
+    // Across the tray, the board and the tray are centered on each other.
+    double across(Size part) =>
+        side ? (size.height - part.height) / 2 : (size.width - part.width) / 2;
+    final (boardAt, panelAt) = switch (tray) {
+      MahjongTraySide.top => (
+        Offset(across(board), panel.height + trayGap),
+        Offset(across(panel), 0),
+      ),
+      MahjongTraySide.bottom => (
+        Offset(across(board), 0),
+        Offset(across(panel), board.height + trayGap),
+      ),
+      MahjongTraySide.left => (
+        Offset(panel.width + trayGap, across(board)),
+        Offset(0, across(panel)),
+      ),
+      MahjongTraySide.right => (
+        Offset(0, across(board)),
+        Offset(board.width + trayGap, across(panel)),
+      ),
+    };
+    boardOffset = boardAt;
+    final trayAt = panelAt & panel;
+    trayRect = trayAt;
     traySlots = [
-      for (var i = 0; i < TrayState.capacity; i++)
+      for (var i = 0; i < places; i++)
         Rect.fromLTWH(
-          trayRect!.left + padding + i * (tileWidth + gap),
-          panelTop + padding,
+          trayAt.left + padding + (side ? 0 : i * (tileWidth + gap)),
+          trayAt.top + padding + (side ? i * (tileHeight + gap) : 0),
           tileWidth,
           tileHeight,
         ),
@@ -109,7 +139,7 @@ class MahjongBoardGeometry {
   /// The size of the whole board, the tray included.
   late final Size size;
 
-  /// Where the layout starts in [size]: the tray can be wider than it.
+  /// Where the layout starts in [size], next to the tray.
   late final Offset boardOffset;
 
   /// The frame of the tray, and the face of a tile in each of its places
@@ -127,10 +157,13 @@ class MahjongBoardGeometry {
     tileHeight,
   );
 
-  /// The height of the tray and its gap from the board, for tiles of
-  /// [width] and height [ratio].
-  static double _trayHeight(double width, double ratio) =>
-      width * (ratio + _depthRatio + 2 * _trayPadding + _trayGap);
+  static bool _isSide(MahjongTraySide tray) =>
+      tray == MahjongTraySide.left || tray == MahjongTraySide.right;
+
+  /// Across the places: the tray and its gap from the board, for tiles of
+  /// width 1 and height [ratio].
+  static double _trayThickness(double ratio, MahjongTraySide tray) =>
+      (_isSide(tray) ? 1 : ratio) + _depthRatio + 2 * _trayPadding + _trayGap;
 
   /// The tile width and height ratio of a layout of [columns] by [rows]
   /// tiles on [layers] in [size].
@@ -155,11 +188,11 @@ class MahjongBoardGeometry {
   }
 
   /// Whether [layout] with rows and columns swapped has bigger tiles in
-  /// [size] (a tall screen), with a [tray] under it or not.
+  /// [size] (a tall screen), with a [tray] on a side or not.
   static bool prefersTransposed(
     Size size,
     MahjongLayout layout, {
-    bool tray = false,
+    MahjongTraySide? tray,
   }) {
     double area(MahjongLayout layout) {
       final geometry = MahjongBoardGeometry.fit(size, layout, tray: tray);
@@ -202,7 +235,7 @@ class _PaintOrder extends ChangeNotifier {
   }
 }
 
-/// Draws the Mahjong board, and the tray under it in tray mode. One
+/// Draws the Mahjong board, and the tray next to it in tray mode. One
 /// timeline moves the tiles: each action plans a [TileMotion] for the tiles
 /// it changes (a drop for a new deal, a flight for a shuffle or a pick into
 /// the tray, a vanish for a match, a pop for a pair cleared in the tray),
@@ -216,12 +249,16 @@ class MahjongBoard extends StatefulWidget {
     super.key,
     required this.controller,
     this.tileStyle = classicTileStyle,
+    this.traySide = MahjongTraySide.top,
     this.onCelebrated,
     this.onLost,
   });
 
   final MahjongController controller;
   final TileStyle tileStyle;
+
+  /// Where the tray is in tray mode.
+  final MahjongTraySide traySide;
 
   /// Called once after a win, when the celebration has played (at once with
   /// reduced motion): time for the win dialog.
@@ -381,7 +418,7 @@ class _MahjongBoardState extends State<MahjongBoard>
           final geometry = MahjongBoardGeometry.fit(
             constraints.biggest,
             state.layout,
-            tray: _controller.isTray,
+            tray: _controller.isTray ? widget.traySide : null,
           );
           _geometry = geometry;
           _plan(state, geometry, animate: animate);

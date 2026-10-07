@@ -141,14 +141,13 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   deals a new game. Route params (`/klondike?seed=42`) start that deal and abandon the saved one.
 - **Storage** (shared_preferences, `SharedPreferencesAsync`; localStorage on web): one key per item, never a whole
   list (other tabs and unreadable entries must survive). Keys: `stats.game.<gameId>-<startedAt µs>-<seed>` per
-  record (`StatsStore.keyOf`), `save.<gameId>` per game in progress (`GameSaveStore.keyOf`), `settings.<name>`
-  per setting (`settings.locale`: `en`/`fr`, absent = device language; `settings.cardBack`: skin id, unknown =
-  classic; `settings.tileStyle`: Mahjong tile style id, unknown = classic; `settings.minesweeperTheme`: theme id,
-  unknown = classic; `settings.klondike.drawCount`: int 1/3, unknown = 1; `settings.mahjong.mode`: `classic`/`tray`,
-  unknown = classic; `settings.<game>.difficulty`: `easy`/`medium`/`hard`, unknown = medium;
-  `settings.minesweeper.flagHoldMs`: int, absent = 300, limited to 150..750; `settings.minesweeper.vibrate`: bool,
-  absent = false),
-  `achievements.<id>` per unlocked achievement (UTC ISO date).
+  record (`StatsStore.keyOf`), `save.<gameId>` per game in progress (`GameSaveStore.keyOf`), `settings.<name>` per
+  setting (`settings.locale`: `en`/`fr`, absent = device language; `settings.cardBack`: skin id, unknown = classic;
+  `settings.tileStyle`: Mahjong tile style id, unknown = classic; `settings.minesweeperTheme`: theme id, unknown =
+  classic; `settings.klondike.drawCount`: int 1/3, unknown = 1; `settings.mahjong.mode`: `classic`/`tray`, unknown =
+  classic; `settings.mahjong.traySide`: `top`/`bottom`/`left`/`right`, unknown = top; `settings.<game>.difficulty`:
+  `easy`/`medium`/`hard`, unknown = medium; `settings.minesweeper.flagHoldMs`: int, absent = 300, limited to 150..750;
+  `settings.minesweeper.vibrate`: bool, absent = false), `achievements.<id>` per unlocked achievement (UTC ISO date).
   Catch storage errors (blocked or full storage must not break the app).
 - **ChangeNotifier stores** notify *after* an `await`, never synchronously in a mutating call:
   screens call them from `dispose()`, when no widget can rebuild.
@@ -220,15 +219,16 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   bonus each. Score (`TriPeaksScoring`): 10 × the card's place in its run (a draw ends a run), 500 per peak top,
   100 per stock card left. The board only draws the top four waste cards (and those of the last action).
 - **Mahjong**: 36 faces, four tiles each; only tiles of the same face match (one flower face, one season face).
-  Deals are built at runtime from the seed (`DealRandom`), solvable by construction (removing pairs
-  of free places from the full layout gives a clearing order). A level is a layout plus a trap rate, checked by
-  `tool/mahjong_difficulty.dart` and a unit test that keeps the levels ordered. On a tall screen the layout is
-  dealt with rows and columns swapped (chosen at deal time, saved with the game). Tile art is vector (no emoji,
-  no CJK font). Two modes (`MahjongMode`, one save slot holding the mode): classic, and tray (`mahjong_tray.dart`):
-  a tapped free tile goes into a tray of 4 places where two of a face clear each other; a full tray loses at once
-  (`GameOutcome.lost`). Tray deals are built forwards (one free tile after the other, faces given so the order
-  never holds more than `TrayLevel.held` tiles); the level also sets how many pairs are blind (not free together)
-  and seen together. Records: variant = layout id, `tray-<layoutId>` in tray mode; no shuffle in tray mode.
+  Deals are built at runtime from the seed (`DealRandom`), solvable by construction (removing pairs of free places
+  from the full layout gives a clearing order). A level is a layout plus a trap rate, checked by
+  `tool/mahjong_difficulty.dart` and a unit test that keeps the levels ordered. On a tall screen the layout is dealt
+  with rows and columns swapped (chosen at deal time, saved with the game). Tile art is vector (no emoji, no CJK
+  font). Two modes (`MahjongMode`, one save slot holding the mode): classic, and tray (`mahjong_tray.dart`): a tapped
+  free tile goes into a tray of 4 places where two of a face clear each other (on the side of the board the settings
+  give, `MahjongTraySide`, top by default; in a column on the left or right); a full tray loses at once
+  (`GameOutcome.lost`). Tray deals are built forwards (one free tile after the other, faces given so the order never
+  holds more than `TrayLevel.held` tiles); the level also sets how many pairs are blind (not free together) and seen
+  together. Records: variant = layout id, `tray-<layoutId>` in tray mode; no shuffle in tray mode.
 - **Minesweeper**: levels Beginner 9x9/10, Intermediate 16x16/40, Expert 30x16/99 (`easy`/`medium`/`hard`; Expert
   is turned 16x30 on a tall screen, chosen at deal time and saved). Mines are placed at the first tap
   (`generateMines`, `DealRandom` from seed + tap): none touches it, and `MinesweeperSolver` clears the board by logic
@@ -249,7 +249,7 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   `stat-winRate` or `stat-<detailKey>`, `variant-<id>`, `difficulty-<name>` (and `-all`) on the stats page,
   `overview-stats-button` (hub), `overview-stat-<id>`, `overview-game-<gameId>`, `overview-recent-<i>`,
   `overview-achievements`, `overview-activity` on /stats, `settings-button`, `language-<code>`,
-  `flag-hold`, `flag-hold-value`, `flag-vibrate` on /settings,
+  `tray-side-<side>`, `flag-hold`, `flag-hold-value`, `flag-vibrate` on /settings,
   `achievements-button`, `skins-button`, `achievement-<id>`, `achievement-tab-<gameId>`, `achievements-count` (all)
   and `achievements-count-<gameId>`, `skins-tab-<kind>` (`SkinKind` name), `skins-group-<free|gameId>`,
   `card-back-<id>`, `tile-style-<id>`, `minesweeper-theme-<id>`, `unlocked-<id>` in the win dialog; Mahjong:

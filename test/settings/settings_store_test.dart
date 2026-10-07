@@ -301,6 +301,22 @@ void main() {
     },
   );
 
+  test(
+    'the Mahjong tray is at the top by default, and keeps its side',
+    () async {
+      final store = await createStore({SettingsStore.mahjongTraySideKey: 'up'});
+      expect(store.mahjongTraySide, MahjongTraySide.top);
+
+      await store.setMahjongTraySide(MahjongTraySide.left);
+
+      expect(store.mahjongTraySide, MahjongTraySide.left);
+      expect(
+        (await SettingsStore.load()).mahjongTraySide,
+        MahjongTraySide.left,
+      );
+    },
+  );
+
   test('listeners are told after the write, not during the call', () async {
     final store = await createStore();
     var notified = 0;

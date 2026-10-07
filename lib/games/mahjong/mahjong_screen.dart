@@ -147,7 +147,9 @@ class _MahjongScreenState extends State<MahjongScreen> {
     return MahjongBoardGeometry.prefersTransposed(
       room,
       difficulty.layout(),
-      tray: mode == MahjongMode.tray,
+      tray: mode == MahjongMode.tray
+          ? widget.stores.settings.mahjongTraySide
+          : null,
     );
   }
 
@@ -317,26 +319,33 @@ class _MahjongScreenState extends State<MahjongScreen> {
             children: [
               _StatusBar(controller: controller),
               Expanded(
-                child: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(8, 4, 8, 12),
-                        child: ListenableBuilder(
-                          listenable: widget.stores.settings,
-                          builder: (context, _) => MahjongBoard(
-                            controller: controller,
-                            tileStyle: tileStyleById(
-                              widget.stores.settings.tileStyleId,
+                child: ListenableBuilder(
+                  listenable: widget.stores.settings,
+                  builder: (context, _) {
+                    final settings = widget.stores.settings;
+                    return Stack(
+                      children: [
+                        Positioned.fill(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(8, 4, 8, 12),
+                            child: MahjongBoard(
+                              controller: controller,
+                              tileStyle: tileStyleById(settings.tileStyleId),
+                              traySide: settings.mahjongTraySide,
+                              onCelebrated: _showWinDialog,
+                              onLost: _showLossDialog,
                             ),
-                            onCelebrated: _showWinDialog,
-                            onLost: _showLossDialog,
                           ),
                         ),
-                      ),
-                    ),
-                    _StuckBanner(controller: controller),
-                  ],
+                        _StuckBanner(
+                          controller: controller,
+                          trayAtBottom:
+                              settings.mahjongTraySide ==
+                              MahjongTraySide.bottom,
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
             ],
@@ -407,9 +416,14 @@ class _TrayFullDialog extends StatelessWidget {
 /// Offered as soon as no move is left that does not lose: in classic mode
 /// shuffle, or undo; in tray mode undo.
 class _StuckBanner extends StatelessWidget {
-  const _StuckBanner({required this.controller});
+  const _StuckBanner({required this.controller, required this.trayAtBottom});
 
   final MahjongController controller;
+
+  /// In tray mode, a tray at the bottom puts the banner at the top.
+  final bool trayAtBottom;
+
+  bool get _atTop => trayAtBottom && controller.isTray;
 
   @override
   Widget build(BuildContext context) {
@@ -418,19 +432,13 @@ class _StuckBanner extends StatelessWidget {
     final animate = !MediaQuery.disableAnimationsOf(context);
     return ListenableBuilder(
       listenable: controller,
-      // In tray mode, the tray is at the bottom.
       builder: (context, _) => Align(
-        alignment: controller.isTray
-            ? Alignment.topCenter
-            : Alignment.bottomCenter,
+        alignment: _atTop ? Alignment.topCenter : Alignment.bottomCenter,
         child: AnimatedSwitcher(
           duration: Duration(milliseconds: animate ? 280 : 0),
           transitionBuilder: (child, animation) => SlideTransition(
-            position:
-                Tween(
-                  begin: Offset(0, controller.isTray ? -1 : 1),
-                  end: Offset.zero,
-                ).animate(
+            position: Tween(begin: Offset(0, _atTop ? -1 : 1), end: Offset.zero)
+                .animate(
                   CurvedAnimation(parent: animation, curve: Curves.easeOut),
                 ),
             child: FadeTransition(opacity: animation, child: child),

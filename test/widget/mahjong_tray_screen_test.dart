@@ -129,6 +129,23 @@ List<int> fourStrangers(int seed) {
 }
 
 void main() {
+  testWidgets('the tray is above the tiles, or on the side of the settings', (
+    tester,
+  ) async {
+    final stores = await pumpTray(tester, state: rowBoard);
+    Rect slot(int i) => tester.getRect(byKey('tray-slot-$i'));
+    expect(slot(0).bottom, lessThan(tester.getRect(tile(0)).top));
+
+    await stores.settings.setMahjongTraySide(MahjongTraySide.left);
+    await tester.pumpAndSettle();
+    expect(slot(3).right, lessThan(tester.getRect(tile(0)).left));
+    expect(slot(1).left, slot(0).left);
+    expect(slot(1).top, greaterThan(slot(0).top));
+
+    await tapTile(tester, 0);
+    expect(inSlot(tester, 0, 0), isTrue);
+  });
+
   testWidgets('a tapped tile flies into the first place of the tray', (
     tester,
   ) async {

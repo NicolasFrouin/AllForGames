@@ -7,6 +7,9 @@ import 'mahjong_layout.dart';
 /// Pure Dart: the settings and the offline tool use it.
 enum MahjongMode { classic, tray }
 
+/// Where the tray of the tray mode is, next to the board (a setting).
+enum MahjongTraySide { top, bottom, left, right }
+
 /// How the tray deals of a level are built (`generateTrayDeal`): the order
 /// that wins a deal holds at most [held] tiles in the tray at once. After a
 /// pick that waits in the tray, the next one waits too with [waitPercent]

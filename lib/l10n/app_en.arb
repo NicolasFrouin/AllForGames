@@ -34,6 +34,19 @@
   "@settingsFlagHoldHint": {
     "description": "Explanation below the Minesweeper hold time setting."
   },
+  "settingsTraySide": "Place of the tray (Tray mode)",
+  "@settingsTraySide": {
+    "description": "Mahjong setting: on which side of the board the tray of the Tray mode is."
+  },
+  "settingsTraySideName": "{side, select, top{Top} bottom{Bottom} left{Left} right{Right} other{Top}}",
+  "@settingsTraySideName": {
+    "description": "A choice of the Mahjong tray setting: a side of the board.",
+    "placeholders": {
+      "side": {
+        "type": "String"
+      }
+    }
+  },
   "settingsFlagVibrate": "Vibrate when a hold puts a flag",
   "@settingsFlagVibrate": {
     "description": "Minesweeper setting (a switch): the phone buzzes when a held finger puts a flag."
