@@ -74,7 +74,11 @@ void mahjongFlows() {
     await tester.tap(find.byKey(const ValueKey('new-game')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('new-game-abandons')), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('new-game-deal')));
+    // The sheet is taller than the window: Deal is further down.
+    final deal = find.byKey(const ValueKey('new-game-deal'));
+    await tester.ensureVisible(deal);
+    await tester.pumpAndSettle();
+    await tester.tap(deal);
     await tester.pumpAndSettle();
     final record = (await StatsStore.load()).records.single;
     expect(
