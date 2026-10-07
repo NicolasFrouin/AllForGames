@@ -34,6 +34,7 @@ class SettingsStore extends ChangeNotifier {
     this._minesweeperVibrate,
     this._mahjongTraySide,
     this._pinnedGames,
+    this._mahjongShape,
   );
 
   static const localeKey = 'settings.locale';
@@ -45,6 +46,7 @@ class SettingsStore extends ChangeNotifier {
   static const mahjongDifficultyKey = 'settings.mahjong.difficulty';
   static const mahjongModeKey = 'settings.mahjong.mode';
   static const mahjongTraySideKey = 'settings.mahjong.traySide';
+  static const mahjongShapeKey = 'settings.mahjong.shape';
   static const freecellDifficultyKey = 'settings.freecell.difficulty';
   static const spiderDifficultyKey = 'settings.spider.difficulty';
   static const tripeaksDifficultyKey = 'settings.tripeaks.difficulty';
@@ -79,6 +81,7 @@ class SettingsStore extends ChangeNotifier {
   bool _minesweeperVibrate;
   MahjongTraySide _mahjongTraySide;
   List<String> _pinnedGames;
+  MahjongShape _mahjongShape;
 
   static Future<SettingsStore> load([SharedPreferencesAsync? prefs]) async {
     prefs ??= SharedPreferencesAsync();
@@ -98,6 +101,7 @@ class SettingsStore extends ChangeNotifier {
     var minesweeperVibrate = false;
     var mahjongTraySide = MahjongTraySide.top;
     var pinnedGames = <String>[];
+    var mahjongShape = MahjongShape.generated;
     try {
       locale = _supportedLocale(await prefs.getString(localeKey));
       cardBackId = _knownCardBack(await prefs.getString(cardBackKey));
@@ -149,6 +153,11 @@ class SettingsStore extends ChangeNotifier {
           )] ??
           MahjongTraySide.top;
       pinnedGames = {...?await prefs.getStringList(pinnedGamesKey)}.toList();
+      mahjongShape =
+          MahjongShape.values.asNameMap()[await prefs.getString(
+            mahjongShapeKey,
+          )] ??
+          MahjongShape.generated;
     } on Object catch (error) {
       // Storage can be blocked (for example site data off in the browser).
       // The app still works, it only keeps the settings of this session.
@@ -172,6 +181,7 @@ class SettingsStore extends ChangeNotifier {
       minesweeperVibrate,
       mahjongTraySide,
       pinnedGames,
+      mahjongShape,
     );
   }
 
@@ -200,6 +210,10 @@ class SettingsStore extends ChangeNotifier {
   /// Mode of the last new Mahjong game the player dealt (classic or tray),
   /// for the next one.
   MahjongMode get mahjongMode => _mahjongMode;
+
+  /// Shape of the last new Mahjong game the player dealt (a generated one,
+  /// or the classic layout of the level), for the next one.
+  MahjongShape get mahjongShape => _mahjongShape;
 
   /// Where the tray of Mahjong's tray mode is, next to the board.
   MahjongTraySide get mahjongTraySide => _mahjongTraySide;
@@ -306,6 +320,15 @@ class SettingsStore extends ChangeNotifier {
     await _guard(
       'save the Mahjong mode',
       () => _prefs.setString(mahjongModeKey, mode.name),
+    );
+    notifyListeners();
+  }
+
+  Future<void> setMahjongShape(MahjongShape shape) async {
+    _mahjongShape = shape;
+    await _guard(
+      'save the Mahjong shape',
+      () => _prefs.setString(mahjongShapeKey, shape.name),
     );
     notifyListeners();
   }

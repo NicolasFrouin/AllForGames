@@ -5,9 +5,13 @@ import 'mahjong_difficulty.dart';
 import 'mahjong_difficulty_texts.dart';
 
 /// Options of a new Mahjong game.
-typedef MahjongNewGame = ({MahjongMode mode, MahjongDifficulty difficulty});
+typedef MahjongNewGame = ({
+  MahjongMode mode,
+  MahjongDifficulty difficulty,
+  MahjongShape shape,
+});
 
-/// Lets the player choose the mode and the difficulty of a new game,
+/// Lets the player choose the mode, the difficulty and the shape of a new game,
 /// starting from [initial]. With [abandons], it says that the game on screen
 /// will count as abandoned, so Deal also confirms that.
 ///
@@ -38,6 +42,7 @@ class _NewGameSheet extends StatefulWidget {
 class _NewGameSheetState extends State<_NewGameSheet> {
   late MahjongMode _mode = widget.initial.mode;
   late MahjongDifficulty _difficulty = widget.initial.difficulty;
+  late MahjongShape _shape = widget.initial.shape;
 
   @override
   Widget build(BuildContext context) {
@@ -115,6 +120,34 @@ class _NewGameSheetState extends State<_NewGameSheet> {
               color: colors.onSurfaceVariant,
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.only(top: 16, bottom: 8),
+            child: Text(
+              l10n.mahjongShapeTitle,
+              style: theme.textTheme.titleSmall,
+            ),
+          ),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final shape in MahjongShape.values)
+                ChoiceChip(
+                  key: ValueKey('new-game-shape-${shape.name}'),
+                  label: Text(shape.label(l10n, _difficulty)),
+                  selected: _shape == shape,
+                  onSelected: (_) => setState(() => _shape = shape),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _shape.hint(l10n, _difficulty),
+            key: const ValueKey('new-game-shape-hint'),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: colors.onSurfaceVariant,
+            ),
+          ),
           const SizedBox(height: 4),
           note(Icons.verified_outlined, colors.primary, l10n.newGameWinnable),
           if (widget.abandons)
@@ -137,9 +170,8 @@ class _NewGameSheetState extends State<_NewGameSheet> {
               ),
               FilledButton(
                 key: const ValueKey('new-game-deal'),
-                onPressed: () =>
-                    Navigator.of(context)
-                        .pop((mode: _mode, difficulty: _difficulty)),
+                onPressed: () => Navigator.of(context)
+                    .pop((mode: _mode, difficulty: _difficulty, shape: _shape)),
                 child: Text(l10n.newGameDeal),
               ),
             ],

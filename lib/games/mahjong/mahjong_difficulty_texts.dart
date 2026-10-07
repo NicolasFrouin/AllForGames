@@ -1,6 +1,7 @@
 import '../../l10n/app_localizations.dart';
 import 'mahjong_controller.dart';
 import 'mahjong_difficulty.dart';
+import 'mahjong_shapes.dart';
 
 /// Texts of the difficulty levels. Apart from [MahjongDifficulty], which the
 /// offline tool uses without Flutter.
@@ -39,10 +40,29 @@ extension MahjongModeTexts on MahjongMode {
   };
 }
 
+/// Texts of the shapes.
+extension MahjongShapeTexts on MahjongShape {
+  /// The classic shape is named after the layout of [difficulty].
+  String label(AppLocalizations l10n, MahjongDifficulty difficulty) =>
+      switch (this) {
+        MahjongShape.generated => l10n.mahjongShapeGenerated,
+        MahjongShape.classic => mahjongLayoutNames[difficulty.layoutId]!(l10n),
+      };
+
+  String hint(AppLocalizations l10n, MahjongDifficulty difficulty) =>
+      switch (this) {
+        MahjongShape.generated => l10n.mahjongShapeGeneratedHint(
+          difficulty.shape.maxLayers,
+        ),
+        MahjongShape.classic => l10n.mahjongShapeClassicHint,
+      };
+}
+
 /// Names of the layouts, by layout id.
 final mahjongLayoutNames = <String, String Function(AppLocalizations)>{
   'pyramid': (l10n) => l10n.mahjongLayoutPyramid,
   'turtle': (l10n) => l10n.mahjongLayoutTurtle,
+  generatedLayoutId: (l10n) => l10n.mahjongLayoutRandom,
 };
 
 /// Names of the variants of the records: each layout in classic mode, then

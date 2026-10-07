@@ -25,7 +25,7 @@ dart run tool/generate_klondike_deals.dart    # regenerates klondike_deals.dart 
 dart run tool/generate_freecell_deals.dart    # regenerates freecell_deals.dart (about 1 minute; --stats N)
 dart run tool/generate_spider_deals.dart      # regenerates spider_deals.dart (about 3 minutes; --stats N [--level hard])
 dart run tool/generate_tripeaks_deals.dart    # regenerates tripeaks_deals.dart (about 10 seconds; --stats N)
-dart run tool/mahjong_difficulty.dart [deals] # win rates of simulated players per Mahjong level
+dart run tool/mahjong_difficulty.dart [deals] # win rates of simulated players per Mahjong level and shape
 dart run tool/minesweeper_generation.dart [n] # Minesweeper generator time per level (node runs its JS build too)
 flutter build web --release --wasm            # release web build in build/web
 scripts/make_icons.sh                         # app icons of every platform from assets/icon/*.svg (rsvg-convert, magick)
@@ -60,7 +60,8 @@ lib/
   main.dart, app.dart        loads the stores, routes (go_router): /, /klondike?draw=3&seed=42,
                              /freecell?difficulty=hard&seed=42, /spider?difficulty=hard&seed=42,
                              /tripeaks?difficulty=hard&seed=42, /minesweeper?difficulty=hard&seed=42,
-                             /mahjong?mode=tray&difficulty=easy&seed=42, /stats, /stats/:gameId,
+                             /mahjong?mode=tray&difficulty=easy&shape=classic&seed=42, /stats,
+                             /stats/:gameId,
                              /achievements?game=klondike, /skins?kind=tileStyle, /settings (without params, a
                              game route continues the saved game; the two pages open on their first tab)
   app_stores.dart            AppStores: every store (stats, saves, settings, achievements), loaded once, given to
@@ -95,8 +96,9 @@ lib/
                              klondike_screen, klondike_deals (generated winnable seeds), deal_picker (pickDealSeed,
                              difficultyOfSeed), klondike_difficulty (enum) + _texts, new_game_sheet,
                              klondike_solver (offline only: the generator and tests)
-  games/mahjong/             pure Dart: mahjong_tiles, mahjong_layout, mahjong_state (rules), mahjong_generator
-                             (solvable by construction), mahjong_solver (hints), mahjong_tray (tray mode: rules,
+  games/mahjong/             pure Dart: mahjong_tiles, mahjong_layout, mahjong_shapes (generated layouts),
+                             mahjong_state (rules), mahjong_generator (solvable by construction), mahjong_solver
+                             (hints), mahjong_tray (tray mode: rules,
                              generator, solver), mahjong_difficulty (levels, modes), mahjong_motion,
                              mahjong_players (offline only); Flutter: mahjong_controller, mahjong_board,
                              mahjong_tile_view (vector tile art), mahjong_moving_tile (per-frame transforms),
@@ -145,10 +147,11 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   setting (`settings.locale`: `en`/`fr`, absent = device language; `settings.cardBack`: skin id, unknown = classic;
   `settings.tileStyle`: Mahjong tile style id, unknown = classic; `settings.minesweeperTheme`: theme id, unknown =
   classic; `settings.klondike.drawCount`: int 1/3, unknown = 1; `settings.mahjong.mode`: `classic`/`tray`, unknown =
-  classic; `settings.mahjong.traySide`: `top`/`bottom`/`left`/`right`, unknown = top; `settings.<game>.difficulty`:
-  `easy`/`medium`/`hard`, unknown = medium; `settings.minesweeper.flagHoldMs`: int, absent = 300, limited to 150..750;
-  `settings.minesweeper.vibrate`: bool, absent = false; `settings.pinnedGames`: string list of game ids, the last
-  pinned first), `achievements.<id>` per unlocked achievement (UTC ISO date).
+  classic; `settings.mahjong.traySide`: `top`/`bottom`/`left`/`right`, unknown = top; `settings.mahjong.shape`:
+  `generated`/`classic`, unknown = generated; `settings.<game>.difficulty`: `easy`/`medium`/`hard`, unknown = medium;
+  `settings.minesweeper.flagHoldMs`: int, absent = 300, limited to 150..750; `settings.minesweeper.vibrate`: bool,
+  absent = false; `settings.pinnedGames`: string list of game ids, the last pinned first), `achievements.<id>` per
+  unlocked achievement (UTC ISO date).
   Catch storage errors (blocked or full storage must not break the app).
 - **ChangeNotifier stores** notify *after* an `await`, never synchronously in a mutating call:
   screens call them from `dispose()`, when no widget can rebuild.
@@ -221,15 +224,21 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   100 per stock card left. The board only draws the top four waste cards (and those of the last action).
 - **Mahjong**: 36 faces, four tiles each; only tiles of the same face match (one flower face, one season face).
   Deals are built at runtime from the seed (`DealRandom`), solvable by construction (removing pairs of free places
-  from the full layout gives a clearing order). A level is a layout plus a trap rate, checked by
-  `tool/mahjong_difficulty.dart` and a unit test that keeps the levels ordered. On a tall screen the layout is dealt
-  with rows and columns swapped (chosen at deal time, saved with the game). Tile art is vector (no emoji, no CJK
-  font). Two modes (`MahjongMode`, one save slot holding the mode): classic, and tray (`mahjong_tray.dart`): a tapped
-  free tile goes into a tray of 4 places where two of a face clear each other (on the side of the board the settings
-  give, `MahjongTraySide`, top by default; in a column on the left or right); a full tray loses at once
+  from the full layout gives a clearing order). Shapes (`MahjongShape`, a setting): `generated` by default, a new
+  layout per deal from its seed (`generateLayout`, `mahjong_shapes.dart`; id `random`): a symmetric base and smaller
+  layers on it, the level's `ShapeLevel` size (Hard: 128 to 144 tiles, up to 8 layers), a multiple of 4 tiles, steps
+  of at most 3 layers between neighbor cells (a layer is drawn up and to the left: a steeper stack would hide the
+  middle of the tile beside it); or `classic`, the level's fixed layout (Pyramid, Turtle). Saves hold the layout's
+  positions (version 3). A level is a shape plus a trap rate, checked by `tool/mahjong_difficulty.dart` and unit tests
+  that keep the levels ordered, for both shapes. On a tall screen the layout is dealt with rows and columns swapped
+  (the controller's `orient` decides at deal time; saved with the game). Tile art is vector (no emoji, no CJK font).
+  Two modes (`MahjongMode`, one save slot holding the mode): classic, and tray (`mahjong_tray.dart`): a tapped free
+  tile goes into a tray of 4 places where two of a face clear each other (on the side of the board the settings give,
+  `MahjongTraySide`, top by default; in a column on the left or right); a full tray loses at once
   (`GameOutcome.lost`). Tray deals are built forwards (one free tile after the other, faces given so the order never
   holds more than `TrayLevel.held` tiles); the level also sets how many pairs are blind (not free together) and seen
-  together. Records: variant = layout id, `tray-<layoutId>` in tray mode; no shuffle in tray mode.
+  together. Records: variant = layout id (`random` for a generated shape), `tray-<layoutId>` in tray mode; no shuffle
+  in tray mode.
 - **Minesweeper**: levels Beginner 9x9/10, Intermediate 16x16/40, Expert 30x16/99 (`easy`/`medium`/`hard`; Expert
   is turned 16x30 on a tall screen, chosen at deal time and saved). Mines are placed at the first tap
   (`generateMines`, `DealRandom` from seed + tap): none touches it, and `MinesweeperSolver` clears the board by logic
@@ -255,7 +264,8 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   and `achievements-count-<gameId>`, `skins-tab-<kind>` (`SkinKind` name), `skins-group-<free|gameId>`,
   `card-back-<id>`, `tile-style-<id>`, `minesweeper-theme-<id>`, `unlocked-<id>` in the win dialog; Mahjong:
   `tile-<id>`, `hint`, `shuffle`, `stuck-banner`, `tiles-value`, `pairs-value`, `mode-value` (tray mode),
-  `new-game-mode-<mode>`, `tray-slot-<i>`, `tray-full`, `try-again`, `lost-new-game`; FreeCell: `freecell-<i>`,
+  `new-game-mode-<mode>`, `new-game-shape-<shape>`, `tray-slot-<i>`, `tray-full`, `try-again`, `lost-new-game`;
+  FreeCell: `freecell-<i>`,
   `cascade-<i>`, `foundation-<i>`, `auto-complete`; Spider: `stock`, `column-<i>`, `foundation-<i>`, `deals-left`,
   card ids like `spades-1-7`; TriPeaks: `stock`, `waste`, `run-value`, `stock-value`, `stuck-banner`, `stuck-undo`,
   `stuck-new-game`; Minesweeper: `minesweeper-board` (tests tap cells by position on it), `flag-mode`, `hint`,

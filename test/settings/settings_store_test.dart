@@ -331,6 +331,16 @@ void main() {
     expect((await SettingsStore.load()).pinnedGames, ['spider']);
   });
 
+  test('a new Mahjong deal has a generated shape until the player chooses '
+      'the classic one', () async {
+    final store = await createStore({SettingsStore.mahjongShapeKey: 'round'});
+    expect(store.mahjongShape, MahjongShape.generated);
+
+    await store.setMahjongShape(MahjongShape.classic);
+
+    expect((await SettingsStore.load()).mahjongShape, MahjongShape.classic);
+  });
+
   test('listeners are told after the write, not during the call', () async {
     final store = await createStore();
     var notified = 0;

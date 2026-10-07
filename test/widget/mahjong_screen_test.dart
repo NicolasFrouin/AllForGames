@@ -1,8 +1,10 @@
 import 'package:all_for_games/app.dart';
 import 'package:all_for_games/app_stores.dart';
 import 'package:all_for_games/games/game_catalog.dart';
+import 'package:all_for_games/games/mahjong/mahjong_board.dart';
 import 'package:all_for_games/games/mahjong/mahjong_controller.dart';
 import 'package:all_for_games/games/mahjong/mahjong_difficulty.dart';
+import 'package:all_for_games/games/mahjong/mahjong_layout.dart';
 import 'package:all_for_games/games/mahjong/mahjong_moving_tile.dart';
 import 'package:all_for_games/games/mahjong/mahjong_screen.dart';
 import 'package:all_for_games/games/mahjong/mahjong_state.dart';
@@ -120,6 +122,13 @@ Future<void> openFromHub(WidgetTester tester) async {
 /// The saved game's data.
 Map<String, Object?> savedData(AppStores stores) =>
     stores.saves[MahjongController.gameId]!.data;
+
+/// The layout of the game on screen.
+MahjongLayout layoutOnScreen(WidgetTester tester) => tester
+    .widget<MahjongBoard>(find.byType(MahjongBoard))
+    .controller
+    .state
+    .layout;
 
 void main() {
   testWidgets('tapping two free tiles that match removes them', (tester) async {
@@ -299,7 +308,9 @@ void main() {
       await tester.tap(byKey('play-again'));
       await tester.pumpAndSettle();
 
-      expect(textOf('tiles-value'), '144');
+      final layout = layoutOnScreen(tester);
+      expect(layout.id, 'random', reason: 'the shape of the settings');
+      expect(textOf('tiles-value'), '${layout.length}');
       expect(textOf('difficulty-value'), 'Medium');
     });
 
@@ -355,12 +366,13 @@ void main() {
     expect(textOf('resume-mahjong'), startsWith('Continue · 1 move'));
     await openFromHub(tester);
 
-    expect(textOf('tiles-value'), '142');
+    final tiles = layoutOnScreen(tester).length;
+    expect(textOf('tiles-value'), '${tiles - 2}');
     expect(isEnabled(tester, 'undo'), isTrue);
     expect(savedData(stores)['faces'], faces);
     await tester.tap(byKey('undo'));
     await tester.pumpAndSettle();
-    expect(textOf('tiles-value'), '144');
+    expect(textOf('tiles-value'), '$tiles');
   });
 
   group('new game sheet', () {
@@ -400,13 +412,20 @@ void main() {
 
       await tester.tap(byKey('new-game-difficulty-easy'));
       await tester.pumpAndSettle();
-      expect(textOf('new-game-hint'), contains('72 tiles'));
+      expect(
+        tester.widget<ChoiceChip>(byKey('new-game-shape-generated')).selected,
+        isTrue,
+      );
+      await tester.tap(byKey('new-game-shape-classic'));
+      await tester.pumpAndSettle();
       await tester.tap(byKey('new-game-deal'));
       await tester.pumpAndSettle();
 
       expect(textOf('difficulty-value'), 'Easy');
+      expect(layoutOnScreen(tester).id, 'pyramid');
       expect(textOf('tiles-value'), '72');
       expect(stores.settings.mahjongDifficulty, MahjongDifficulty.easy);
+      expect(stores.settings.mahjongShape, MahjongShape.classic);
       expect(stores.stats.records, isEmpty, reason: 'no match, no record');
     });
 
@@ -419,7 +438,12 @@ void main() {
       );
 
       expect(textOf('difficulty-value'), 'Hard');
-      expect(textOf('tiles-value'), '144');
+      // A generated shape of the Hard size.
+      final layout = layoutOnScreen(tester);
+      expect(layout.id, 'random');
+      expect(layout.length, inInclusiveRange(120, 144));
+      expect(layout.layers, inInclusiveRange(5, 8));
+      expect(textOf('tiles-value'), '${layout.length}');
     });
   });
 

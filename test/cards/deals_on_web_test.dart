@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../games/freecell/freecell_state_test.dart' as freecell;
 import '../games/klondike/klondike_state_test.dart' as klondike;
 import '../games/mahjong/mahjong_generator_test.dart' as mahjong;
+import '../games/mahjong/mahjong_shapes_test.dart' as shapes;
 import '../games/mahjong/mahjong_tray_test.dart' as tray;
 import '../games/minesweeper/minesweeper_generator_test.dart' as minesweeper;
 import '../games/spider/spider_state_test.dart' as spider;
@@ -43,6 +44,10 @@ void main() {
       faces.take(mahjong.seed1MediumFaces.length),
       mahjong.seed1MediumFaces,
     );
+  });
+
+  test('Mahjong generated shapes', () {
+    expect(shapes.hardShapeOfSeed1(), shapes.seed1HardShape);
   });
 
   test('Mahjong tray mode', () {

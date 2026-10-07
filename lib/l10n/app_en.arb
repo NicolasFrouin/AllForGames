@@ -1630,15 +1630,40 @@
   "@mahjongLayoutTurtle": {
     "description": "Mahjong layout (variant): the classic Turtle of 144 tiles."
   },
-  "mahjongEasyHint": "A small pyramid of 72 tiles, with few traps.",
+  "mahjongLayoutRandom": "Random shapes",
+  "@mahjongLayoutRandom": {
+    "description": "Mahjong variant on the statistics page: games on generated shapes (a new shape at each deal)."
+  },
+  "mahjongShapeTitle": "Shape",
+  "@mahjongShapeTitle": {
+    "description": "Title of the shape choice in the Mahjong new game sheet."
+  },
+  "mahjongShapeGenerated": "Random",
+  "@mahjongShapeGenerated": {
+    "description": "Shape choice in the Mahjong new game sheet: a new shape made for each deal."
+  },
+  "mahjongShapeGeneratedHint": "A new shape at each deal, up to {layers} layers high.",
+  "@mahjongShapeGeneratedHint": {
+    "description": "Below the shape choice when Random is selected.",
+    "placeholders": {
+      "layers": {
+        "type": "int"
+      }
+    }
+  },
+  "mahjongShapeClassicHint": "The classic shape of this level, always the same.",
+  "@mahjongShapeClassicHint": {
+    "description": "Below the shape choice when the classic shape (Pyramid or Turtle) is selected."
+  },
+  "mahjongEasyHint": "Small, low shapes, with few traps.",
   "@mahjongEasyHint": {
     "description": "New game sheet: what an Easy Mahjong deal is."
   },
-  "mahjongMediumHint": "The classic Turtle of 144 tiles.",
+  "mahjongMediumHint": "Bigger shapes, with some traps.",
   "@mahjongMediumHint": {
     "description": "New game sheet: what a Medium Mahjong deal is."
   },
-  "mahjongHardHint": "The Turtle with many traps: choose your pairs with care.",
+  "mahjongHardHint": "Big, tall shapes with many traps: choose your pairs with care.",
   "@mahjongHardHint": {
     "description": "New game sheet: what a Hard Mahjong deal is."
   },
@@ -1785,15 +1810,15 @@
   "@mahjongTrayModeHint": {
     "description": "New game sheet: what the tray Mahjong mode is."
   },
-  "mahjongTrayEasyHint": "A small pyramid of 72 tiles: pairs are often free together.",
+  "mahjongTrayEasyHint": "Small shapes: pairs are often free together.",
   "@mahjongTrayEasyHint": {
     "description": "New game sheet: what an Easy Mahjong deal is in tray mode."
   },
-  "mahjongTrayMediumHint": "The Turtle of 144 tiles: some tiles must wait in the tray.",
+  "mahjongTrayMediumHint": "Bigger shapes: some tiles must wait in the tray.",
   "@mahjongTrayMediumHint": {
     "description": "New game sheet: what a Medium Mahjong deal is in tray mode."
   },
-  "mahjongTrayHardHint": "The Turtle, where up to 3 tiles must wait at once: plan your picks.",
+  "mahjongTrayHardHint": "Big, tall shapes where up to 3 tiles must wait at once: plan your picks.",
   "@mahjongTrayHardHint": {
     "description": "New game sheet: what a Hard Mahjong deal is in tray mode."
   },

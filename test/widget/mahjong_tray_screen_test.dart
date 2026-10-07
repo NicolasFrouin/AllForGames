@@ -55,6 +55,7 @@ Future<AppStores> pumpTray(
                     : MahjongMode.values.asNameMap()[query['mode']],
                 difficulty: MahjongDifficulty.values
                     .asNameMap()[query['difficulty']],
+                shape: MahjongShape.values.asNameMap()[query['shape']],
                 seed: int.tryParse(query['seed'] ?? ''),
                 initialState: initialState,
               );
@@ -230,7 +231,7 @@ void main() {
         'game', (tester) async {
       final stores = await pumpTray(
         tester,
-        location: '/mahjong?mode=tray&difficulty=hard&seed=6',
+        location: '/mahjong?mode=tray&difficulty=hard&shape=classic&seed=6',
       );
       final faces = generateTrayDeal(
         MahjongDifficulty.hard.layout(),
@@ -270,7 +271,7 @@ void main() {
       useReducedMotion(tester);
       final stores = await pumpTray(
         tester,
-        location: '/mahjong?mode=tray&difficulty=hard&seed=6',
+        location: '/mahjong?mode=tray&difficulty=hard&shape=classic&seed=6',
       );
       for (final id in fourStrangers(6)) {
         await tester.tap(tile(id));
@@ -378,7 +379,7 @@ void main() {
   testWidgets('the stats page filters the tray games', (tester) async {
     final stores = await pumpTray(
       tester,
-      location: '/mahjong?mode=tray&difficulty=hard&seed=6',
+      location: '/mahjong?mode=tray&difficulty=hard&shape=classic&seed=6',
     );
     for (final id in fourStrangers(6)) {
       await tapTile(tester, id);

@@ -13,6 +13,7 @@ import 'mahjong_board.dart';
 import 'mahjong_controller.dart';
 import 'mahjong_difficulty.dart';
 import 'mahjong_difficulty_texts.dart';
+import 'mahjong_layout.dart';
 import 'mahjong_new_game_sheet.dart';
 import 'mahjong_state.dart';
 
@@ -29,6 +30,7 @@ class MahjongScreen extends StatefulWidget {
     required this.stores,
     this.mode,
     this.difficulty,
+    this.shape,
     this.seed,
     this.initialState,
     this.clock,
@@ -36,11 +38,12 @@ class MahjongScreen extends StatefulWidget {
 
   final AppStores stores;
 
-  /// [mode], [difficulty], [seed] and [initialState] ask for a new deal.
-  /// Without any of them, the saved game continues. A new deal takes the
-  /// mode and the difficulty of the settings when it has none.
+  /// [mode], [difficulty], [shape], [seed] and [initialState] ask for a new
+  /// deal. Without any of them, the saved game continues. A new deal takes
+  /// the mode, the difficulty and the shape of the settings when it has none.
   final MahjongMode? mode;
   final MahjongDifficulty? difficulty;
+  final MahjongShape? shape;
   final int? seed;
 
   /// Starts from this board instead of a new deal (used by tests).
@@ -88,18 +91,19 @@ class _MahjongScreenState extends State<MahjongScreen> {
     final newDeal =
         widget.mode != null ||
         widget.difficulty != null ||
+        widget.shape != null ||
         widget.seed != null ||
         widget.initialState != null;
     if (saved != null && !newDeal) return saved;
     final settings = widget.stores.settings;
     final mode = widget.mode ?? settings.mahjongMode;
     final difficulty = widget.difficulty ?? settings.mahjongDifficulty;
-    final transposed = _fitsTransposed(difficulty, mode);
+    final shape = widget.shape ?? settings.mahjongShape;
     if (saved != null) {
       return saved..newGame(
         difficulty: difficulty,
         mode: mode,
-        transposed: transposed,
+        shape: shape,
         seed: widget.seed,
         initialState: widget.initialState,
       );
@@ -109,7 +113,8 @@ class _MahjongScreenState extends State<MahjongScreen> {
       saves: widget.stores.saves,
       difficulty: difficulty,
       mode: mode,
-      transposed: transposed,
+      shape: shape,
+      orient: _fitsTransposed,
       seed: widget.seed,
       initialState: widget.initialState,
       clock: widget.clock,
@@ -124,6 +129,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
         saved.data,
         stats: widget.stores.stats,
         saves: widget.stores.saves,
+        orient: _fitsTransposed,
         clock: widget.clock,
       );
     } on FormatException catch (error) {
@@ -133,10 +139,10 @@ class _MahjongScreenState extends State<MahjongScreen> {
     }
   }
 
-  /// Whether a new deal of [difficulty] in [mode] gets bigger tiles with
-  /// rows and columns swapped, on this screen (a phone held upright). The
+  /// Whether a new deal of [layout] in [mode] gets bigger tiles with rows
+  /// and columns swapped, on this screen (a phone held upright). The
   /// board keeps its orientation for the whole game: the rules depend on it.
-  bool _fitsTransposed(MahjongDifficulty difficulty, MahjongMode mode) {
+  bool _fitsTransposed(MahjongLayout layout, MahjongMode mode) {
     final size = MediaQuery.sizeOf(context);
     final padding = MediaQuery.paddingOf(context);
     final room = Size(
@@ -146,7 +152,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
     );
     return MahjongBoardGeometry.prefersTransposed(
       room,
-      difficulty.layout(),
+      layout,
       tray: mode == MahjongMode.tray
           ? widget.stores.settings.mahjongTraySide
           : null,
@@ -235,10 +241,8 @@ class _MahjongScreenState extends State<MahjongScreen> {
     }
   }
 
-  /// A new deal of the same mode and difficulty.
-  void _dealAgain() => _controller.newGame(
-    transposed: _fitsTransposed(_controller.difficulty, _controller.mode),
-  );
+  /// A new deal of the same mode, difficulty and shape.
+  void _dealAgain() => _controller.newGame();
 
   /// Opens the new game sheet with the options of the settings, then deals
   /// the chosen game and keeps its options for the next time.
@@ -249,18 +253,16 @@ class _MahjongScreenState extends State<MahjongScreen> {
       initial: (
         mode: settings.mahjongMode,
         difficulty: settings.mahjongDifficulty,
+        shape: settings.mahjongShape,
       ),
       abandons: _controller.moves > 0 && _controller.result == null,
     );
     if (options == null || !mounted) return;
-    final (:mode, :difficulty) = options;
+    final (:mode, :difficulty, :shape) = options;
     unawaited(settings.setMahjongMode(mode));
     unawaited(settings.setMahjongDifficulty(difficulty));
-    _controller.newGame(
-      difficulty: difficulty,
-      mode: mode,
-      transposed: _fitsTransposed(difficulty, mode),
-    );
+    unawaited(settings.setMahjongShape(shape));
+    _controller.newGame(difficulty: difficulty, mode: mode, shape: shape);
   }
 
   void _openStats() => context.push('/stats/${MahjongController.gameId}');

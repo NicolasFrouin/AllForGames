@@ -36,21 +36,28 @@ void mahjongFlows() {
     await _startApp(tester);
     await tester.tap(find.byKey(const ValueKey('game-mahjong')));
     await tester.pumpAndSettle();
-    expect(_text(tester, 'tiles-value'), '144');
     expect(_text(tester, 'difficulty-value'), 'Medium');
 
     final (a, b) = await _hint(tester);
+    // A generated shape: its tiles are those of the save.
+    final saved = await _savedGame();
+    expect(saved['layout'], 'random');
+    final tiles = (saved['positions']! as List<Object?>).length ~/ 3;
+    expect(_text(tester, 'tiles-value'), '$tiles');
     await _tapTile(tester, a);
     await _tapTile(tester, b);
-    expect(_text(tester, 'tiles-value'), '142');
+    expect(_text(tester, 'tiles-value'), '${tiles - 2}');
 
     await tester.tap(find.byKey(const ValueKey('undo')));
     await tester.pumpAndSettle();
-    expect(_text(tester, 'tiles-value'), '144');
+    expect(_text(tester, 'tiles-value'), '$tiles');
   });
 
   testFlow('Mahjong: a game left continues after a restart', (tester) async {
-    await _startApp(tester, location: '/mahjong?seed=42&difficulty=hard');
+    await _startApp(
+      tester,
+      location: '/mahjong?seed=42&difficulty=hard&shape=classic',
+    );
     final (a, b) = await _hint(tester);
     await _tapTile(tester, a);
     await _tapTile(tester, b);
@@ -78,7 +85,10 @@ void mahjongFlows() {
   });
 
   testFlow('Mahjong: an Easy board played to the end is a win', (tester) async {
-    await _startApp(tester, location: '/mahjong?seed=5&difficulty=easy');
+    await _startApp(
+      tester,
+      location: '/mahjong?seed=5&difficulty=easy&shape=classic',
+    );
     await _hint(tester);
     // The order that clears the deal, as the hint knows it.
     final ids = ((await _savedGame())['solution']! as List<Object?>)
@@ -122,7 +132,7 @@ void mahjongFlows() {
 
     await _startApp(
       tester,
-      location: '/mahjong?mode=tray&seed=5&difficulty=easy',
+      location: '/mahjong?mode=tray&seed=5&difficulty=easy&shape=classic',
     );
     expect(_text(tester, 'mode-value'), 'Tray · Easy');
     await tester.tap(find.byKey(const ValueKey('hint')));
@@ -150,7 +160,7 @@ void mahjongFlows() {
   ) async {
     await _startApp(
       tester,
-      location: '/mahjong?mode=tray&seed=6&difficulty=hard',
+      location: '/mahjong?mode=tray&seed=6&difficulty=hard&shape=classic',
     );
     await tester.tap(find.byKey(const ValueKey('hint')));
     await tester.pumpAndSettle();

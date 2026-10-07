@@ -89,8 +89,8 @@ class _AllForGamesAppState extends State<AllForGamesApp> {
           GoRoute(
             path: 'mahjong',
             // Query parameters start a given deal: /mahjong?mode=tray&
-            // difficulty=hard&seed=42. Without them, the saved game
-            // continues.
+            // difficulty=hard&shape=classic&seed=42. Without them, the saved
+            // game continues.
             builder: (context, state) {
               final query = state.uri.queryParameters;
               return MahjongScreen(
@@ -98,6 +98,7 @@ class _AllForGamesAppState extends State<AllForGamesApp> {
                 mode: MahjongMode.values.asNameMap()[query['mode']],
                 difficulty: MahjongDifficulty.values
                     .asNameMap()[query['difficulty']],
+                shape: MahjongShape.values.asNameMap()[query['shape']],
                 seed: int.tryParse(query['seed'] ?? ''),
               );
             },

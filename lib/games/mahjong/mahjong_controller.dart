@@ -12,6 +12,7 @@ import '../../stats/stats_store.dart';
 import 'mahjong_difficulty.dart';
 import 'mahjong_generator.dart';
 import 'mahjong_layout.dart';
+import 'mahjong_shapes.dart';
 import 'mahjong_solver.dart';
 import 'mahjong_state.dart';
 import 'mahjong_tiles.dart';
@@ -90,7 +91,9 @@ class MahjongController extends ChangeNotifier {
     required this._saves,
     MahjongDifficulty difficulty = MahjongDifficulty.medium,
     MahjongMode mode = MahjongMode.classic,
-    bool transposed = false,
+    MahjongShape shape = MahjongShape.classic,
+    bool? transposed,
+    this.orient,
     int? seed,
     MahjongState? initialState,
     DateTime Function()? clock,
@@ -98,6 +101,7 @@ class MahjongController extends ChangeNotifier {
     _start(
       difficulty: difficulty,
       mode: mode,
+      shape: shape,
       transposed: transposed,
       seed: seed,
       initialState: initialState,
@@ -110,6 +114,7 @@ class MahjongController extends ChangeNotifier {
     Map<String, Object?> json, {
     required this._stats,
     required this._saves,
+    this.orient,
     DateTime Function()? clock,
   }) : _clock = clock ?? DateTime.now {
     try {
@@ -135,8 +140,9 @@ class MahjongController extends ChangeNotifier {
 
   /// Version of the [toJson] format. Version 1 had four flower faces (34 to
   /// 37) and four season faces (38 to 41), any flower matching any flower,
-  /// and no tray mode.
-  static const _saveVersion = 2;
+  /// and no tray mode. Version 3 saves the positions of the layout (a
+  /// generated shape has no id to find it by) and the shape.
+  static const _saveVersion = 3;
 
   /// Boards the hint solver may look at: a few tens of milliseconds.
   static const _solverBudget = 20000;
@@ -147,8 +153,14 @@ class MahjongController extends ChangeNotifier {
   final _history = <_Snapshot>[];
   final _counters = <String, int>{};
 
+  /// Whether a new deal of [layout] in [mode] fits the screen better with
+  /// rows and columns swapped (a phone held upright). Without it, a new deal
+  /// keeps the orientation of the game before.
+  bool Function(MahjongLayout layout, MahjongMode mode)? orient;
+
   late MahjongState _state;
   late MahjongMode _mode;
+  late MahjongShape _shape;
   List<int> _tray = const [];
   late int _seed;
   late MahjongDifficulty _difficulty;
@@ -180,6 +192,7 @@ class MahjongController extends ChangeNotifier {
   /// The board. In tray mode, the tiles of the tray are not on it.
   MahjongState get state => _state;
   MahjongMode get mode => _mode;
+  MahjongShape get shape => _shape;
   bool get isTray => _mode == MahjongMode.tray;
 
   /// Ids of the tiles in the tray, in the order they came (tray mode).
@@ -406,12 +419,13 @@ class MahjongController extends ChangeNotifier {
   /// Deals a new game and saves it. The current game counts as abandoned if
   /// the player made at least one move and did not finish it.
   ///
-  /// [difficulty] and [mode] default to the current ones; [transposed]
-  /// (rows and columns swapped, for tall screens) to the current
-  /// orientation.
+  /// [difficulty], [mode] and [shape] default to the current ones;
+  /// [transposed] (rows and columns swapped, for tall screens) to what
+  /// [orient] says, else to the current orientation.
   void newGame({
     MahjongDifficulty? difficulty,
     MahjongMode? mode,
+    MahjongShape? shape,
     bool? transposed,
     int? seed,
     MahjongState? initialState,
@@ -422,7 +436,9 @@ class MahjongController extends ChangeNotifier {
     _start(
       difficulty: difficulty ?? _difficulty,
       mode: mode ?? _mode,
-      transposed: transposed ?? _state.layout.transposed,
+      shape: shape ?? _shape,
+      transposed:
+          transposed ?? (orient == null ? _state.layout.transposed : null),
       seed: seed,
       initialState: initialState,
     );
@@ -436,8 +452,12 @@ class MahjongController extends ChangeNotifier {
     'mode': _mode.name,
     'seed': _seed,
     'difficulty': _difficulty.name,
+    'shape': _shape.name,
     'layout': _state.layout.id,
     'transposed': _state.layout.transposed,
+    'positions': [
+      for (final p in _state.layout.positions) ...[p.x, p.y, p.z],
+    ],
     'faces': _state.faces,
     'slots': _state.slots,
     'tray': _tray,
@@ -462,19 +482,29 @@ class MahjongController extends ChangeNotifier {
 
   void _restore(Map<String, Object?> json) {
     final version = json['version'];
-    if (version != _saveVersion && version != 1) {
+    if (version is! int || version < 1 || version > _saveVersion) {
       throw FormatException('Unknown Mahjong save version $version');
     }
     Duration duration(Object? ms) => Duration(milliseconds: ms as int);
     Duration? optionalDuration(Object? ms) => ms == null ? null : duration(ms);
     List<int> ints(Object? list) => (list as List<Object?>).cast<int>();
 
-    final layout = layoutById(
-      json['layout'] as String,
-      transposed: json['transposed'] as bool,
-    );
-    if (layout == null) {
-      throw FormatException('Unknown Mahjong layout ${json['layout']}');
+    final layoutId = json['layout'] as String;
+    final transposed = json['transposed'] as bool;
+    final MahjongLayout layout;
+    if (json['positions'] case final List<Object?> list) {
+      final xyz = list.cast<int>();
+      if (xyz.isEmpty || xyz.length % 3 != 0) {
+        throw const FormatException('Bad Mahjong layout positions');
+      }
+      layout = MahjongLayout(layoutId, [
+        for (var i = 0; i < xyz.length; i += 3)
+          TilePosition(xyz[i], xyz[i + 1], xyz[i + 2]),
+      ], transposed: transposed);
+    } else {
+      layout =
+          layoutById(layoutId, transposed: transposed) ??
+          (throw FormatException('Unknown Mahjong layout $layoutId'));
     }
     final faces = [
       for (final face in ints(json['faces']))
@@ -503,6 +533,10 @@ class MahjongController extends ChangeNotifier {
 
     _seed = json['seed'] as int;
     _difficulty = MahjongDifficulty.values.byName(json['difficulty'] as String);
+    _shape = MahjongShape.values.byName(
+      json['shape'] as String? ??
+          (layoutId == generatedLayoutId ? 'generated' : 'classic'),
+    );
     final (slots, tray) = board(json['slots'], json['tray']);
     _state = MahjongState(layout: layout, faces: faces, slots: slots);
     _tray = tray;
@@ -545,17 +579,22 @@ class MahjongController extends ChangeNotifier {
   void _start({
     required MahjongDifficulty difficulty,
     required MahjongMode mode,
-    required bool transposed,
+    required MahjongShape shape,
+    required bool? transposed,
     int? seed,
     MahjongState? initialState,
   }) {
     _seed = seed ?? Random().nextInt(0x7FFFFFFF);
     _difficulty = difficulty;
     _mode = mode;
+    _shape = shape;
     _tray = const [];
     _solution = null;
     _picks = null;
-    final layout = difficulty.layout(transposed: transposed);
+    var layout = difficulty.layoutFor(shape, _seed);
+    if (transposed ?? orient?.call(layout, mode) ?? false) {
+      layout = layout.toTransposed();
+    }
     if (initialState != null) {
       _state = initialState;
       if (isTray) {

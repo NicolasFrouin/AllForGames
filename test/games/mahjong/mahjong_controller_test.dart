@@ -316,6 +316,65 @@ void main() {
     });
   });
 
+  group('generated shapes', () {
+    MahjongController generated({int seed = 5}) => MahjongController(
+      stats: stats,
+      saves: saves,
+      shape: MahjongShape.generated,
+      seed: seed,
+      clock: () => now,
+    );
+
+    test('a deal gets the shape of its seed; the save keeps it', () async {
+      final game = generated();
+      final layout = game.state.layout;
+      expect(layout.id, 'random');
+      expect(
+        layout.positions,
+        MahjongDifficulty.medium.layoutFor(MahjongShape.generated, 5).positions,
+      );
+      game.save();
+      await flush();
+
+      final restored = restore(await storedSave(gameId));
+      expect(restored.shape, MahjongShape.generated);
+      expect(restored.state.layout.positions, layout.positions);
+      expect(restored.state.faces, game.state.faces);
+    });
+
+    test('a new game keeps the shape kind, and records it as the variant', () {
+      final game = generated();
+      final (a, b) = game.hint()!;
+      game.match(a, b);
+
+      game.newGame(seed: 6);
+
+      expect(game.state.layout.id, 'random');
+      expect(
+        game.state.layout.positions,
+        MahjongDifficulty.medium.layoutFor(MahjongShape.generated, 6).positions,
+      );
+      expect(stats.records.single.variant, 'random');
+      game.newGame(shape: MahjongShape.classic);
+      expect(game.state.layout.id, 'turtle');
+    });
+
+    test('orient turns the shape it is given', () {
+      final turned = MahjongController(
+        stats: stats,
+        saves: saves,
+        shape: MahjongShape.generated,
+        seed: 5,
+        orient: (layout, mode) => layout.id == 'random',
+      );
+      expect(turned.state.layout.transposed, isTrue);
+
+      turned.orient = (layout, mode) => false;
+      turned.newGame();
+      expect(turned.state.layout.transposed, isFalse);
+    });
+  });
+
   group('saves', () {
     test('every action saves the game; a restore continues it', () async {
       final game = controller(difficulty: MahjongDifficulty.hard, seed: 4);
@@ -402,7 +461,12 @@ void main() {
 
       for (final bad in [
         {...json, 'version': 99},
-        {...json, 'layout': 'castle'},
+        // An old save names its layout without its positions.
+        {...json, 'layout': 'castle', 'positions': null},
+        {
+          ...json,
+          'positions': [0, 0],
+        },
         {
           ...json,
           'slots': [1, 2, 3],
