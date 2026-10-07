@@ -1,7 +1,10 @@
 name: CI
 
 on:
+  # Branches only: a tag push (a release) points at a commit the CI checked already, and tag
+  # pushes ignore paths-ignore.
   push:
+    branches: ['**']
     paths-ignore: ['**/*.md', '.ai/**']
   pull_request:
     paths-ignore: ['**/*.md', '.ai/**']

@@ -37,11 +37,12 @@ Toolchain: Flutter 3.47.6 / Dart 3.13 (Homebrew cask). CI (`.github/workflows/ci
 the deal test in Chrome with Wasm (the e2e tests check a deal in JS) and web e2e. The e2e tests run in the background
 beside the other checks: about 3 minutes. Unit and widget tests run as one bundle (`scripts/test_bundle.sh`: one
 compile instead of one per test file); the e2e flows run in a 1024x768 window (the runner has no GPU: Chrome draws in
-software). Docs-only changes (`**/*.md`, `.ai/**`) skip CI. The release workflow (`.github/workflows/release.yml`;
-tags `v*` or run by hand, own concurrency group) builds the Android APK + app bundle and the web zip, on the same
-runner (Java 17 and the Android SDK stay on its disk too); it signs with the upload key when the `ANDROID_KEY*`
-secrets are set (see README), else with the debug key. Its Android builds must not take `--no-pub`: only a pub run
-rewrites the plugin registrant without the dev-only plugins (`integration_test` does not compile in release).
+software). Docs-only changes (`**/*.md`, `.ai/**`) and tag pushes skip CI. The release workflow
+(`.github/workflows/release.yml`; tags `v*` or run by hand, own concurrency group) builds the Android APK + app bundle
+and the web zip, on the same runner (Java 17 and the Android SDK stay on its disk too); it signs with the upload key
+when the `ANDROID_KEY*` secrets are set (see README), else with the debug key. Its Android builds must not take
+`--no-pub`: only a pub run rewrites the plugin registrant without the dev-only plugins (`integration_test` does not
+compile in release).
 
 **CI runs only on the self-hosted runner** (Coolify, Linux x64): every job uses `runs-on: [self-hosted, Linux, X64]`.
 Never use GitHub-hosted runners (`ubuntu-latest`, ...). The runner is a persistent container (4 CPUs although `nproc`
