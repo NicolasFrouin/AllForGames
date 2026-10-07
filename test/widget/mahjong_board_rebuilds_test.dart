@@ -86,11 +86,9 @@ void main() {
     final (a, b) = controller.state.freePairs.first;
     take(controller, a);
     await tester.pumpAndSettle();
-    // A face-down tile turns over first.
-    if (!controller.isFaceUp(b)) controller.tap(b);
-    await tester.pumpAndSettle();
 
-    expectCheap(await buildRates(tester, () => controller.tap(b)));
+    // A face-down b goes with a as it turns over.
+    expectCheap(await buildRates(tester, () => take(controller, b)));
     expect(controller.state.tileCount, 142);
   });
 

@@ -71,11 +71,40 @@ void main() {
     expect(game.tap(2), TileTap.selected);
     expect((game.isFaceUp(1), game.isFaceUp(2)), (false, true));
 
-    // 0 matches 2 once it is turned over.
-    expect(game.tap(0), TileTap.revealed);
+    // 0, the pair of the selected 2, goes with it as soon as it turns over.
     expect(game.tap(0), TileTap.matched);
     expect(game.tilesLeft, 2);
     expect(game.revealed, isNull);
+  });
+
+  test('a tile turned over goes with its pair when the pair is tapped', () {
+    // 1 turned over, then 3, face up, of the same face.
+    final game = controller(spreadBoard)..tap(1);
+    expect(game.tap(3), TileTap.matched);
+    expect(game.state.tileIds, [0, 2]);
+
+    // Both face down: turning over the second one takes the pair.
+    expect(game.tap(0), TileTap.revealed);
+    expect(game.tap(2), TileTap.matched);
+    expect(game.result?.won, isTrue);
+  });
+
+  test('a tile turned over stays when another pair matches', () {
+    final game = controller(
+      MahjongState(
+        layout: layoutOf([(0, 0, 0), (4, 0, 0), (8, 0, 0), (12, 0, 0)]),
+        faces: [dots1, dots2, dots2, dots1],
+        slots: [0, 1, 2, 3],
+        hidden: {0},
+      ),
+    )..tap(0);
+
+    game
+      ..tap(1)
+      ..tap(2);
+
+    expect(game.state.tileIds, [0, 3]);
+    expect(game.revealed, 0);
   });
 
   test('a blocked hidden tile stays face down', () {
@@ -100,6 +129,55 @@ void main() {
     expect(game.tap(1), TileTap.picked);
     expect(game.tray, [1]);
     expect(game.revealed, isNull);
+  });
+
+  group('in tray mode', () {
+    MahjongController tray(MahjongState state) =>
+        controller(state, mode: MahjongMode.tray);
+
+    test('turning over the pair of a tile of the tray takes it at once', () {
+      final game = tray(spreadBoard);
+      expect(game.tap(3), TileTap.picked);
+
+      expect(game.tap(1), TileTap.matched);
+      expect(game.tray, isEmpty);
+      expect(game.state.tileIds, [0, 2]);
+    });
+
+    test('a tap on the pair of the tile turned over takes both; the tray '
+        'stays as it was', () {
+      final game = tray(spreadBoard)..tap(1);
+
+      expect(game.tap(3), TileTap.matched);
+      expect(game.tray, isEmpty);
+      expect(game.moves, 2);
+      expect(game.lastAction, MahjongAction.match);
+
+      // Both face down.
+      game.tap(0);
+      expect(game.tap(2), TileTap.matched);
+      expect(game.result?.won, isTrue);
+    });
+
+    test('with one place left in the tray, the pair waits: no tile goes in '
+        'on its own', () {
+      final game = tray(
+        MahjongState(
+          layout: layoutOf([for (var x = 0; x < 6; x++) (x * 4, 0, 0)]),
+          faces: [dots1, dots1, dots2, dots3, bamboo1, flower],
+          slots: [0, 1, 2, 3, 4, 5],
+          hidden: {0},
+        ),
+      );
+      for (final id in [2, 3, 4]) {
+        game.tap(id);
+      }
+      expect(game.tap(0), TileTap.revealed);
+
+      // The tray takes 1 and fills: the rules of the tray stay.
+      expect(game.tap(1), TileTap.picked);
+      expect(game.isLost, isTrue);
+    });
   });
 
   test('the save keeps the hidden tiles and the one turned over', () async {

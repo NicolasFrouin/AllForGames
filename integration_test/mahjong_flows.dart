@@ -1,5 +1,6 @@
 import 'package:all_for_games/app.dart';
 import 'package:all_for_games/app_stores.dart';
+import 'package:all_for_games/games/mahjong/mahjong_board.dart';
 import 'package:all_for_games/games/mahjong/mahjong_controller.dart';
 import 'package:all_for_games/games/mahjong/mahjong_difficulty.dart';
 import 'package:all_for_games/games/mahjong/mahjong_generator.dart';
@@ -243,7 +244,8 @@ Future<(int, int)> _hint(WidgetTester tester) async {
   return (solution[0]! as int, solution[1]! as int);
 }
 
-/// Takes tile [id] like a player: a face-down tile is turned over first.
+/// Takes tile [id] like a player: a face-down tile is turned over first,
+/// which takes it at once when the selected tile matches it.
 Future<void> _tapTile(WidgetTester tester, int id) async {
   final tile = find.byKey(ValueKey('tile-$id'));
   final view = tester.widget<MahjongTileView>(
@@ -252,6 +254,8 @@ Future<void> _tapTile(WidgetTester tester, int id) async {
   if (view.faceDown) {
     await tester.tap(tile);
     await tester.pumpAndSettle();
+    final board = tester.widget<MahjongBoard>(find.byType(MahjongBoard));
+    if (board.controller.state.positionOf(id) == null) return;
   }
   await tester.tap(tile);
   await tester.pumpAndSettle();

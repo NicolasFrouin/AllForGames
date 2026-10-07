@@ -92,9 +92,13 @@ Future<void> tapTile(WidgetTester tester, int id) async {
   await tester.pumpAndSettle();
 }
 
-/// Taps [id] like a player: a face-down tile is turned over first.
+/// Taps [id] like a player: a face-down tile is turned over first, which
+/// takes it at once with the selected tile when they match.
 Future<void> takeTile(WidgetTester tester, int id) async {
-  if (viewOf(tester, id).faceDown) await tapTile(tester, id);
+  if (viewOf(tester, id).faceDown) {
+    await tapTile(tester, id);
+    if (boardOnScreen(tester).positionOf(id) == null) return;
+  }
   await tapTile(tester, id);
 }
 
@@ -137,11 +141,12 @@ Map<String, Object?> savedData(AppStores stores) =>
 const classicShape = {SettingsStore.mahjongShapeKey: 'classic'};
 
 /// The layout of the game on screen.
-MahjongLayout layoutOnScreen(WidgetTester tester) => tester
-    .widget<MahjongBoard>(find.byType(MahjongBoard))
-    .controller
-    .state
-    .layout;
+MahjongLayout layoutOnScreen(WidgetTester tester) =>
+    boardOnScreen(tester).layout;
+
+/// The board of the game on screen.
+MahjongState boardOnScreen(WidgetTester tester) =>
+    tester.widget<MahjongBoard>(find.byType(MahjongBoard)).controller.state;
 
 void main() {
   testWidgets('tapping two free tiles that match removes them', (tester) async {
@@ -492,11 +497,12 @@ void main() {
   ) async {
     await pumpGame(
       tester,
+      // Four free tiles apart: 1 2 2 1.
       state: MahjongState(
-        layout: rowBoard.layout,
+        layout: layoutOf([(0, 0, 0), (4, 0, 0), (8, 0, 0), (12, 0, 0)]),
         faces: rowBoard.faces,
         slots: rowBoard.slots,
-        hidden: {0, 3},
+        hidden: {0, 1},
       ),
     );
     expect(viewOf(tester, 0).faceDown, isTrue);
@@ -504,14 +510,14 @@ void main() {
 
     await tapTile(tester, 0);
     expect(viewOf(tester, 0).faceDown, isFalse);
-    await tapTile(tester, 3);
+    await tapTile(tester, 1);
     expect(viewOf(tester, 0).faceDown, isTrue, reason: 'one at a time');
-    expect(viewOf(tester, 3).faceDown, isFalse);
+    expect(viewOf(tester, 1).faceDown, isFalse);
 
-    await tapTile(tester, 3);
-    await tapTile(tester, 0);
-    await tapTile(tester, 0);
-    expect(textOf('tiles-value'), '2', reason: 'the two 1s matched');
+    // 2 matches 1, turned over: both go.
+    await tapTile(tester, 2);
+    expect(textOf('tiles-value'), '2');
+    expect(isEnabled(tester, 'undo'), isTrue);
   });
 
   testWidgets('the tiles take the style of the settings, and its changes', (

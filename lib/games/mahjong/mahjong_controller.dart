@@ -286,29 +286,60 @@ class MahjongController extends ChangeNotifier {
   /// does not match selects that one instead. Tray mode: picks the tile.
   ///
   /// A free face-down tile turns over first (the one turned over before
-  /// turns back, unless it is selected); the next tap takes it.
+  /// turns back, unless it is selected); the next tap takes it. A tile
+  /// turned over counts as taken too: a tap on its pair, face up or down,
+  /// takes both (in tray mode, while the tray has room for one more), and
+  /// turning over the pair of the selected tile, or of a tile of the tray,
+  /// takes it at once.
   TileTap tap(int id) {
     if (_finished || _state.positionOf(id) == null) return TileTap.ignored;
     if (!_state.isFree(id)) return TileTap.blocked;
-    if (!isFaceUp(id)) {
-      _revealed = id;
-      notifyListeners();
-      return TileTap.revealed;
+    final faceDown = !isFaceUp(id);
+    final turned = _revealed;
+    if (isTray) {
+      final tray = trayState;
+      if (tray.partnerOf(id) == null &&
+          tray.tray.length < TrayState.capacity - 1) {
+        if (_pairOf(id, [turned]) case final pair?) return _pick([id, pair]);
+      }
+      if (!faceDown || tray.partnerOf(id) != null) return _pick([id]);
+    } else {
+      final selected = _selected;
+      if (selected == id) {
+        _selected = null;
+        // It stays face up, as the tile turned over.
+        if (_state.isHidden(id)) _revealed = id;
+        notifyListeners();
+        return TileTap.deselected;
+      }
+      if (_pairOf(id, [selected, turned]) case final pair?) {
+        match(pair, id);
+        return TileTap.matched;
+      }
+      if (!faceDown) {
+        _selected = id;
+        if (_revealed == id) _revealed = null;
+        notifyListeners();
+        return TileTap.selected;
+      }
     }
-    if (isTray) return _pick(id);
-    final selected = _selected;
-    if (selected == id) {
-      _selected = null;
-      // It stays face up, as the tile turned over.
-      if (_state.isHidden(id)) _revealed = id;
-      notifyListeners();
-      return TileTap.deselected;
-    }
-    if (selected != null && match(selected, id)) return TileTap.matched;
-    _selected = id;
-    if (_revealed == id) _revealed = null;
+    _revealed = id;
     notifyListeners();
-    return TileTap.selected;
+    return TileTap.revealed;
+  }
+
+  /// The first of [candidates] (the selected tile, the tile turned over)
+  /// that matches [id] now.
+  int? _pairOf(int id, List<int?> candidates) {
+    for (final candidate in candidates) {
+      if (candidate != null &&
+          candidate != id &&
+          _state.isFree(candidate) &&
+          _state.faces[candidate] == _state.faces[id]) {
+        return candidate;
+      }
+    }
+    return null;
   }
 
   /// Removes [a] and [b] when they are free and match (classic mode).
@@ -332,14 +363,18 @@ class MahjongController extends ChangeNotifier {
     return true;
   }
 
-  /// Tray mode: [id] goes into the tray, or clears its partner there. The
-  /// game is lost at once when the tray fills.
-  TileTap _pick(int id) {
+  /// Tray mode: a tile goes into the tray, or clears its partner there. The
+  /// game is lost at once when the tray fills. Two [ids] of a face (a tile
+  /// and the one turned over) go one after the other: they clear each other.
+  TileTap _pick(List<int> ids) {
     final before = trayState;
-    final next = before.pick(id)!;
+    var next = before;
+    for (final id in ids) {
+      next = next.pick(id)!;
+    }
     _remember();
-    _moves++;
-    final cleared = next.tray.length < before.tray.length;
+    _moves += ids.length;
+    final cleared = next.tray.length < before.tray.length || ids.length > 1;
     final freed = next.board.freeDiscs - before.board.freeDiscs;
     _score += freed * discPoints;
     if (cleared) {
@@ -355,12 +390,16 @@ class MahjongController extends ChangeNotifier {
       // Taking a tile earlier never blocks another: only the tray can fill.
       final mended = [
         for (final pick in picks)
-          if (pick != id) pick,
+          if (!ids.contains(pick)) pick,
       ];
       _picks = next.isSolvedBy(mended) ? mended : null;
     }
     _tray = next.tray;
-    _apply(next.board, MahjongAction.pick);
+    // A pair from the board vanishes, like a match.
+    _apply(
+      next.board,
+      ids.length > 1 ? MahjongAction.match : MahjongAction.pick,
+    );
     // The last disc freed wins, even when the tray fills with the same pick.
     if (next.isWon || isDiscs && next.board.discsFree) {
       _finish(GameOutcome.won);
