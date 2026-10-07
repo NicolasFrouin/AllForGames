@@ -11,6 +11,7 @@ import '../games/game_catalog.dart';
 import '../l10n/app_localizations.dart';
 import '../saves/game_save_store.dart';
 import '../stats/game_stats.dart';
+import '../update/update_widgets.dart';
 
 class HubScreen extends StatelessWidget {
   const HubScreen({super.key, required this.stores});
@@ -21,66 +22,72 @@ class HubScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
-      body: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF0E3B2C), Color(0xFF0A1F1A), Color(0xFF07110F)],
+      body: UpdatePrompt(
+        updater: stores.updater,
+        child: DecoratedBox(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFF0E3B2C), Color(0xFF0A1F1A), Color(0xFF07110F)],
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: ListenableBuilder(
-            listenable: Listenable.merge([
-              stores.stats,
-              stores.saves,
-              stores.settings,
-            ]),
-            builder: (context, _) => Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1100),
-                child: CustomScrollView(
-                  slivers: [
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(20, 28, 20, 8),
-                      sliver: SliverToBoxAdapter(
-                        child: _Header(overall: stores.stats.overall),
+          child: SafeArea(
+            child: ListenableBuilder(
+              listenable: Listenable.merge([
+                stores.stats,
+                stores.saves,
+                stores.settings,
+              ]),
+              builder: (context, _) => Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1100),
+                  child: CustomScrollView(
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: UpdateButton(updater: stores.updater),
                       ),
-                    ),
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                      sliver: SliverToBoxAdapter(
-                        child: Text(
-                          l10n.hubGames,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(
-                                color: Colors.white70,
-                                letterSpacing: 1.2,
-                              ),
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(20, 28, 20, 8),
+                        sliver: SliverToBoxAdapter(
+                          child: _Header(overall: stores.stats.overall),
                         ),
                       ),
-                    ),
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
-                      sliver: _GameGrid(
-                        tiles: [
-                          for (final game in _games(
-                            stores.settings.pinnedGames,
-                          ))
-                            GameTile(
-                              game: game,
-                              stats: stores.stats.statsFor(game.id),
-                              saved: stores.saves[game.id],
-                              pinned: stores.settings.pinnedGames.contains(
-                                game.id,
-                              ),
-                              onPin: () =>
-                                  stores.settings.togglePinned(game.id),
-                            ),
-                        ],
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                        sliver: SliverToBoxAdapter(
+                          child: Text(
+                            l10n.hubGames,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
+                                  color: Colors.white70,
+                                  letterSpacing: 1.2,
+                                ),
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
+                        sliver: _GameGrid(
+                          tiles: [
+                            for (final game in _games(
+                              stores.settings.pinnedGames,
+                            ))
+                              GameTile(
+                                game: game,
+                                stats: stores.stats.statsFor(game.id),
+                                saved: stores.saves[game.id],
+                                pinned: stores.settings.pinnedGames.contains(
+                                  game.id,
+                                ),
+                                onPin: () =>
+                                    stores.settings.togglePinned(game.id),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

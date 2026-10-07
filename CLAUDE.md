@@ -84,6 +84,11 @@ lib/
   stats/                     GameRecord (one finished game), GameStats (aggregates), StatsStore, PlayTimer, stats page;
                              overview_stats (pure Dart, every game together: totals, win and day streaks, last 30
                              days, games by hour/weekday, records, recent games) + overview_screen (/stats)
+  update/                    in-app update of the Android app: app_release (pure: AppVersion, pickUpdate from the
+                             GitHub releases JSON), AppUpdater (check at start from main, ask once per version,
+                             Later stored; download, install), update_backend_io (HttpClient + MethodChannel
+                             `all_for_games/update` of MainActivity.kt: versionName, cache folder, FileProvider
+                             installer) / _web (none), update_widgets (UpdatePrompt dialog, UpdateButton on the hub)
   common/format.dart         duration/date/percent formatting, in the app language
   games/game_catalog.dart    GameInfo list shown on the hub (route, localized title/tagline/variants/stat labels)
   cards/                     shared by card games: playing_card (Suit, PlayingCard), deal_random (seeded shuffle, the
@@ -151,7 +156,7 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   `generated`/`classic`, unknown = generated; `settings.<game>.difficulty`: `easy`/`medium`/`hard`, unknown = medium;
   `settings.minesweeper.flagHoldMs`: int, absent = 300, limited to 150..750; `settings.minesweeper.vibrate`: bool,
   absent = false; `settings.pinnedGames`: string list of game ids, the last pinned first), `achievements.<id>` per
-  unlocked achievement (UTC ISO date).
+  unlocked achievement (UTC ISO date), `update.dismissed` (the version the player answered Later to).
   Catch storage errors (blocked or full storage must not break the app).
 - **ChangeNotifier stores** notify *after* an `await`, never synchronously in a mutating call:
   screens call them from `dispose()`, when no widget can rebuild.
@@ -259,6 +264,12 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   500 ms) and, with the vibration setting (off by default), buzzes the phone. Two fingers zoom every board
   (`InteractiveViewer`, cells up to `maxZoomCell`); cells smaller than `minCell` keep that size and the board pans. A
   new board size resets the zoom.
+- **In-app update** (Android only, `Platform.isAndroid`: never in tests, web or desktop): the check reads
+  `https://api.github.com/repos/NicolasFrouin/AllForGames/releases` (the repository is public: no key in the app),
+  skips drafts and tags with a suffix, and offers the highest version above the installed `versionName` (the tag
+  without `v`, from the release workflow's `--build-name`) that has an `.apk`. Errors stay silent. The APK must be
+  signed with the same upload key, or Android refuses it. The manifest's `INTERNET` (release builds need it),
+  `REQUEST_INSTALL_PACKAGES` and FileProvider serve it; a Play Store bundle must drop the last two.
 - **Card suits** are drawn with `SuitIcon` (`lib/cards/`, vector). Text symbols ♥ ♦ render as color emoji on web.
   Face-down cards are drawn with `CardBackView` and the selected skin.
 - **Keys for tests**: widgets that tests drive have `ValueKey`s (`game-<id>`, `stats-<id>`, `stock`, `waste`,
@@ -268,8 +279,10 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   `overview-stats-button`, `pin-<id>` (hub), `overview-stat-<id>`, `overview-game-<gameId>`, `overview-recent-<i>`,
   `overview-achievements`, `overview-activity` on /stats, `settings-button`, `language-<code>`,
   `tray-side-<side>`, `flag-hold`, `flag-hold-value`, `flag-vibrate` on /settings,
-  `achievements-button`, `skins-button`, `achievement-<id>`, `achievement-tab-<gameId>`, `achievements-count` (all)
-  and `achievements-count-<gameId>`, `skins-tab-<kind>` (`SkinKind` name), `skins-group-<free|gameId>`,
+  `update-button`, `update-dialog`, `update-later`, `update-now`, `update-progress`, `update-percent`, `update-error`,
+  `update-retry`, `update-cancel` (hub), `achievements-button`, `skins-button`, `achievement-<id>`,
+  `achievement-tab-<gameId>`, `achievements-count` (all) and `achievements-count-<gameId>`, `skins-tab-<kind>`
+  (`SkinKind` name), `skins-group-<free|gameId>`,
   `card-back-<id>`, `tile-style-<id>`, `minesweeper-theme-<id>`, `unlocked-<id>` in the win dialog; Mahjong:
   `tile-<id>`, `hint`, `shuffle`, `stuck-banner`, `tiles-value`, `pairs-value`, `mode-value` (tray mode),
   `new-game-mode-<mode>`, `new-game-goal-<tiles|discs>`, `new-game-shape-<shape>`, `new-game-hidden-note`,

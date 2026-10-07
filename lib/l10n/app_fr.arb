@@ -427,5 +427,14 @@
   "minesweeperChords": "Ouvertures groupées",
   "minesweeperFlagsPlaced": "Drapeaux posés",
   "minesweeperHints": "Indices",
-  "minesweeperCellsRevealed": "Cases ouvertes"
+  "minesweeperCellsRevealed": "Cases ouvertes",
+  "updateAvailableTitle": "Nouvelle version",
+  "updateAvailableMessage": "La version {version} est disponible. Mettre à jour maintenant ?",
+  "updateLater": "Plus tard",
+  "updateNow": "Mettre à jour",
+  "updateTo": "Passer à la version {version}",
+  "updateDownloading": "Téléchargement… {percent}",
+  "updateInstallNote": "Android vous propose ensuite de l'installer. Rouvrez l'application une fois l'installation terminée.",
+  "updateFailed": "Le téléchargement a échoué. Vérifiez votre connexion et réessayez.",
+  "updateRetry": "Réessayer"
 }

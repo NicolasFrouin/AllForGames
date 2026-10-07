@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The only folder the update FileProvider shares: the APK downloaded by the in-app update. -->
+<paths>
+    <cache-path name="updates" path="updates/" />
+</paths>

@@ -52,9 +52,15 @@ artifacts of the run, kept 14 days).
 
 ### Install the APK on an Android phone
 
-- On the phone: open the release page (signed in to GitHub: the repository is private), download the `.apk`,
-  open it and allow installs from this source when Android asks.
+- On the phone: open the release page, download the `.apk`, open it and allow installs from this source when
+  Android asks.
 - Or from a computer, with USB debugging on: `adb install all-for-games-<version>.apk`.
+
+Then the app updates itself (from 0.2.0): at start it reads the releases of this (public) repository, and when a
+newer version has an APK, it offers to install it (Later keeps an Update button on the hub). It downloads the APK
+and opens the Android installer; the app opens again from the installer's Open button. A Play Store build must not
+keep this: Google Play forbids self-updates and `REQUEST_INSTALL_PACKAGES` (remove the permission and the update
+provider of `AndroidManifest.xml` for the app bundle first).
 
 Without the signing secrets (below), builds are signed with the runner's debug key. Android updates an app only
 with an APK signed by the same key: after a key change (debug to upload key, local build to CI build), uninstall

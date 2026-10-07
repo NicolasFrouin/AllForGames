@@ -2004,5 +2004,59 @@
   "minesweeperCellsRevealed": "Cells opened",
   "@minesweeperCellsRevealed": {
     "description": "Minesweeper statistic: safe cells opened."
+  },
+  "updateAvailableTitle": "New version",
+  "@updateAvailableTitle": {
+    "description": "Title of the dialog that offers to install a newer version of the Android app."
+  },
+  "updateAvailableMessage": "Version {version} is available. Update now?",
+  "@updateAvailableMessage": {
+    "description": "Dialog that offers to install a newer version of the Android app.",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "0.3.0"
+      }
+    }
+  },
+  "updateLater": "Later",
+  "@updateLater": {
+    "description": "Update dialog button: not now, and not again for this version."
+  },
+  "updateNow": "Update",
+  "@updateNow": {
+    "description": "Update dialog button: downloads and installs the newer version."
+  },
+  "updateTo": "Update to {version}",
+  "@updateTo": {
+    "description": "Button at the top of the hub while a newer version of the Android app exists, and title of the download dialog.",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "0.3.0"
+      }
+    }
+  },
+  "updateDownloading": "Downloading… {percent}",
+  "@updateDownloading": {
+    "description": "Download dialog of a newer version: the part downloaded so far.",
+    "placeholders": {
+      "percent": {
+        "type": "String",
+        "example": "42%"
+      }
+    }
+  },
+  "updateInstallNote": "Android then asks you to install it. Open the app again once it is done.",
+  "@updateInstallNote": {
+    "description": "Download dialog of a newer version: the app cannot start itself again after the update."
+  },
+  "updateFailed": "The download failed. Check your connection and try again.",
+  "@updateFailed": {
+    "description": "Download dialog of a newer version, when the download failed."
+  },
+  "updateRetry": "Try again",
+  "@updateRetry": {
+    "description": "Download dialog button after a failed download: downloads again."
   }
 }
