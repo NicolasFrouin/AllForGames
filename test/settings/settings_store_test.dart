@@ -198,21 +198,21 @@ void main() {
   });
 
   test(
-    'keeps the mode of the last new Mahjong game; unknown is classic',
+    'keeps the mode of the last new Mahjong game; the tray mode by default',
     () async {
       final store = await createStore();
-      expect(store.mahjongMode, MahjongMode.classic);
+      expect(store.mahjongMode, MahjongMode.tray);
 
-      await store.setMahjongMode(MahjongMode.tray);
+      await store.setMahjongMode(MahjongMode.classic);
 
-      expect((await SettingsStore.load()).mahjongMode, MahjongMode.tray);
+      expect((await SettingsStore.load()).mahjongMode, MahjongMode.classic);
       expect(await SharedPreferencesAsync().getAll(), {
-        SettingsStore.mahjongModeKey: 'tray',
+        SettingsStore.mahjongModeKey: 'classic',
       });
       final unknown = await createStore({
         SettingsStore.mahjongModeKey: 'tower',
       });
-      expect(unknown.mahjongMode, MahjongMode.classic);
+      expect(unknown.mahjongMode, MahjongMode.tray);
     },
   );
 

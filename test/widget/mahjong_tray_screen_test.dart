@@ -339,7 +339,10 @@ void main() {
     testWidgets('the new game sheet deals the chosen mode and keeps it', (
       tester,
     ) async {
-      final stores = await pumpTray(tester, location: '/mahjong');
+      final stores = await pumpTray(
+        tester,
+        data: {SettingsStore.mahjongModeKey: 'classic'},
+      );
       expect(textOf('difficulty-value'), 'Medium');
       expect(byKey('tray-slot-0'), findsNothing);
 
@@ -415,9 +418,7 @@ void main() {
       final stores = await pumpTray(tester, location: '/mahjong?mode=tray');
       await tester.tap(byKey('new-game'));
       await tester.pumpAndSettle();
-      expect(byKey('new-game-goal-tiles'), findsNothing, reason: 'classic');
-      await tester.tap(byKey('new-game-mode-tray'));
-      await tester.pumpAndSettle();
+      // The tray mode of the settings, by default.
       expect(
         tester.widget<ChoiceChip>(byKey('new-game-goal-tiles')).selected,
         isTrue,

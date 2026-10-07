@@ -91,7 +91,7 @@ class SettingsStore extends ChangeNotifier {
     var drawCount = _defaultDrawCount;
     var difficulty = _defaultDifficulty;
     var mahjongDifficulty = MahjongDifficulty.medium;
-    var mahjongMode = MahjongMode.classic;
+    var mahjongMode = MahjongMode.tray;
     var freecellDifficulty = FreeCellDifficulty.medium;
     var spiderDifficulty = SpiderDifficulty.medium;
     var tripeaksDifficulty = TriPeaksDifficulty.medium;
@@ -119,7 +119,7 @@ class SettingsStore extends ChangeNotifier {
           MahjongMode.values.asNameMap()[await prefs.getString(
             mahjongModeKey,
           )] ??
-          MahjongMode.classic;
+          MahjongMode.tray;
       freecellDifficulty =
           FreeCellDifficulty.values.asNameMap()[await prefs.getString(
             freecellDifficultyKey,

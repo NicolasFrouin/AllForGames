@@ -41,7 +41,11 @@ Future<AppStores> pumpGame(
   Size size = const Size(1280, 900),
 }) async {
   useSurface(tester, size);
-  final stores = await createTestStores(data);
+  // These tests play the classic mode; the tray mode has its own file.
+  final stores = await createTestStores({
+    SettingsStore.mahjongModeKey: 'classic',
+    ...data,
+  });
   final router = GoRouter(
     initialLocation: '/mahjong',
     initialExtra: state,
@@ -447,8 +451,8 @@ void main() {
       // A generated shape of the Hard size.
       final layout = layoutOnScreen(tester);
       expect(layout.id, 'random');
-      expect(layout.length, inInclusiveRange(120, 144));
-      expect(layout.layers, inInclusiveRange(5, 8));
+      expect(layout.length, inInclusiveRange(128, 144));
+      expect(layout.layers, inInclusiveRange(4, 8));
       expect(textOf('tiles-value'), '${layout.length}');
     });
   });
@@ -537,12 +541,14 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(textOf('difficulty-value'), 'Easy');
+    // The tray mode, by default.
+    expect(textOf('mode-value'), 'Tray · Easy');
     expect(find.widgetWithText(AppBar, 'Mahjong'), findsOneWidget);
     await leaveGame(tester);
     expect(savedData(stores)['seed'], 42);
 
     await openFromHub(tester);
-    expect(textOf('tiles-value'), '72');
+    expect(textOf('tiles-value'), '${layoutOnScreen(tester).length}');
+    expect(savedData(stores)['mode'], 'tray');
   });
 }

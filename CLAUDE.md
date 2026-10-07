@@ -146,8 +146,8 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   record (`StatsStore.keyOf`), `save.<gameId>` per game in progress (`GameSaveStore.keyOf`), `settings.<name>` per
   setting (`settings.locale`: `en`/`fr`, absent = device language; `settings.cardBack`: skin id, unknown = classic;
   `settings.tileStyle`: Mahjong tile style id, unknown = classic; `settings.minesweeperTheme`: theme id, unknown =
-  classic; `settings.klondike.drawCount`: int 1/3, unknown = 1; `settings.mahjong.mode`: `classic`/`tray`, unknown =
-  classic; `settings.mahjong.traySide`: `top`/`bottom`/`left`/`right`, unknown = top; `settings.mahjong.shape`:
+  classic; `settings.klondike.drawCount`: int 1/3, unknown = 1; `settings.mahjong.mode`: `classic`/`tray`/`discs`,
+  unknown = tray; `settings.mahjong.traySide`: `top`/`bottom`/`left`/`right`, unknown = top; `settings.mahjong.shape`:
   `generated`/`classic`, unknown = generated; `settings.<game>.difficulty`: `easy`/`medium`/`hard`, unknown = medium;
   `settings.minesweeper.flagHoldMs`: int, absent = 300, limited to 150..750; `settings.minesweeper.vibrate`: bool,
   absent = false; `settings.pinnedGames`: string list of game ids, the last pinned first), `achievements.<id>` per

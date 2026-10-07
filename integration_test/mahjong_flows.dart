@@ -17,7 +17,7 @@ import 'fast_animations.dart';
 /// The Mahjong flows of the e2e tests, on real storage (localStorage on
 /// web). `integration_test/app_test.dart` runs them.
 void mahjongFlows() {
-  testFlow('Mahjong deals as on the VM; a match from the hub, undone', (
+  testFlow('Mahjong deals as on the VM; a tray pick from the hub, undone', (
     tester,
   ) async {
     // The same faces as `seed1MediumFaces` in mahjong_generator_test.dart
@@ -37,27 +37,26 @@ void mahjongFlows() {
     await _startApp(tester);
     await tester.tap(find.byKey(const ValueKey('game-mahjong')));
     await tester.pumpAndSettle();
-    expect(_text(tester, 'difficulty-value'), 'Medium');
-
-    final (a, b) = await _hint(tester);
-    // A generated shape: its tiles are those of the save.
+    // The tray mode on a generated shape, by default.
+    expect(_text(tester, 'mode-value'), 'Tray · Medium');
+    await tester.tap(find.byKey(const ValueKey('hint')));
+    await tester.pumpAndSettle();
     final saved = await _savedGame();
     expect(saved['layout'], 'random');
-    final tiles = (saved['positions']! as List<Object?>).length ~/ 3;
-    expect(_text(tester, 'tiles-value'), '$tiles');
-    await _tapTile(tester, a);
-    await _tapTile(tester, b);
-    expect(_text(tester, 'tiles-value'), '${tiles - 2}');
+    final pick = (saved['solution']! as List<Object?>).first! as int;
+
+    await _tapTile(tester, pick);
+    expect((await _savedGame())['tray'], [pick]);
 
     await tester.tap(find.byKey(const ValueKey('undo')));
     await tester.pumpAndSettle();
-    expect(_text(tester, 'tiles-value'), '$tiles');
+    expect((await _savedGame())['tray'], isEmpty);
   });
 
   testFlow('Mahjong: a game left continues after a restart', (tester) async {
     await _startApp(
       tester,
-      location: '/mahjong?seed=42&difficulty=hard&shape=classic',
+      location: '/mahjong?mode=classic&seed=42&difficulty=hard&shape=classic',
     );
     final (a, b) = await _hint(tester);
     await _tapTile(tester, a);
@@ -88,7 +87,7 @@ void mahjongFlows() {
   testFlow('Mahjong: an Easy board played to the end is a win', (tester) async {
     await _startApp(
       tester,
-      location: '/mahjong?seed=5&difficulty=easy&shape=classic',
+      location: '/mahjong?mode=classic&seed=5&difficulty=easy&shape=classic',
     );
     await _hint(tester);
     // The order that clears the deal, as the hint knows it.
