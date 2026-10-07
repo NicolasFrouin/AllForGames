@@ -17,6 +17,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../games/mahjong/mahjong_discs_test.dart' show discBoard;
 import '../games/mahjong/mahjong_test_helpers.dart';
 import '../helpers/test_stores.dart';
 import 'widget_test_helpers.dart';
@@ -51,9 +52,9 @@ Future<AppStores> pumpTray(
               final initialState = route.extra as MahjongState?;
               return MahjongScreen(
                 stores: stores,
-                mode: initialState != null
-                    ? MahjongMode.tray
-                    : MahjongMode.values.asNameMap()[query['mode']],
+                mode:
+                    MahjongMode.values.asNameMap()[query['mode']] ??
+                    (initialState != null ? MahjongMode.tray : null),
                 difficulty: MahjongDifficulty.values
                     .asNameMap()[query['difficulty']],
                 shape: MahjongShape.values.asNameMap()[query['shape']],
@@ -376,6 +377,7 @@ void main() {
         saves: stores.saves,
       );
       final pick = controller.hintPick()!;
+      await reveal(tester, pick);
       await tapTile(tester, pick);
 
       await tester.pageBack();
@@ -388,7 +390,59 @@ void main() {
     });
   });
 
-  testWidgets('the stats page filters the tray games', (tester) async {
+  group('discs', () {
+    testWidgets('discs lie under the tiles; freeing both wins', (tester) async {
+      await pumpTray(tester, state: discBoard, location: '/mahjong?mode=discs');
+      expect(textOf('discs-value'), '0/2');
+      expect(find.bySemanticsLabel('Disc'), findsNWidgets(2));
+
+      await tapTile(tester, 4);
+      expect(textOf('discs-value'), '0/2', reason: '5 lies on both');
+      await tester.tap(tile(5));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(find.bySemanticsLabel('Disc'), findsNWidgets(2), reason: 'rising');
+      await tester.pumpAndSettle();
+
+      expect(find.bySemanticsLabel('Disc'), findsNothing);
+      expect(textOf('discs-value'), '2/2');
+      expect(find.text('You won!'), findsOneWidget);
+    });
+
+    testWidgets('the new game sheet sets the goal of the tray rules', (
+      tester,
+    ) async {
+      final stores = await pumpTray(tester, location: '/mahjong?mode=tray');
+      await tester.tap(byKey('new-game'));
+      await tester.pumpAndSettle();
+      expect(byKey('new-game-goal-tiles'), findsNothing, reason: 'classic');
+      await tester.tap(byKey('new-game-mode-tray'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<ChoiceChip>(byKey('new-game-goal-tiles')).selected,
+        isTrue,
+      );
+
+      await tester.tap(byKey('new-game-goal-discs'));
+      await tester.pumpAndSettle();
+      await tester.tap(byKey('new-game-deal'));
+      await tester.pumpAndSettle();
+
+      expect(savedData(stores)['mode'], 'discs');
+      expect(stores.settings.mahjongMode, MahjongMode.discs);
+      expect(textOf('mode-value'), 'Discs · Medium');
+      expect(textOf('discs-value'), '0/3');
+
+      await tester.tap(byKey('new-game'));
+      await tester.pumpAndSettle();
+      await tester.tap(byKey('new-game-mode-classic'));
+      await tester.pumpAndSettle();
+      expect(byKey('new-game-goal-discs'), findsNothing);
+    });
+  });
+
+  testWidgets('the stats page shows the tray game; one variant needs no '
+      'filter', (tester) async {
     final stores = await pumpTray(
       tester,
       location: '/mahjong?mode=tray&difficulty=hard&shape=classic&seed=6',
@@ -403,10 +457,7 @@ void main() {
 
     await tester.tap(byKey('open-stats'));
     await tester.pumpAndSettle();
-    await tester.tap(byKey('variant-tray-turtle'));
-    await tester.pumpAndSettle();
-
-    expect(find.textContaining('Tray · Turtle'), findsWidgets);
+    expect(byKey('variant-tray-turtle'), findsNothing);
     expect(valueIn('stat-played'), '1');
     expect(valueIn('stat-${MahjongStatKeys.mostHeld}'), '4');
   });

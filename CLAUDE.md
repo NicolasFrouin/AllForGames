@@ -98,9 +98,9 @@ lib/
                              klondike_solver (offline only: the generator and tests)
   games/mahjong/             pure Dart: mahjong_tiles, mahjong_layout, mahjong_shapes (generated layouts),
                              mahjong_state (rules), mahjong_generator (solvable by construction), mahjong_solver
-                             (hints), mahjong_tray (tray mode: rules,
-                             generator, solver), mahjong_difficulty (levels, modes), mahjong_motion,
-                             mahjong_players (offline only); Flutter: mahjong_controller, mahjong_board,
+                             (hints), mahjong_tray (tray mode: rules, generator, solver), mahjong_discs
+                             (discs mode), mahjong_difficulty (levels, modes), mahjong_motion, mahjong_players
+                             (offline only); Flutter: mahjong_controller, mahjong_board,
                              mahjong_tile_view (vector tile art), mahjong_moving_tile (per-frame transforms),
                              mahjong_screen, mahjong_new_game_sheet, _texts
   games/freecell/            freecell_state (rules), freecell_solver (offline), freecell_deals (generated), deal
@@ -235,13 +235,18 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   level's `hiddenPercent`: Medium 10%, Hard 20%, chosen with their own random numbers so a seed's faces stay the same)
   lie face down: a tap on a free one turns it over (`TileTap.revealed`; one at a time, the selected tile stays face
   up), the next tap selects it or puts it in the tray; the rules ignore it. Tests take tiles with `take`/`takeTile`,
-  which turn them over first. Tile art is vector (no emoji, no CJK font). Two modes (`MahjongMode`, one save slot
-  holding the mode): classic, and tray (`mahjong_tray.dart`): a tapped free tile goes into a tray of 4 places where
-  two of a face clear each other (on the side of the board the settings give, `MahjongTraySide`, top by default; in a
-  column on the left or right); a full tray loses at once (`GameOutcome.lost`). Tray deals are built forwards (one
-  free tile after the other, faces given so the order never holds more than `TrayLevel.held` tiles); the level also
-  sets how many pairs are blind (not free together) and seen together. Records: variant = layout id (`random` for a
-  generated shape), `tray-<layoutId>` in tray mode; no shuffle in tray mode.
+  which turn them over first. Tile art is vector (no emoji, no CJK font). Three modes (`MahjongMode`, one save slot
+  holding the mode): classic, tray (`mahjong_tray.dart`) and discs (`usesTray`: the tray rules): a tapped free tile
+  goes into a tray of 4 places where two of a face clear each other (on the side of the board the settings give,
+  `MahjongTraySide`, top by default; in a column on the left or right); a full tray loses at once
+  (`GameOutcome.lost`). Tray deals are built forwards (one free tile after the other, faces given so the order never
+  holds more than `TrayLevel.held` tiles); the level also sets how many pairs are blind (not free together) and seen
+  together. The discs mode (`mahjong_discs.dart`, the sheet's goal under Tray) deals the tray mode's board with the
+  level's discs (`placeDiscs`: on a tile, under the tile of the next layer, wider than a tile so it peeks out): a disc
+  is free when no tile of its layer or above lies on it (`discCover`), drawn between the layers, and rises away when
+  freed (100 points); all discs free wins, tiles left or not (a full tray still loses); an undo covers it again.
+  Records: variant = layout id (`random` for a generated shape), `<mode>-<layoutId>` in the tray and discs modes
+  (`mahjongVariant`); no shuffle with the tray rules; the stats page lists the variants played.
 - **Minesweeper**: levels Beginner 9x9/10, Intermediate 16x16/40, Expert 30x16/99 (`easy`/`medium`/`hard`; Expert
   is turned 16x30 on a tall screen, chosen at deal time and saved). Mines are placed at the first tap
   (`generateMines`, `DealRandom` from seed + tap): none touches it, and `MinesweeperSolver` clears the board by logic
@@ -267,9 +272,8 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   and `achievements-count-<gameId>`, `skins-tab-<kind>` (`SkinKind` name), `skins-group-<free|gameId>`,
   `card-back-<id>`, `tile-style-<id>`, `minesweeper-theme-<id>`, `unlocked-<id>` in the win dialog; Mahjong:
   `tile-<id>`, `hint`, `shuffle`, `stuck-banner`, `tiles-value`, `pairs-value`, `mode-value` (tray mode),
-  `new-game-mode-<mode>`, `new-game-shape-<shape>`, `new-game-hidden-note`, `tray-slot-<i>`, `tray-full`, `try-again`,
-  `lost-new-game`;
-  FreeCell: `freecell-<i>`,
+  `new-game-mode-<mode>`, `new-game-goal-<tiles|discs>`, `new-game-shape-<shape>`, `new-game-hidden-note`,
+  `discs-value`, `tray-slot-<i>`, `tray-full`, `try-again`, `lost-new-game`; FreeCell: `freecell-<i>`,
   `cascade-<i>`, `foundation-<i>`, `auto-complete`; Spider: `stock`, `column-<i>`, `foundation-<i>`, `deals-left`,
   card ids like `spades-1-7`; TriPeaks: `stock`, `waste`, `run-value`, `stock-value`, `stuck-banner`, `stuck-undo`,
   `stuck-new-game`; Minesweeper: `minesweeper-board` (tests tap cells by position on it), `flag-mode`, `hint`,

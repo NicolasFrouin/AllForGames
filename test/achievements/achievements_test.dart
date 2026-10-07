@@ -458,11 +458,14 @@ void main() {
       expect(progress('mahjong.combo10', [combo(7), combo(12)]), 10);
     });
 
-    test('turtleWin counts a Turtle win in either mode', () {
+    test('turtleWin counts a Turtle cleared in the classic or tray mode', () {
       final pyramid = game(gameId: 'mahjong', variant: 'tray-pyramid');
       expect(progress('mahjong.turtleWin', [pyramid]), 0);
+      // Freeing the discs does not clear the board.
+      final discs = game(gameId: 'mahjong', variant: 'discs-turtle');
+      expect(progress('mahjong.turtleWin', [pyramid, discs]), 0);
       final turtle = game(gameId: 'mahjong', variant: 'tray-turtle');
-      expect(progress('mahjong.turtleWin', [pyramid, turtle]), 1);
+      expect(progress('mahjong.turtleWin', [pyramid, discs, turtle]), 1);
     });
 
     group('in tray mode', () {

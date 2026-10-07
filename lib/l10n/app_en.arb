@@ -1818,6 +1818,34 @@
   "@mahjongTrayModeHint": {
     "description": "New game sheet: what the tray Mahjong mode is."
   },
+  "mahjongModeDiscs": "Discs",
+  "@mahjongModeDiscs": {
+    "description": "Mahjong mode: the tray rules, with the goal of freeing the discs under the tiles. Also the status bar label of the mode."
+  },
+  "mahjongDiscsModeHint": "Free every disc: clear the tiles that lie on them. The tray rules stay: a full tray loses.",
+  "@mahjongDiscsModeHint": {
+    "description": "Explains the Mahjong discs mode in the new game sheet."
+  },
+  "mahjongGoalTitle": "Goal",
+  "@mahjongGoalTitle": {
+    "description": "Title of the goal choice of the tray rules in the Mahjong new game sheet."
+  },
+  "mahjongGoalTiles": "Clear the tiles",
+  "@mahjongGoalTiles": {
+    "description": "Goal choice in the Mahjong new game sheet: the tray mode, every tile to clear."
+  },
+  "mahjongGoalDiscs": "Free the discs",
+  "@mahjongGoalDiscs": {
+    "description": "Goal choice in the Mahjong new game sheet: the discs mode."
+  },
+  "mahjongDiscs": "Discs",
+  "@mahjongDiscs": {
+    "description": "Status bar label: the discs freed out of all the discs (discs mode)."
+  },
+  "mahjongDisc": "Disc",
+  "@mahjongDisc": {
+    "description": "Name of a disc on the Mahjong board, for screen readers."
+  },
   "mahjongTrayEasyHint": "Small shapes: pairs are often free together.",
   "@mahjongTrayEasyHint": {
     "description": "New game sheet: what an Easy Mahjong deal is in tray mode."
@@ -1837,6 +1865,16 @@
       "layout": {
         "type": "String",
         "example": "Turtle"
+      }
+    }
+  },
+  "mahjongDiscsVariant": "Discs · {layout}",
+  "@mahjongDiscsVariant": {
+    "description": "Mahjong variant of the statistics: the discs mode on a layout.",
+    "placeholders": {
+      "layout": {
+        "type": "String",
+        "example": "Random shapes"
       }
     }
   },
@@ -1863,6 +1901,10 @@
   "mahjongTilesHeld": "Tiles put in the tray",
   "@mahjongTilesHeld": {
     "description": "Mahjong statistic (tray mode): tiles that went into the tray to wait for their partner."
+  },
+  "mahjongDiscsFreed": "Discs freed",
+  "@mahjongDiscsFreed": {
+    "description": "Mahjong statistic of the discs mode: the discs freed in a game."
   },
   "minesweeperTitle": "Minesweeper",
   "@minesweeperTitle": {

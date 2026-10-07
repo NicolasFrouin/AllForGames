@@ -40,7 +40,8 @@ void main(List<String> args) {
                     playMahjong(deal.state, player, Random(seed)),
                   );
                 }
-              case MahjongMode.tray:
+              // The discs mode deals the tray mode's boards.
+              case MahjongMode.tray || MahjongMode.discs:
                 final deal = generateTrayDeal(layout, seed, difficulty.tray);
                 final state = TrayState(deal.state, const []);
                 for (final player in TrayPlayer.values) {

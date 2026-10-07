@@ -10,6 +10,7 @@ import '../../stats/game_record.dart';
 import '../../stats/play_timer.dart';
 import '../../stats/stats_store.dart';
 import 'mahjong_difficulty.dart';
+import 'mahjong_discs.dart';
 import 'mahjong_generator.dart';
 import 'mahjong_layout.dart';
 import 'mahjong_shapes.dart';
@@ -49,6 +50,9 @@ abstract final class MahjongStatKeys {
   static const mostHeld = 'mostHeld';
   static const tilesHeld = 'tilesHeld';
 
+  /// Discs mode: the discs freed.
+  static const discsFreed = 'discsFreed';
+
   static final labels = <String, String Function(AppLocalizations)>{
     pairsMatched: (l10n) => l10n.mahjongPairsMatched,
     hints: (l10n) => l10n.mahjongHints,
@@ -59,20 +63,25 @@ abstract final class MahjongStatKeys {
     longestThinkMs: (l10n) => l10n.mahjongLongestThink,
     mostHeld: (l10n) => l10n.mahjongMostHeld,
     tilesHeld: (l10n) => l10n.mahjongTilesHeld,
+    discsFreed: (l10n) => l10n.mahjongDiscsFreed,
   };
 }
 
-/// The variant of a record: the layout, or the tray mode on the layout.
+/// The variant of a record: the layout, or the mode on the layout
+/// (`tray-turtle`, `discs-random`).
 String mahjongVariant(MahjongMode mode, String layoutId) =>
-    mode == MahjongMode.tray ? '$_trayPrefix$layoutId' : layoutId;
+    mode == MahjongMode.classic ? layoutId : '${mode.name}-$layoutId';
 
 /// The mode and the layout id of a record's [variant].
-(MahjongMode, String) mahjongModeAndLayout(String variant) =>
-    variant.startsWith(_trayPrefix)
-    ? (MahjongMode.tray, variant.substring(_trayPrefix.length))
-    : (MahjongMode.classic, variant);
-
-const _trayPrefix = 'tray-';
+(MahjongMode, String) mahjongModeAndLayout(String variant) {
+  for (final mode in [MahjongMode.tray, MahjongMode.discs]) {
+    final prefix = '${mode.name}-';
+    if (variant.startsWith(prefix)) {
+      return (mode, variant.substring(prefix.length));
+    }
+  }
+  return (MahjongMode.classic, variant);
+}
 
 /// A board before an action, for undo.
 class _Snapshot {
@@ -147,6 +156,9 @@ class MahjongController extends ChangeNotifier {
   static const comboBonus = 5;
   static const maxComboBonus = 20;
 
+  /// Points of a disc freed (discs mode).
+  static const discPoints = 100;
+
   /// Version of the [toJson] format. Version 1 had four flower faces (34 to
   /// 37) and four season faces (38 to 41), any flower matching any flower,
   /// and no tray mode. Version 3 saves the positions of the layout (a
@@ -203,7 +215,10 @@ class MahjongController extends ChangeNotifier {
   MahjongState get state => _state;
   MahjongMode get mode => _mode;
   MahjongShape get shape => _shape;
-  bool get isTray => _mode == MahjongMode.tray;
+
+  /// Tray rules: the tray mode and the discs mode.
+  bool get isTray => _mode.usesTray;
+  bool get isDiscs => _mode == MahjongMode.discs;
 
   /// Ids of the tiles in the tray, in the order they came (tray mode).
   List<int> get tray => _tray;
@@ -325,6 +340,8 @@ class MahjongController extends ChangeNotifier {
     _remember();
     _moves++;
     final cleared = next.tray.length < before.tray.length;
+    final freed = next.board.freeDiscs - before.board.freeDiscs;
+    _score += freed * discPoints;
     if (cleared) {
       _scoreMatch();
     } else {
@@ -344,7 +361,8 @@ class MahjongController extends ChangeNotifier {
     }
     _tray = next.tray;
     _apply(next.board, MahjongAction.pick);
-    if (next.isWon) {
+    // The last disc freed wins, even when the tray fills with the same pick.
+    if (next.isWon || isDiscs && next.board.discsFree) {
       _finish(GameOutcome.won);
     } else if (next.isLost) {
       _finish(GameOutcome.lost);
@@ -491,6 +509,9 @@ class MahjongController extends ChangeNotifier {
     'slots': _state.slots,
     'hidden': [..._state.hidden],
     'revealed': _revealed,
+    'discs': [
+      for (final disc in _state.discs) ...[disc.x, disc.y, disc.z],
+    ],
     'tray': _tray,
     'solution': isTray ? _picks : _encodePairs(_solution),
     'history': [
@@ -573,11 +594,19 @@ class MahjongController extends ChangeNotifier {
     if (hidden.any((id) => id < 0 || id >= faces.length)) {
       throw const FormatException('Bad Mahjong hidden tiles');
     }
+    final discs = ints(json['discs'] ?? const <int>[]);
+    if (discs.length % 3 != 0) {
+      throw const FormatException('Bad Mahjong discs');
+    }
     _state = MahjongState(
       layout: layout,
       faces: faces,
       slots: slots,
       hidden: hidden,
+      discs: [
+        for (var i = 0; i < discs.length; i += 3)
+          TilePosition(discs[i], discs[i + 1], discs[i + 2]),
+      ],
     );
     _revealed = switch (json['revealed']) {
       final int id when hidden.contains(id) => id,
@@ -653,7 +682,10 @@ class MahjongController extends ChangeNotifier {
         difficulty.tray,
         hiddenPercent: difficulty.hiddenPercent,
       );
-      _state = deal.state;
+      // The order that clears the board frees every disc on the way.
+      _state = isDiscs
+          ? deal.state.withDiscs(placeDiscs(layout, _seed, difficulty.discs))
+          : deal.state;
       _picks = deal.solution;
     } else {
       final deal = generateDeal(
@@ -820,6 +852,7 @@ class MahjongController extends ChangeNotifier {
         MahjongStatKeys.mostHeld: _counters[MahjongStatKeys.mostHeld] ?? 0,
         MahjongStatKeys.tilesHeld: _counters[MahjongStatKeys.tilesHeld] ?? 0,
       },
+      if (isDiscs) MahjongStatKeys.discsFreed: _state.freeDiscs,
     },
   );
 

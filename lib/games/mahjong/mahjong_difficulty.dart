@@ -6,9 +6,18 @@ export 'mahjong_shapes.dart' show ShapeLevel;
 /// The ways to play Mahjong: [classic] matches two free tiles at a time;
 /// in [tray], each tile tapped goes into a tray of four places, where two
 /// tiles of a face clear each other, and a full tray loses the game.
+/// [discs] plays by the tray rules, with another goal: free the discs that
+/// lie under the tiles.
 ///
 /// Pure Dart: the settings and the offline tool use it.
-enum MahjongMode { classic, tray }
+enum MahjongMode {
+  classic,
+  tray,
+  discs;
+
+  /// Whether a tapped tile goes into the tray.
+  bool get usesTray => this != classic;
+}
 
 /// Where the tray of the tray mode is, next to the board (a setting).
 enum MahjongTraySide { top, bottom, left, right }

@@ -35,6 +35,9 @@ enum TileMotionKind {
 
   /// A face-down tile turns over (or back): it rises a little and swells.
   turn,
+
+  /// Discs mode: a disc no tile lies on any more rises and fades away.
+  escape,
 }
 
 /// How a tile looks at a moment of its motion: [offset] from its place on
@@ -99,7 +102,8 @@ class TileMotion {
   bool isAirborneAt(double time) =>
       (kind == TileMotionKind.fly ||
           kind == TileMotionKind.vanish ||
-          kind == TileMotionKind.collect) &&
+          kind == TileMotionKind.collect ||
+          kind == TileMotionKind.escape) &&
       time >= start &&
       time < end;
 
@@ -142,6 +146,15 @@ class TileMotion {
         return TilePose(offset: Offset(sin(t * pi * 6) * height * (1 - t), 0));
       case TileMotionKind.pulse:
         return TilePose(glow: waiting ? 0 : (1 - cos(2 * pi * 3 * t)) / 2);
+      case TileMotionKind.escape:
+        if (waiting) return const TilePose();
+        final p = Curves.easeInOutCubic.transform(t);
+        return TilePose(
+          offset: Offset(0, -height * p),
+          scale: 1 + 0.2 * sin(pi * t / 2),
+          opacity: t < 0.45 ? 1 : 1 - (t - 0.45) / 0.55,
+          elevation: 1,
+        );
       case TileMotionKind.turn:
         final lift = sin(pi * t);
         return TilePose(

@@ -41,6 +41,11 @@ class _NewGameSheet extends StatefulWidget {
 
 class _NewGameSheetState extends State<_NewGameSheet> {
   late MahjongMode _mode = widget.initial.mode;
+
+  /// The goal of the tray rules, kept while the classic mode is chosen.
+  late MahjongMode _trayGoal = widget.initial.mode == MahjongMode.discs
+      ? MahjongMode.discs
+      : MahjongMode.tray;
   late MahjongDifficulty _difficulty = widget.initial.difficulty;
   late MahjongShape _shape = widget.initial.shape;
 
@@ -74,19 +79,46 @@ class _NewGameSheetState extends State<_NewGameSheet> {
               style: theme.textTheme.titleSmall,
             ),
           ),
+          // The discs mode is a goal of the tray rules.
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
-              for (final mode in MahjongMode.values)
+              for (final mode in [MahjongMode.classic, MahjongMode.tray])
                 ChoiceChip(
                   key: ValueKey('new-game-mode-${mode.name}'),
                   label: Text(mode.label(l10n)),
-                  selected: _mode == mode,
-                  onSelected: (_) => setState(() => _mode = mode),
+                  selected: _mode.usesTray == mode.usesTray,
+                  onSelected: (_) =>
+                      setState(() => _mode = mode.usesTray ? _trayGoal : mode),
                 ),
             ],
           ),
+          if (_mode.usesTray) ...[
+            Padding(
+              padding: const EdgeInsets.only(top: 12, bottom: 8),
+              child: Text(
+                l10n.mahjongGoalTitle,
+                style: theme.textTheme.titleSmall,
+              ),
+            ),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final (goal, key, label) in [
+                  (MahjongMode.tray, 'tiles', l10n.mahjongGoalTiles),
+                  (MahjongMode.discs, 'discs', l10n.mahjongGoalDiscs),
+                ])
+                  ChoiceChip(
+                    key: ValueKey('new-game-goal-$key'),
+                    label: Text(label),
+                    selected: _mode == goal,
+                    onSelected: (_) => setState(() => _mode = _trayGoal = goal),
+                  ),
+              ],
+            ),
+          ],
           const SizedBox(height: 8),
           Text(
             _mode.hint(l10n),

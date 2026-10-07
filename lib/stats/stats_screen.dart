@@ -75,16 +75,26 @@ class _StatsScreenState extends State<StatsScreen> {
               difficulty: _difficulty,
             );
             final stats = GameStats.from(records);
+            // Only the variants played: Mahjong has one per mode and shape.
+            final played = {
+              for (final record in widget.stores.stats.recordsFor(game.id))
+                record.variant,
+              ?_variant,
+            };
+            final variants = {
+              for (final MapEntry(:key, :value) in game.variants.entries)
+                if (played.contains(key)) key: value,
+            };
             return Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 900),
                 child: ListView(
                   padding: const EdgeInsets.all(20),
                   children: [
-                    if (game.variants.isNotEmpty)
+                    if (variants.length > 1 || _variant != null)
                       _filter(
                         'variant',
-                        game.variants,
+                        variants,
                         _variant,
                         (variant) => _variant = variant,
                         l10n,

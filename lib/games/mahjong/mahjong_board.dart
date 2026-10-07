@@ -9,6 +9,7 @@ import '../../l10n/app_localizations.dart';
 import '../../skins/tile_styles.dart';
 import 'mahjong_controller.dart';
 import 'mahjong_difficulty.dart';
+import 'mahjong_discs.dart';
 import 'mahjong_layout.dart';
 import 'mahjong_motion.dart';
 import 'mahjong_moving_tile.dart';
@@ -203,8 +204,20 @@ class MahjongBoardGeometry {
   }
 }
 
-/// Where a tile rests: on the board, or in the tray.
-typedef _Target = ({int id, TileFace face, Rect rect, int z, bool inTray});
+/// Where a tile rests: on the board, or in the tray. A [disc] of the discs
+/// mode is a target too ([face] unused): it lies under the tiles of layer
+/// [z], [rect] is its round.
+typedef _Target = ({
+  int id,
+  TileFace face,
+  Rect rect,
+  int z,
+  bool inTray,
+  bool disc,
+});
+
+/// The id of disc [index] among the tile ids: below 0.
+int _discId(int index) => -1 - index;
 
 /// Everything a tile widget shows: the board keeps the widget of a tile
 /// while its look stays the same.
@@ -493,7 +506,18 @@ class _MahjongBoardState extends State<MahjongBoard>
           // Above every layer of the board.
           z: state.layout.layers,
           inTray: true,
+          disc: false,
         ),
+      for (final (i, disc) in state.discs.indexed)
+        if (!state.isDiscFree(i))
+          _discId(i): (
+            id: _discId(i),
+            face: const TileFace(0),
+            rect: _discRect(disc, geometry),
+            z: disc.z,
+            inTray: false,
+            disc: true,
+          ),
     };
     final serial = _controller.actionSerial;
     final action = serial == _seenSerial ? null : _controller.lastAction;
@@ -524,6 +548,23 @@ class _MahjongBoardState extends State<MahjongBoard>
     }
 
     final added = <int, TileMotion>{};
+    // A disc no tile lies on any more rises and fades away, after the pick.
+    final tiles = {
+      for (final MapEntry(:key, :value) in previous.entries)
+        if (!value.disc) key: value,
+    };
+    if (action != MahjongAction.deal) {
+      for (final target in previous.values) {
+        if (!target.disc || _targets.containsKey(target.id)) continue;
+        _leaving[target.id] = target;
+        added[target.id] = TileMotion(
+          kind: TileMotionKind.escape,
+          start: 260,
+          duration: 900,
+          height: geometry.tileHeight * 1.6,
+        );
+      }
+    }
     switch (action) {
       case MahjongAction.deal:
         _stopTimeline();
@@ -531,9 +572,9 @@ class _MahjongBoardState extends State<MahjongBoard>
         _celebratedAt = null;
         added.addAll(_dropMotions(state, geometry));
       case MahjongAction.match:
-        added.addAll(_vanishMotions(previous));
+        added.addAll(_vanishMotions(tiles));
       case MahjongAction.pick:
-        added.addAll(_pickMotions(previous, geometry));
+        added.addAll(_pickMotions(tiles, geometry));
       case MahjongAction.undo || MahjongAction.shuffle:
         added.addAll(_returnMotions(previous, geometry));
       case MahjongAction.none || null:
@@ -595,6 +636,17 @@ class _MahjongBoardState extends State<MahjongBoard>
       rect: geometry.faceRect(p),
       z: p.z,
       inTray: false,
+      disc: false,
+    );
+  }
+
+  /// A disc lies on the tile under its place, a little wider than a tile.
+  Rect _discRect(TilePosition disc, MahjongBoardGeometry geometry) {
+    final under = geometry.faceRect(TilePosition(disc.x, disc.y, disc.z - 1));
+    final lift = geometry.depth * 0.35;
+    return Rect.fromCircle(
+      center: under.center - Offset(lift, lift),
+      radius: geometry.tileWidth * discRadius / 2,
     );
   }
 
@@ -606,10 +658,12 @@ class _MahjongBoardState extends State<MahjongBoard>
       for (final target in _targets.values) (target, false),
       for (final target in _leaving.values) (target, true),
     ];
+    // A disc goes before the tiles of its layer, which lie on it.
+    int layer(_Target target) => target.z * 2 - (target.disc ? 1 : 0);
     _byDepth.sort((a, b) {
       final (ta, _) = a;
       final (tb, _) = b;
-      if (ta.z != tb.z) return ta.z.compareTo(tb.z);
+      if (layer(ta) != layer(tb)) return layer(ta).compareTo(layer(tb));
       return (ta.rect.left + ta.rect.top).compareTo(tb.rect.left + tb.rect.top);
     });
   }
@@ -644,6 +698,14 @@ class _MahjongBoardState extends State<MahjongBoard>
           height: geometry.tileHeight * 0.9,
         );
       }(),
+    // A disc lands before the layer that lies on it.
+    for (final (i, disc) in state.discs.indexed)
+      _discId(i): TileMotion(
+        kind: TileMotionKind.drop,
+        start: (disc.z - 0.5) * _layerDelay,
+        duration: _dropDuration,
+        height: geometry.tileHeight * 0.9,
+      ),
   };
 
   /// The matched tiles fly toward each other and fade away.
@@ -698,6 +760,7 @@ class _MahjongBoardState extends State<MahjongBoard>
         rect: landing,
         z: partner.z,
         inTray: true,
+        disc: false,
       );
       _leaving[partner.id] = partner;
       const duration = _trayFlight / TileMotion.collectFlight;
@@ -846,7 +909,9 @@ class _MahjongBoardState extends State<MahjongBoard>
       if (kept != null && kept.$1 == look) {
         tiles[id] = kept.$2;
       } else {
-        final tile = _tile(look, geometry, l10n, animate: animate);
+        final tile = target.disc
+            ? _disc(look, geometry, l10n)
+            : _tile(look, geometry, l10n, animate: animate);
         _tileWidgets[id] = (look, tile);
         tiles[id] = tile;
       }
@@ -927,6 +992,40 @@ class _MahjongBoardState extends State<MahjongBoard>
                     ),
                   ),
                 ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// A disc: it never takes taps, and only moves.
+  Widget _disc(
+    _TileLook look,
+    MahjongBoardGeometry geometry,
+    AppLocalizations l10n,
+  ) {
+    final rect = look.target.rect;
+    final margin = geometry.depth * 2;
+    return Positioned(
+      key: _TileKey(look.target.id),
+      left: rect.left - margin,
+      top: rect.top - margin,
+      width: rect.width + 2 * margin,
+      height: rect.height + 2 * margin,
+      child: IgnorePointer(
+        child: MovingTile(
+          clock: _clock,
+          motion: look.motion,
+          faceRect: Offset(margin, margin) & rect.size,
+          depth: geometry.depth,
+          hinted: false,
+          child: Semantics(
+            label: l10n.mahjongDisc,
+            child: RepaintBoundary(
+              child: CustomPaint(
+                painter: _DiscPainter(depth: geometry.depth, margin: margin),
               ),
             ),
           ),
@@ -1114,4 +1213,77 @@ class _TrayPainter extends CustomPainter {
       old.flashStart != flashStart ||
       old.clock != clock ||
       !listEquals(old.slots, slots);
+}
+
+/// A jade disc with a hole in its middle (a bi), lying flat: its shadow, its
+/// thickness, then its top with a carved ring and grains.
+class _DiscPainter extends CustomPainter {
+  const _DiscPainter({required this.depth, required this.margin});
+
+  final double depth;
+  final double margin;
+
+  static const _top = [Color(0xFF8ED8B4), Color(0xFF3E9B74), Color(0xFF1F6B4E)];
+  static const _side = Color(0xFF15503A);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final r = size.width / 2 - margin;
+    final c = size.center(Offset.zero);
+    final hole = r * 0.3;
+    final thick = max(1.5, depth * 0.45);
+    Path ring(Offset at) => Path()
+      ..fillType = PathFillType.evenOdd
+      ..addOval(Rect.fromCircle(center: at, radius: r))
+      ..addOval(Rect.fromCircle(center: at, radius: hole));
+
+    canvas.drawPath(
+      ring(c + Offset(thick * 1.2, thick * 1.6)),
+      Paint()
+        ..color = const Color(0x66000000)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, depth * 0.8 + 1),
+    );
+    canvas.drawPath(ring(c + Offset(thick, thick)), Paint()..color = _side);
+    canvas.drawPath(
+      ring(c),
+      Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(-0.35, -0.4),
+          radius: 1.1,
+          colors: _top,
+        ).createShader(Rect.fromCircle(center: c, radius: r)),
+    );
+    final carve = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = max(0.8, r * 0.035)
+      ..color = const Color(0x99D8F5E6);
+    canvas.drawCircle(c, r * 0.64, carve);
+    canvas.drawCircle(c, hole, carve..color = const Color(0x8015503A));
+    final grain = Paint()..color = const Color(0x66E6FFF3);
+    for (final (radius, count) in [(0.47, 10), (0.82, 16)]) {
+      for (var i = 0; i < count; i++) {
+        final angle = 2 * pi * i / count;
+        canvas.drawCircle(
+          c + Offset(cos(angle), sin(angle)) * (r * radius),
+          r * 0.045,
+          grain,
+        );
+      }
+    }
+    canvas.drawArc(
+      Rect.fromCircle(center: c, radius: r * 0.9),
+      pi * 1.05,
+      pi * 0.45,
+      false,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = r * 0.06
+        ..strokeCap = StrokeCap.round
+        ..color = const Color(0x59FFFFFF),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_DiscPainter old) =>
+      old.depth != depth || old.margin != margin;
 }

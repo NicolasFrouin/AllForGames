@@ -153,9 +153,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
     return MahjongBoardGeometry.prefersTransposed(
       room,
       layout,
-      tray: mode == MahjongMode.tray
-          ? widget.stores.settings.mahjongTraySide
-          : null,
+      tray: mode.usesTray ? widget.stores.settings.mahjongTraySide : null,
     );
   }
 
@@ -572,6 +570,16 @@ class _StatusBarState extends State<_StatusBar> {
               tooltip: l10n.mahjongOpenPairs,
               value: '${controller.state.freePairs.length}',
             ),
+            if (controller.isDiscs)
+              _StatusItem(
+                id: 'discs',
+                icon: Icons.album_outlined,
+                label: label(l10n.mahjongDiscs),
+                tooltip: l10n.mahjongDiscs,
+                value:
+                    '${controller.state.freeDiscs}/'
+                    '${controller.state.discs.length}',
+              ),
             _StatusItem(
               id: 'score',
               icon: Icons.star_outline,

@@ -16,13 +16,13 @@ extension MahjongDifficultyTexts on MahjongDifficulty {
   String hint(
     AppLocalizations l10n, [
     MahjongMode mode = MahjongMode.classic,
-  ]) => switch ((mode, this)) {
-    (MahjongMode.classic, MahjongDifficulty.easy) => l10n.mahjongEasyHint,
-    (MahjongMode.classic, MahjongDifficulty.medium) => l10n.mahjongMediumHint,
-    (MahjongMode.classic, MahjongDifficulty.hard) => l10n.mahjongHardHint,
-    (MahjongMode.tray, MahjongDifficulty.easy) => l10n.mahjongTrayEasyHint,
-    (MahjongMode.tray, MahjongDifficulty.medium) => l10n.mahjongTrayMediumHint,
-    (MahjongMode.tray, MahjongDifficulty.hard) => l10n.mahjongTrayHardHint,
+  ]) => switch ((mode.usesTray, this)) {
+    (false, MahjongDifficulty.easy) => l10n.mahjongEasyHint,
+    (false, MahjongDifficulty.medium) => l10n.mahjongMediumHint,
+    (false, MahjongDifficulty.hard) => l10n.mahjongHardHint,
+    (true, MahjongDifficulty.easy) => l10n.mahjongTrayEasyHint,
+    (true, MahjongDifficulty.medium) => l10n.mahjongTrayMediumHint,
+    (true, MahjongDifficulty.hard) => l10n.mahjongTrayHardHint,
   };
 }
 
@@ -31,12 +31,14 @@ extension MahjongModeTexts on MahjongMode {
   String label(AppLocalizations l10n) => switch (this) {
     MahjongMode.classic => l10n.mahjongModeClassic,
     MahjongMode.tray => l10n.mahjongModeTray,
+    MahjongMode.discs => l10n.mahjongModeDiscs,
   };
 
   /// How the mode plays.
   String hint(AppLocalizations l10n) => switch (this) {
     MahjongMode.classic => l10n.mahjongClassicModeHint,
     MahjongMode.tray => l10n.mahjongTrayModeHint,
+    MahjongMode.discs => l10n.mahjongDiscsModeHint,
   };
 }
 
@@ -71,7 +73,9 @@ final mahjongVariantNames = <String, String Function(AppLocalizations)>{
   for (final mode in MahjongMode.values)
     for (final MapEntry(key: layoutId, value: name)
         in mahjongLayoutNames.entries)
-      mahjongVariant(mode, layoutId): mode == MahjongMode.classic
-          ? name
-          : (l10n) => l10n.mahjongTrayVariant(name(l10n)),
+      mahjongVariant(mode, layoutId): switch (mode) {
+        MahjongMode.classic => name,
+        MahjongMode.tray => (l10n) => l10n.mahjongTrayVariant(name(l10n)),
+        MahjongMode.discs => (l10n) => l10n.mahjongDiscsVariant(name(l10n)),
+      },
 };

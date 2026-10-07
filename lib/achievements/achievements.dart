@@ -504,12 +504,15 @@ int _tripeaksNoUndoWins(List<GameRecord> records) =>
 int _mahjongWinCount(List<GameRecord> records) =>
     _winsOf(records, MahjongController.gameId).length;
 
-/// Wins on the Turtle, in either mode.
+/// Turtles cleared, in the classic mode or the tray mode (the discs mode
+/// does not clear the board).
 int _mahjongTurtleWins(List<GameRecord> records) =>
     _winsOf(records, MahjongController.gameId)
         .where(
-          (record) =>
-              mahjongModeAndLayout(record.variant).$2 == turtleLayout.id,
+          (record) => switch (mahjongModeAndLayout(record.variant)) {
+            (MahjongMode.discs, _) => false,
+            (_, final layoutId) => layoutId == turtleLayout.id,
+          },
         )
         .length;
 
