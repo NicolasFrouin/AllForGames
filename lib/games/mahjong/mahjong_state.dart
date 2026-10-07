@@ -1,4 +1,3 @@
-import 'mahjong_discs.dart';
 import 'mahjong_layout.dart';
 import 'mahjong_tiles.dart';
 
@@ -16,7 +15,6 @@ class MahjongState {
     required this.faces,
     required List<int> slots,
     this.hidden = const {},
-    this.discs = const [],
   }) : slots = List.unmodifiable(slots),
        assert(slots.length == layout.length);
 
@@ -27,14 +25,9 @@ class MahjongState {
   /// player turns one over to see it (the controller keeps which one).
   final Set<int> hidden;
 
-  /// The discs of the discs mode: each lies under the tile place it is
-  /// given, and is free once no tile lies on it ([isDiscFree]).
-  final List<TilePosition> discs;
-
-  /// For each disc, the positions whose tiles lie on it.
-  late final List<List<int>> _discCovers = [
-    for (final disc in discs) discCover(layout, disc),
-  ];
+  /// The discs of the discs mode ([MahjongLayout.discs]): each is free once
+  /// no tile lies on it ([isDiscFree]).
+  List<TilePosition> get discs => layout.discs;
 
   /// The id of the tile on each position of [layout], or [empty].
   final List<int> slots;
@@ -59,7 +52,8 @@ class MahjongState {
 
   bool isHidden(int id) => hidden.contains(id);
 
-  bool isDiscFree(int disc) => !_discCovers[disc].any((p) => _occupied[p]);
+  bool isDiscFree(int disc) =>
+      !layout.discCovers[disc].any((p) => _occupied[p]);
 
   int get freeDiscs =>
       [for (var i = 0; i < discs.length; i++) i].where(isDiscFree).length;
@@ -86,21 +80,15 @@ class MahjongState {
   }
 
   /// This board with the tiles on other positions (a shuffle, an undo).
-  MahjongState withSlots(List<int> slots) => MahjongState(
-    layout: layout,
-    faces: faces,
-    slots: slots,
-    hidden: hidden,
-    discs: discs,
-  );
+  MahjongState withSlots(List<int> slots) =>
+      MahjongState(layout: layout, faces: faces, slots: slots, hidden: hidden);
 
   /// This board with [discs] lying under its tiles.
   MahjongState withDiscs(List<TilePosition> discs) => MahjongState(
-    layout: layout,
+    layout: layout.withDiscs(discs),
     faces: faces,
     slots: slots,
     hidden: hidden,
-    discs: discs,
   );
 
   /// Every pair of free tiles that match.

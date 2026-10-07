@@ -3,13 +3,10 @@ import 'dart:math';
 import '../../cards/deal_random.dart';
 import 'mahjong_layout.dart';
 
-/// The radius of a disc in half tile widths: a disc is 1.7 tiles wide.
-const discRadius = 1.7;
-
 /// The places of [count] discs on [layout] for the deal of [seed]. A disc
 /// lies on a tile of layer `z - 1`, under the tile place it is given (layer
-/// `z`), and is a little wider than a tile: it peeks out where no tile of
-/// its layer lies beside it. Discs lie apart from each other.
+/// `z`), and is wider than a tile: it peeks out where no tile of its layer
+/// lies beside it. Discs lie apart from each other.
 ///
 /// Pure Dart: the discs mode is built at runtime from the seed, like the
 /// deals.
@@ -41,7 +38,7 @@ List<TilePosition> placeDiscs(MahjongLayout layout, int seed, int count) {
   ];
   // Apart from each other when the shape has room, closer when not.
   final discs = <TilePosition>[];
-  for (final apart in [5.0, 3.0, 0.0]) {
+  for (final apart in [2 * discRadius, discRadius, 0.0]) {
     for (final candidate in candidates) {
       if (discs.length == count) return discs;
       if (discs.contains(candidate)) continue;
@@ -64,25 +61,4 @@ List<T> _shuffled<T>(List<T> items, DealRandom random) {
     items[j] = item;
   }
   return items;
-}
-
-/// The positions of [layout] whose tiles lie on [disc]: from its layer up,
-/// over its round.
-List<int> discCover(MahjongLayout layout, TilePosition disc) {
-  final cx = disc.x + 1.0;
-  final cy = disc.y + 1.0;
-  return [
-    for (final (i, p) in layout.positions.indexed)
-      if (p.z >= disc.z &&
-          // Corners that barely touch the round do not count.
-          _distance(cx, cy, p) < discRadius * 0.8)
-        i,
-  ];
-}
-
-/// From (cx, cy) to the nearest point of the tile at [p].
-double _distance(double cx, double cy, TilePosition p) {
-  final dx = max(0.0, max(p.x - cx, cx - (p.x + 2)));
-  final dy = max(0.0, max(p.y - cy, cy - (p.y + 2)));
-  return sqrt(dx * dx + dy * dy);
 }

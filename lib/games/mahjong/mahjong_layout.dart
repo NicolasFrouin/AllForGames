@@ -1,3 +1,5 @@
+import 'dart:math';
+
 /// Where a tile lies: [x] and [y] in half tile widths and heights (a tile
 /// covers two by two units), [z] the layer from 0.
 class TilePosition {
@@ -26,12 +28,18 @@ class TilePosition {
 /// block which.
 ///
 /// A tile is free when no tile lies on it, and the tiles on its left or the
-/// tiles on its right are all gone.
+/// tiles on its right are all gone. In the discs mode, a disc not yet free
+/// blocks the tiles under its round too: until the tiles that lie on it are
+/// gone, they count as lying on those tiles.
 class MahjongLayout {
-  MahjongLayout(this.id, this.positions, {this.transposed = false})
-    : above = _neighbors(positions, (p, q) => q.z > p.z && p.overlaps(q)),
-      left = _neighbors(positions, (p, q) => _beside(p, q, -2)),
-      right = _neighbors(positions, (p, q) => _beside(p, q, 2));
+  MahjongLayout(
+    this.id,
+    this.positions, {
+    this.transposed = false,
+    this.discs = const [],
+  }) : above = _above(positions, discs),
+       left = _neighbors(positions, (p, q) => _beside(p, q, -2)),
+       right = _neighbors(positions, (p, q) => _beside(p, q, 2));
 
   /// Stays the same when [transposed]: records name the layout by it.
   final String id;
@@ -40,6 +48,15 @@ class MahjongLayout {
   /// the new rows: this is another board, with its own deals.
   final bool transposed;
   final List<TilePosition> positions;
+
+  /// The discs of the discs mode: each lies on the tile under the place it
+  /// is given, under the tile of that place.
+  final List<TilePosition> discs;
+
+  /// For each disc, the positions whose tiles lie on it ([discCover]).
+  late final List<List<int>> discCovers = [
+    for (final disc in discs) discCover(positions, disc),
+  ];
 
   /// For each position, the positions of the tiles that lie on it, beside it
   /// on the left, and beside it on the right.
@@ -75,9 +92,34 @@ class MahjongLayout {
   }
 
   /// The same board with rows and columns swapped.
-  MahjongLayout toTransposed() => MahjongLayout(id, [
-    for (final p in positions) TilePosition(p.y, p.x, p.z),
-  ], transposed: !transposed);
+  MahjongLayout toTransposed() => MahjongLayout(
+    id,
+    [for (final p in positions) TilePosition(p.y, p.x, p.z)],
+    transposed: !transposed,
+    discs: [for (final d in discs) TilePosition(d.y, d.x, d.z)],
+  );
+
+  /// The same board with [discs] lying in it.
+  MahjongLayout withDiscs(List<TilePosition> discs) =>
+      MahjongLayout(id, positions, transposed: transposed, discs: discs);
+
+  /// The tiles that lie on each position: the tiles above it, and those
+  /// that lie on a disc whose round covers it.
+  static List<List<int>> _above(
+    List<TilePosition> positions,
+    List<TilePosition> discs,
+  ) {
+    final above = _neighbors(positions, (p, q) => q.z > p.z && p.overlaps(q));
+    for (final disc in discs) {
+      final cover = discCover(positions, disc);
+      for (final (i, p) in positions.indexed) {
+        if (p.z < disc.z && _underRound(disc, p)) {
+          above[i] = {...above[i], ...cover}.toList();
+        }
+      }
+    }
+    return above;
+  }
 
   static bool _beside(TilePosition p, TilePosition q, int dx) =>
       q.z == p.z && q.x == p.x + dx && (q.y - p.y).abs() < 2;
@@ -146,4 +188,24 @@ MahjongLayout? layoutById(String id, {bool transposed = false}) {
     if (layout.id == id) return transposed ? layout.toTransposed() : layout;
   }
   return null;
+}
+
+/// The radius of a disc in half tile widths: a disc is 2.6 tiles wide.
+const discRadius = 2.6;
+
+/// The positions of [positions] whose tiles lie on [disc]: from its layer
+/// up, over its round.
+List<int> discCover(List<TilePosition> positions, TilePosition disc) => [
+  for (final (i, p) in positions.indexed)
+    if (p.z >= disc.z && _underRound(disc, p)) i,
+];
+
+/// Whether the tile at [p] reaches into the round of [disc] (from above or
+/// below); corners that barely touch it do not count.
+bool _underRound(TilePosition disc, TilePosition p) {
+  final cx = disc.x + 1.0;
+  final cy = disc.y + 1.0;
+  final dx = max(0.0, max(p.x - cx, cx - (p.x + 2)));
+  final dy = max(0.0, max(p.y - cy, cy - (p.y + 2)));
+  return sqrt(dx * dx + dy * dy) < discRadius * 0.8;
 }

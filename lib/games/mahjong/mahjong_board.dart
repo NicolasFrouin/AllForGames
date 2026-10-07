@@ -9,7 +9,6 @@ import '../../l10n/app_localizations.dart';
 import '../../skins/tile_styles.dart';
 import 'mahjong_controller.dart';
 import 'mahjong_difficulty.dart';
-import 'mahjong_discs.dart';
 import 'mahjong_layout.dart';
 import 'mahjong_motion.dart';
 import 'mahjong_moving_tile.dart';

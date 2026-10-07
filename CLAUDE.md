@@ -249,12 +249,13 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   column on the left or right); a full tray loses at once (`GameOutcome.lost`). Tray deals are built forwards (one
   free tile after the other, faces given so the order never holds more than `TrayLevel.held` tiles); the level also
   sets how many pairs are blind (not free together) and seen together. The discs mode (`mahjong_discs.dart`, the
-  sheet's goal under Tray) deals the tray mode's board with the level's discs (`placeDiscs`: on a tile, under the tile
-  of the next layer, wider than a tile so it peeks out): a disc is free when no tile of its layer or above lies on it
-  (`discCover`), drawn between the layers, and rises away when freed (100 points); all discs free wins, tiles left or
-  not (a full tray still loses); an undo covers it again. Records: variant = layout id (`random` for a generated
-  shape), `<mode>-<layoutId>` in the tray and discs modes (`mahjongVariant`); no shuffle with the tray rules; the
-  stats page lists the variants played.
+  sheet's goal under Tray) places the level's discs first (`placeDiscs`: on a tile, under the tile of the next layer,
+  2.6 tiles wide so it peeks out) in the layout (`MahjongLayout.discs`), then deals the tray mode's board on it: a
+  disc is free when no tile of its layer or above lies on it (`discCover`), and until then blocks the tiles under its
+  round (the layout adds its cover to their `above`, so the rules, the deal and the hints follow it); drawn between
+  the layers, it rises away when freed (100 points); all discs free wins, tiles left or not (a full tray still loses);
+  an undo covers it again. Records: variant = layout id (`random` for a generated shape), `<mode>-<layoutId>` in the
+  tray and discs modes (`mahjongVariant`); no shuffle with the tray rules; the stats page lists the variants played.
 - **Minesweeper**: levels Beginner 9x9/10, Intermediate 16x16/40, Expert 30x16/99 (`easy`/`medium`/`hard`; Expert
   is turned 16x30 on a tall screen, chosen at deal time and saved). Mines are placed at the first tap
   (`generateMines`, `DealRandom` from seed + tap): none touches it, and `MinesweeperSolver` clears the board by logic

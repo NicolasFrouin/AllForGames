@@ -638,14 +638,13 @@ class MahjongController extends ChangeNotifier {
       throw const FormatException('Bad Mahjong discs');
     }
     _state = MahjongState(
-      layout: layout,
+      layout: layout.withDiscs([
+        for (var i = 0; i < discs.length; i += 3)
+          TilePosition(discs[i], discs[i + 1], discs[i + 2]),
+      ]),
       faces: faces,
       slots: slots,
       hidden: hidden,
-      discs: [
-        for (var i = 0; i < discs.length; i += 3)
-          TilePosition(discs[i], discs[i + 1], discs[i + 2]),
-      ],
     );
     _revealed = switch (json['revealed']) {
       final int id when hidden.contains(id) => id,
@@ -715,16 +714,18 @@ class MahjongController extends ChangeNotifier {
         _solution = solveMahjong(initialState, budget: _solverBudget);
       }
     } else if (isTray) {
+      // The discs block the tiles under them: the deal is built with them,
+      // so its order clears the board, freeing every disc on the way.
+      if (isDiscs) {
+        layout = layout.withDiscs(placeDiscs(layout, _seed, difficulty.discs));
+      }
       final deal = generateTrayDeal(
         layout,
         _seed,
         difficulty.tray,
         hiddenPercent: difficulty.hiddenPercent,
       );
-      // The order that clears the board frees every disc on the way.
-      _state = isDiscs
-          ? deal.state.withDiscs(placeDiscs(layout, _seed, difficulty.discs))
-          : deal.state;
+      _state = deal.state;
       _picks = deal.solution;
     } else {
       final deal = generateDeal(

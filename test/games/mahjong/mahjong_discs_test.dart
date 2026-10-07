@@ -21,10 +21,20 @@ final discBoard = MahjongState(
     (6, 0, 0),
     (2, 0, 1),
     (4, 0, 1),
-  ]),
+  ]).withDiscs(const [TilePosition(2, 0, 1), TilePosition(4, 0, 1)]),
   faces: [dots1, dots1, dots2, dots2, dots3, dots3],
   slots: [0, 1, 2, 3, 4, 5],
-  discs: const [TilePosition(2, 0, 1), TilePosition(4, 0, 1)],
+);
+
+/// Two stacks far apart, each with a disc under its top tile, and a tile
+/// beside the first stack: no tile lies on it, but the disc does.
+/// 0 (dots1) under 1 (dots1); 2 (dots2) beside them; 3 (dots3) under 4
+/// (dots2).
+final besideBoard = MahjongState(
+  layout: layoutOf([(0, 0, 0), (0, 0, 1), (2, 0, 0), (16, 0, 0), (16, 0, 1)])
+      .withDiscs(const [TilePosition(0, 0, 1), TilePosition(16, 0, 1)]),
+  faces: [dots1, dots1, dots2, dots3, dots2],
+  slots: [0, 1, 2, 3, 4],
 );
 
 void main() {
@@ -46,7 +56,7 @@ void main() {
 
   test('a disc is free once no tile of its layer or above lies on it', () {
     // The disc under 4 also lies under 5, beside it; not under 1, below.
-    expect(discCover(discBoard.layout, discBoard.discs[0]), [4, 5]);
+    expect(discCover(discBoard.layout.positions, discBoard.discs[0]), [4, 5]);
     expect(discBoard.isDiscFree(0), isFalse);
 
     final withoutFour = discBoard.withSlots([0, 1, 2, 3, -1, 5]);
@@ -73,28 +83,30 @@ void main() {
     expect(record.details[MahjongStatKeys.tilesLeft], 4);
   });
 
+  test('a tile under the round of a disc cannot be taken until the disc '
+      'is free', () {
+    final game = discs(besideBoard);
+    expect(besideBoard.isFree(2), isFalse, reason: 'no tile lies on it');
+    expect(game.tap(2), TileTap.blocked);
+    expect(game.tray, isEmpty);
+
+    expect(game.tap(1), TileTap.picked);
+    expect(game.state.freeDiscs, 1);
+    expect(game.state.isFree(2), isTrue);
+    expect(game.tap(2), TileTap.picked);
+  });
+
   test('an undo covers the disc again, and takes its points back', () {
-    final game = discs(
-      discBoard.withDiscs(const [TilePosition(2, 0, 1)]).withSlots([
-        0,
-        1,
-        2,
-        3,
-        4,
-        -1,
-      ]),
-    );
+    final game = discs(besideBoard)..tap(1);
+    expect(game.score, MahjongController.discPoints);
+    expect(game.result, isNull, reason: 'one disc is left');
+
+    game.undo();
+
     expect(game.state.freeDiscs, 0);
-
-    game.tap(4);
-    expect(game.result?.won, isTrue, reason: 'its only disc is free');
-
-    final second = discs(discBoard)..tap(4);
-    expect(second.score, 0);
-    second.tap(0);
-    expect(second.state.freeDiscs, 0);
-    second.undo();
-    expect(second.tray, [4]);
+    expect(game.state.isFree(2), isFalse);
+    expect(game.tray, isEmpty);
+    expect(game.score, 0);
   });
 
   test('a full tray still loses', () {
@@ -103,15 +115,14 @@ void main() {
       (4, 0, 0),
       (8, 0, 0),
       (12, 0, 0),
-      (16, 0, 0),
-      (16, 0, 1),
-    ]);
+      (20, 0, 0),
+      (20, 0, 1),
+    ]).withDiscs(const [TilePosition(20, 0, 1)]);
     final game = discs(
       MahjongState(
         layout: layout,
         faces: [dots1, dots2, dots3, bamboo1, flower, season],
         slots: [0, 1, 2, 3, 4, 5],
-        discs: const [TilePosition(16, 0, 1)],
       ),
     );
     for (final id in [0, 1, 2, 3]) {
@@ -151,6 +162,29 @@ void main() {
           state.discs,
           reason: 'the same seed places the same discs',
         );
+      }
+    }
+  });
+
+  test('the hints of a discs deal win it: the deal is built with the discs '
+      'blocking the tiles under them', () {
+    for (final difficulty in MahjongDifficulty.values) {
+      for (var seed = 1; seed <= 6; seed++) {
+        final game = MahjongController(
+          stats: stats,
+          saves: saves,
+          mode: MahjongMode.discs,
+          shape: MahjongShape.generated,
+          difficulty: difficulty,
+          seed: seed,
+        );
+        final reason = '${difficulty.name} seed $seed';
+        for (var step = 0; game.result == null && step < 200; step++) {
+          final pick = game.hintPick();
+          expect(pick, isNotNull, reason: reason);
+          expect(take(game, pick!), isNot(TileTap.blocked), reason: reason);
+        }
+        expect(game.result?.won, isTrue, reason: reason);
       }
     }
   });
