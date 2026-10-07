@@ -237,7 +237,8 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   variant `classic`, moves = clicks (opens, chords, flags), score = 10 per 3BV cleared. The colors are a
   `MinesweeperTheme` (the selected skin); `all.everyGame`'s goal is the number of games (a test checks it). A hold of
   the settings' time flags a cell (`flagHold`, its own `LongPressGestureRecognizer`: Flutter's long press takes
-  500 ms) and buzzes the phone.
+  500 ms) and buzzes the phone. Two fingers zoom every board (`InteractiveViewer`, cells up to `maxZoomCell`); cells
+  smaller than `minCell` keep that size and the board pans. A new board size resets the zoom.
 - **Card suits** are drawn with `SuitIcon` (`lib/cards/`, vector). Text symbols ♥ ♦ render as color emoji on web.
   Face-down cards are drawn with `CardBackView` and the selected skin.
 - **Keys for tests**: widgets that tests drive have `ValueKey`s (`game-<id>`, `stats-<id>`, `stock`, `waste`,

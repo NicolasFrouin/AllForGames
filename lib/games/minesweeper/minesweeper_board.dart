@@ -36,6 +36,9 @@ class MinesweeperBoardGeometry {
   /// player pans (and zooms) it.
   static const minCell = 22.0;
 
+  /// The player zooms in (two fingers) up to cells of this size.
+  static const maxZoomCell = 64.0;
+
   /// Room around the cells, for the frame of the board.
   static const frame = 6.0;
 
@@ -93,7 +96,7 @@ class _StillVersion extends ChangeNotifier {
 
 /// Draws the Minesweeper board, and turns taps into actions: tap opens (or
 /// flags in [flagMode]), a hold of [flagHold] and a secondary tap flag, a
-/// tap on a number chords.
+/// tap on a number chords. Two fingers zoom it.
 ///
 /// One timeline animates the board: each action plans a [CellMotion] for
 /// the cells it changes (a reveal spreading from the tap, a flag popping,
@@ -253,8 +256,9 @@ class _MinesweeperBoardState extends State<MinesweeperBoard>
     return LayoutBuilder(
       builder: (context, constraints) => ListenableBuilder(
         listenable: _controller,
-        // The confetti layer stays out of the board, which a new hold time
-        // builds again: its controller attaches to one layer only.
+        // The confetti layer stays out of the board, which a new board size
+        // or hold time builds again: its controller attaches to one layer
+        // only.
         builder: (context, _) => OverlayPortal(
           controller: _confettiLayer,
           overlayChildBuilder: (context) => _confettiOverlay(),
@@ -264,7 +268,7 @@ class _MinesweeperBoardState extends State<MinesweeperBoard>
     );
   }
 
-  /// The board, in a viewer that pans it when it is too big for the screen.
+  /// The board in a viewer that zooms (two fingers) and pans it.
   Widget _viewer(
     BoxConstraints constraints, {
     required bool animate,
@@ -356,15 +360,16 @@ class _MinesweeperBoardState extends State<MinesweeperBoard>
         ),
       ),
     );
-    if (!pans) return Center(child: board);
-    // Smaller cells would be hard to tap: the player pans the board, and can
-    // zoom out to see all of it.
+    // Two fingers zoom in. Cells smaller than minCell would be hard to tap:
+    // such a board keeps that size, pans, and zooms out to show all of it.
+    // A new board size starts without zoom.
     return InteractiveViewer(
-      constrained: false,
-      minScale: fitted.cell / MinesweeperBoardGeometry.minCell,
-      maxScale: 2.5,
-      boundaryMargin: const EdgeInsets.all(24),
-      child: board,
+      key: ValueKey((state.columns, state.rows, pans)),
+      constrained: !pans,
+      minScale: pans ? fitted.cell / geometry.cell : 1,
+      maxScale: max(1, MinesweeperBoardGeometry.maxZoomCell / geometry.cell),
+      boundaryMargin: pans ? const EdgeInsets.all(24) : EdgeInsets.zero,
+      child: pans ? board : Center(child: board),
     );
   }
 

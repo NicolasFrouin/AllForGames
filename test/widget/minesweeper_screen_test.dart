@@ -76,12 +76,12 @@ Finder byKey(String key) => find.byKey(ValueKey(key));
 MinesweeperController gameOf(WidgetTester tester) =>
     tester.widget<MinesweeperBoard>(find.byType(MinesweeperBoard)).controller;
 
-/// Where [cell] is on screen.
+/// Where [cell] is on screen (a zoomed board too).
 Offset cellCenter(WidgetTester tester, int cell) {
-  final board = byKey('minesweeper-board');
+  final board = tester.getRect(byKey('minesweeper-board'));
   final columns = gameOf(tester).state.columns;
-  final size = tester.getSize(board).width / columns;
-  return tester.getTopLeft(board) +
+  final size = board.width / columns;
+  return board.topLeft +
       Offset((cell % columns + 0.5) * size, (cell ~/ columns + 0.5) * size);
 }
 
@@ -192,6 +192,36 @@ void main() {
 
     expect(await holdFlags(tester, 0, 550), isFalse);
     expect(await holdFlags(tester, 0, 650), isTrue);
+  });
+
+  testWidgets('two fingers zoom the board in; a tap opens the cell under it', (
+    tester,
+  ) async {
+    await pumpGame(
+      tester,
+      difficulty: MinesweeperDifficulty.medium,
+      seed: 8,
+      size: const Size(412, 915),
+    );
+    final board = byKey('minesweeper-board');
+    final before = tester.getRect(board);
+
+    final left = await tester.startGesture(before.center.translate(-30, 0));
+    final right = await tester.startGesture(before.center.translate(30, 0));
+    for (var step = 0; step < 6; step++) {
+      await left.moveBy(const Offset(-15, 0));
+      await right.moveBy(const Offset(15, 0));
+      await tester.pump();
+    }
+    await left.up();
+    await right.up();
+    await tester.pumpAndSettle();
+
+    expect(tester.getRect(board).width, greaterThan(before.width * 2));
+    expect(textOf('mines-left-value'), '40');
+    const cell = 8 * 16 + 8;
+    await tapCell(tester, cell);
+    expect(gameOf(tester).firstTap, cell);
   });
 
   testWidgets('a tap on a number whose flags match opens its neighbors', (
@@ -340,7 +370,10 @@ void main() {
     );
     final state = gameOf(tester).state;
     expect((state.columns, state.rows), (16, 30));
-    expect(find.byType(InteractiveViewer), findsNothing);
+    expect(
+      tester.getSize(byKey('minesweeper-board')).width / 16,
+      greaterThan(MinesweeperBoardGeometry.minCell),
+    );
   });
 
   testWidgets('a small phone pans Expert; taps open the cell under them', (
@@ -352,7 +385,6 @@ void main() {
       seed: 8,
       size: const Size(360, 640),
     );
-    expect(find.byType(InteractiveViewer), findsOneWidget);
     expect(
       tester.getSize(byKey('minesweeper-board')).width / 16,
       MinesweeperBoardGeometry.minCell,
