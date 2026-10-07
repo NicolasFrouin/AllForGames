@@ -31,7 +31,11 @@ class HubScreen extends StatelessWidget {
         ),
         child: SafeArea(
           child: ListenableBuilder(
-            listenable: Listenable.merge([stores.stats, stores.saves]),
+            listenable: Listenable.merge([
+              stores.stats,
+              stores.saves,
+              stores.settings,
+            ]),
             builder: (context, _) => Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 1100),
@@ -60,11 +64,18 @@ class HubScreen extends StatelessWidget {
                       padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
                       sliver: _GameGrid(
                         tiles: [
-                          for (final game in gameCatalog)
+                          for (final game in _games(
+                            stores.settings.pinnedGames,
+                          ))
                             GameTile(
                               game: game,
                               stats: stores.stats.statsFor(game.id),
                               saved: stores.saves[game.id],
+                              pinned: stores.settings.pinnedGames.contains(
+                                game.id,
+                              ),
+                              onPin: () =>
+                                  stores.settings.togglePinned(game.id),
                             ),
                         ],
                       ),
@@ -78,6 +89,14 @@ class HubScreen extends StatelessWidget {
       ),
     );
   }
+
+  /// The pinned games first, the last pinned first, then the others in the
+  /// order of the catalog.
+  static List<GameInfo> _games(List<String> pinned) => [
+    for (final id in pinned) ?gameById(id),
+    for (final game in gameCatalog)
+      if (!pinned.contains(game.id)) game,
+  ];
 }
 
 /// A grid where each row is as tall as its tallest tile, so no text size
@@ -389,6 +408,8 @@ class GameTile extends StatefulWidget {
     required this.game,
     required this.stats,
     this.saved,
+    this.pinned = false,
+    this.onPin,
   });
 
   final GameInfo game;
@@ -396,6 +417,10 @@ class GameTile extends StatefulWidget {
 
   /// The game in progress. Tapping the tile continues it.
   final SavedGame? saved;
+
+  /// Pinned to the top of the hub; [onPin] pins or unpins it.
+  final bool pinned;
+  final VoidCallback? onPin;
 
   @override
   State<GameTile> createState() => _GameTileState();
@@ -467,12 +492,29 @@ class _GameTileState extends State<GameTile> {
                           child: Icon(game.icon, color: Colors.white, size: 30),
                         ),
                         if (game.isAvailable)
-                          IconButton(
-                            key: ValueKey('stats-${game.id}'),
-                            tooltip: l10n.gameStatistics(title),
-                            color: Colors.white,
-                            onPressed: () => context.go('/stats/${game.id}'),
-                            icon: const Icon(Icons.bar_chart),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                key: ValueKey('pin-${game.id}'),
+                                tooltip: widget.pinned
+                                    ? l10n.hubUnpin(title)
+                                    : l10n.hubPin(title),
+                                color: Colors.white,
+                                isSelected: widget.pinned,
+                                onPressed: widget.onPin,
+                                icon: const Icon(Icons.push_pin_outlined),
+                                selectedIcon: const Icon(Icons.push_pin),
+                              ),
+                              IconButton(
+                                key: ValueKey('stats-${game.id}'),
+                                tooltip: l10n.gameStatistics(title),
+                                color: Colors.white,
+                                onPressed: () =>
+                                    context.go('/stats/${game.id}'),
+                                icon: const Icon(Icons.bar_chart),
+                              ),
+                            ],
                           )
                         else
                           Flexible(

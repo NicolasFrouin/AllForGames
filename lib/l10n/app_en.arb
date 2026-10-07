@@ -125,6 +125,26 @@
       }
     }
   },
+  "hubPin": "Pin {game} to the top",
+  "@hubPin": {
+    "description": "Tooltip of the pin button of a game on the hub: the game goes to the top of the list.",
+    "placeholders": {
+      "game": {
+        "type": "String",
+        "example": "Klondike"
+      }
+    }
+  },
+  "hubUnpin": "Unpin {game}",
+  "@hubUnpin": {
+    "description": "Tooltip of the pin button of a pinned game on the hub: the game goes back to its place.",
+    "placeholders": {
+      "game": {
+        "type": "String",
+        "example": "Klondike"
+      }
+    }
+  },
   "finish": "Finish",
   "@finish": {
     "description": "Button that plays every remaining card to the foundations."

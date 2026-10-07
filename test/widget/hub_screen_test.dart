@@ -3,10 +3,12 @@ import 'package:all_for_games/app_stores.dart';
 import 'package:all_for_games/games/game_catalog.dart';
 import 'package:all_for_games/games/klondike/klondike_screen.dart';
 import 'package:all_for_games/hub/hub_screen.dart';
+import 'package:all_for_games/settings/settings_store.dart';
 import 'package:all_for_games/stats/stats_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../helpers/test_stores.dart';
 import 'widget_test_helpers.dart';
 
 const comingSoon = <String>[];
@@ -21,6 +23,20 @@ Finder tile(String id) => find.byKey(ValueKey('game-$id'));
 
 Finder resumeLine(String id) => find.byKey(ValueKey('resume-$id'));
 
+/// The game ids in the order of their tiles: by row, then from the left.
+List<String> tileOrder(WidgetTester tester) {
+  Offset at(String id) => tester.getTopLeft(tile(id));
+  return [for (final game in gameCatalog) game.id]..sort((a, b) {
+    final (pa, pb) = (at(a), at(b));
+    return pa.dy != pb.dy ? pa.dy.compareTo(pb.dy) : pa.dx.compareTo(pb.dx);
+  });
+}
+
+Future<void> togglePin(WidgetTester tester, String id) async {
+  await tester.tap(find.byKey(ValueKey('pin-$id')));
+  await tester.pumpAndSettle();
+}
+
 void main() {
   testWidgets('shows a tile for every game of the catalog', (tester) async {
     await pumpHub(tester, await seededStores([]));
@@ -33,6 +49,37 @@ void main() {
     }
     expect(find.text('Coming soon'), findsNWidgets(comingSoon.length));
     expect(textOf('summary-klondike'), 'Not played yet · Tap to play');
+  });
+
+  testWidgets('a pinned game goes to the top, above the games pinned before', (
+    tester,
+  ) async {
+    await pumpHub(tester, await seededStores([]));
+    final catalog = [for (final game in gameCatalog) game.id];
+    expect(tileOrder(tester), catalog);
+
+    await togglePin(tester, 'minesweeper');
+    await togglePin(tester, 'freecell');
+    expect(tileOrder(tester), [
+      'freecell',
+      'minesweeper',
+      ...catalog.where((id) => id != 'freecell' && id != 'minesweeper'),
+    ]);
+
+    await togglePin(tester, 'freecell');
+    expect(tileOrder(tester), [
+      'minesweeper',
+      ...catalog.where((id) => id != 'minesweeper'),
+    ]);
+  });
+
+  testWidgets('the pinned games of the settings come first', (tester) async {
+    final stores = await createTestStores({
+      SettingsStore.pinnedGamesKey: ['tripeaks', 'no-such-game'],
+    });
+    await pumpHub(tester, stores);
+
+    expect(tileOrder(tester).first, 'tripeaks');
   });
 
   testWidgets('an unknown link opens the hub', (tester) async {

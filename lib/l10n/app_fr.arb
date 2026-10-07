@@ -27,6 +27,8 @@
   "newGameDeal": "Distribuer",
   "statistics": "Statistiques",
   "gameStatistics": "Statistiques – {game}",
+  "hubPin": "Épingler {game} en haut",
+  "hubUnpin": "Désépingler {game}",
   "finish": "Terminer",
   "moves": "Coups",
   "score": "Score",

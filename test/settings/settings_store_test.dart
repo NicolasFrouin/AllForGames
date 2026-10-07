@@ -317,6 +317,20 @@ void main() {
     },
   );
 
+  test('pins a game above the games pinned before, and unpins it', () async {
+    final store = await createStore();
+    expect(store.pinnedGames, isEmpty);
+
+    await store.togglePinned('mahjong');
+    await store.togglePinned('spider');
+    expect(store.pinnedGames, ['spider', 'mahjong']);
+    expect((await SettingsStore.load()).pinnedGames, ['spider', 'mahjong']);
+
+    await store.togglePinned('mahjong');
+    expect(store.pinnedGames, ['spider']);
+    expect((await SettingsStore.load()).pinnedGames, ['spider']);
+  });
+
   test('listeners are told after the write, not during the call', () async {
     final store = await createStore();
     var notified = 0;

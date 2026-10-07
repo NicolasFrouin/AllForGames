@@ -78,7 +78,7 @@ lib/
                              tab per SkinKind from `_tabOf`: label, games that use it, skins; grouped as free, then
                              by game of the unlocking achievement)
   hub/                       home page: header (all statistics, achievements, skins, settings), overall stats (tap:
-                             /stats), game grid
+                             /stats), game grid (pinned games first, the last pinned first)
   saves/                     SavedGame (one game in progress, game-specific JSON in data), GameSaveStore
   stats/                     GameRecord (one finished game), GameStats (aggregates), StatsStore, PlayTimer, stats page;
                              overview_stats (pure Dart, every game together: totals, win and day streaks, last 30
@@ -147,7 +147,8 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   classic; `settings.klondike.drawCount`: int 1/3, unknown = 1; `settings.mahjong.mode`: `classic`/`tray`, unknown =
   classic; `settings.mahjong.traySide`: `top`/`bottom`/`left`/`right`, unknown = top; `settings.<game>.difficulty`:
   `easy`/`medium`/`hard`, unknown = medium; `settings.minesweeper.flagHoldMs`: int, absent = 300, limited to 150..750;
-  `settings.minesweeper.vibrate`: bool, absent = false), `achievements.<id>` per unlocked achievement (UTC ISO date).
+  `settings.minesweeper.vibrate`: bool, absent = false; `settings.pinnedGames`: string list of game ids, the last
+  pinned first), `achievements.<id>` per unlocked achievement (UTC ISO date).
   Catch storage errors (blocked or full storage must not break the app).
 - **ChangeNotifier stores** notify *after* an `await`, never synchronously in a mutating call:
   screens call them from `dispose()`, when no widget can rebuild.
@@ -247,7 +248,7 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   `foundation-<suit>`, `tableau-<i>`, card ids like `hearts-1`, `moves-value`, `difficulty-value`, `undo`,
   `new-game`, `new-game-draw-<n>`, `new-game-difficulty-<name>`, `new-game-deal`, `stat-<id>` like
   `stat-winRate` or `stat-<detailKey>`, `variant-<id>`, `difficulty-<name>` (and `-all`) on the stats page,
-  `overview-stats-button` (hub), `overview-stat-<id>`, `overview-game-<gameId>`, `overview-recent-<i>`,
+  `overview-stats-button`, `pin-<id>` (hub), `overview-stat-<id>`, `overview-game-<gameId>`, `overview-recent-<i>`,
   `overview-achievements`, `overview-activity` on /stats, `settings-button`, `language-<code>`,
   `tray-side-<side>`, `flag-hold`, `flag-hold-value`, `flag-vibrate` on /settings,
   `achievements-button`, `skins-button`, `achievement-<id>`, `achievement-tab-<gameId>`, `achievements-count` (all)

@@ -33,9 +33,11 @@ class SettingsStore extends ChangeNotifier {
     this._minesweeperFlagHoldMs,
     this._minesweeperVibrate,
     this._mahjongTraySide,
+    this._pinnedGames,
   );
 
   static const localeKey = 'settings.locale';
+  static const pinnedGamesKey = 'settings.pinnedGames';
   static const cardBackKey = 'settings.cardBack';
   static const tileStyleKey = 'settings.tileStyle';
   static const klondikeDrawCountKey = 'settings.klondike.drawCount';
@@ -76,6 +78,7 @@ class SettingsStore extends ChangeNotifier {
   int _minesweeperFlagHoldMs;
   bool _minesweeperVibrate;
   MahjongTraySide _mahjongTraySide;
+  List<String> _pinnedGames;
 
   static Future<SettingsStore> load([SharedPreferencesAsync? prefs]) async {
     prefs ??= SharedPreferencesAsync();
@@ -94,6 +97,7 @@ class SettingsStore extends ChangeNotifier {
     var minesweeperFlagHoldMs = defaultFlagHoldMs;
     var minesweeperVibrate = false;
     var mahjongTraySide = MahjongTraySide.top;
+    var pinnedGames = <String>[];
     try {
       locale = _supportedLocale(await prefs.getString(localeKey));
       cardBackId = _knownCardBack(await prefs.getString(cardBackKey));
@@ -144,6 +148,7 @@ class SettingsStore extends ChangeNotifier {
             mahjongTraySideKey,
           )] ??
           MahjongTraySide.top;
+      pinnedGames = {...?await prefs.getStringList(pinnedGamesKey)}.toList();
     } on Object catch (error) {
       // Storage can be blocked (for example site data off in the browser).
       // The app still works, it only keeps the settings of this session.
@@ -166,11 +171,16 @@ class SettingsStore extends ChangeNotifier {
       minesweeperFlagHoldMs,
       minesweeperVibrate,
       mahjongTraySide,
+      pinnedGames,
     );
   }
 
   /// The language chosen by the player. Null follows the device language.
   Locale? get locale => _locale;
+
+  /// Ids of the games pinned to the top of the hub, the last pinned first.
+  /// An id the app does not have (yet) stays: the hub skips it.
+  List<String> get pinnedGames => _pinnedGames;
 
   /// Id of the card back the games draw face-down cards with.
   String get cardBackId => _cardBackId;
@@ -228,6 +238,19 @@ class SettingsStore extends ChangeNotifier {
       () => locale == null
           ? _prefs.remove(localeKey)
           : _prefs.setString(localeKey, locale.languageCode),
+    );
+    notifyListeners();
+  }
+
+  /// Pins [gameId] to the top of the hub, above the games pinned before, or
+  /// unpins it.
+  Future<void> togglePinned(String gameId) async {
+    _pinnedGames = _pinnedGames.contains(gameId)
+        ? [..._pinnedGames.where((id) => id != gameId)]
+        : [gameId, ..._pinnedGames];
+    await _guard(
+      'save the pinned games',
+      () => _prefs.setStringList(pinnedGamesKey, _pinnedGames),
     );
     notifyListeners();
   }
