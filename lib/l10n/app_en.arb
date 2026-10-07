@@ -6,11 +6,33 @@
   },
   "language": "Language",
   "@language": {
-    "description": "Tooltip of the language menu on the hub."
+    "description": "Title of the language section of the settings page."
   },
   "languageSystem": "System default",
   "@languageSystem": {
-    "description": "Language menu item: follow the language of the device."
+    "description": "Language choice on the settings page: follow the language of the device."
+  },
+  "settings": "Settings",
+  "@settings": {
+    "description": "Title of the settings page, and tooltip of its button on the hub."
+  },
+  "settingsFlagHold": "Hold to flag",
+  "@settingsFlagHold": {
+    "description": "Minesweeper setting: how long a finger holds a cell to put a flag on it."
+  },
+  "settingsFlagHoldValue": "{seconds} s",
+  "@settingsFlagHoldValue": {
+    "description": "The hold time of the Minesweeper setting, in seconds (for example 0.3 s).",
+    "placeholders": {
+      "seconds": {
+        "type": "double",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "settingsFlagHoldHint": "How long you hold a covered cell to put a flag on it. A shorter time is faster, but then a slow tap can put a flag too.",
+  "@settingsFlagHoldHint": {
+    "description": "Explanation below the Minesweeper hold time setting."
   },
   "cancel": "Cancel",
   "@cancel": {

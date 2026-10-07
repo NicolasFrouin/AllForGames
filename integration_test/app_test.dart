@@ -153,9 +153,11 @@ void main() {
     await startApp(tester);
     expect(find.text('Games'), findsOneWidget);
 
-    await tester.tap(find.byKey(const ValueKey('language-menu')));
+    await tester.tap(find.byKey(const ValueKey('settings-button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('language-fr')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
     expect(find.text('Jeux'), findsOneWidget);
 

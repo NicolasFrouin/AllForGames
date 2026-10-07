@@ -95,6 +95,17 @@ Future<void> longPressCell(WidgetTester tester, int cell) async {
   await tester.pumpAndSettle();
 }
 
+/// Holds a finger on [cell] for [ms], then takes it away without a tap:
+/// whether the hold flagged the cell.
+Future<bool> holdFlags(WidgetTester tester, int cell, int ms) async {
+  final finger = await tester.startGesture(cellCenter(tester, cell));
+  await tester.pump(Duration(milliseconds: ms));
+  final flagged = gameOf(tester).state.isFlagged(cell);
+  await finger.cancel();
+  await tester.pumpAndSettle();
+  return flagged;
+}
+
 Future<void> rightClickCell(WidgetTester tester, int cell) async {
   await tester.tapAt(cellCenter(tester, cell), buttons: kSecondaryMouseButton);
   await tester.pumpAndSettle();
@@ -159,6 +170,28 @@ void main() {
     await rightClickCell(tester, 1);
     await tapCell(tester, 1);
     expect(game.state.isOpen(1), isTrue);
+  });
+
+  testWidgets('a hold of 0.3 s flags a cell, faster than a usual long press', (
+    tester,
+  ) async {
+    await pumpGame(tester, state: cornerBoard);
+    await tapCell(tester, cornerTap);
+
+    expect(await holdFlags(tester, 0, 250), isFalse);
+    expect(await holdFlags(tester, 0, 350), isTrue);
+  });
+
+  testWidgets('the hold time comes from the settings', (tester) async {
+    await pumpGame(
+      tester,
+      state: cornerBoard,
+      data: {SettingsStore.minesweeperFlagHoldKey: 600},
+    );
+    await tapCell(tester, cornerTap);
+
+    expect(await holdFlags(tester, 0, 550), isFalse);
+    expect(await holdFlags(tester, 0, 650), isTrue);
   });
 
   testWidgets('a tap on a number whose flags match opens its neighbors', (

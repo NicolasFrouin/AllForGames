@@ -61,13 +61,13 @@ lib/
                              /freecell?difficulty=hard&seed=42, /spider?difficulty=hard&seed=42,
                              /tripeaks?difficulty=hard&seed=42, /minesweeper?difficulty=hard&seed=42,
                              /mahjong?mode=tray&difficulty=easy&seed=42, /stats, /stats/:gameId,
-                             /achievements?game=klondike, /skins?kind=tileStyle (without params, a game route
-                             continues the saved game; the two pages open on their first tab)
+                             /achievements?game=klondike, /skins?kind=tileStyle, /settings (without params, a
+                             game route continues the saved game; the two pages open on their first tab)
   app_stores.dart            AppStores: every store (stats, saves, settings, achievements), loaded once, given to
                              the screens; its constructor keeps the achievements in sync with the stats
   l10n/                      app_en.arb (template) + app_fr.arb; app_localizations*.dart are generated (git-ignored)
   settings/                  SettingsStore: player settings (language, card back, tile style, game options), one
-                             storage key per setting
+                             storage key per setting; settings_screen (/settings: language, Minesweeper hold time)
   achievements/              Achievement definitions (goal + progress from records; achievementGameIds orders the
                              groups), AchievementStore (unlock dates), achievement_texts (id -> title/description,
                              card back and tile style names), achievements page (one tab per achievementGameIds
@@ -77,7 +77,7 @@ lib/
                              (SkinReward, skinRewardOf: what an achievement unlocks), skins_screen (Skins page: one
                              tab per SkinKind from `_tabOf`: label, games that use it, skins; grouped as free, then
                              by game of the unlocking achievement)
-  hub/                       home page: header (all statistics, achievements, skins, language), overall stats (tap:
+  hub/                       home page: header (all statistics, achievements, skins, settings), overall stats (tap:
                              /stats), game grid
   saves/                     SavedGame (one game in progress, game-specific JSON in data), GameSaveStore
   stats/                     GameRecord (one finished game), GameStats (aggregates), StatsStore, PlayTimer, stats page;
@@ -145,7 +145,8 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   per setting (`settings.locale`: `en`/`fr`, absent = device language; `settings.cardBack`: skin id, unknown =
   classic; `settings.tileStyle`: Mahjong tile style id, unknown = classic; `settings.minesweeperTheme`: theme id,
   unknown = classic; `settings.klondike.drawCount`: int 1/3, unknown = 1; `settings.mahjong.mode`: `classic`/`tray`,
-  unknown = classic; `settings.<game>.difficulty`: `easy`/`medium`/`hard`, unknown = medium),
+  unknown = classic; `settings.<game>.difficulty`: `easy`/`medium`/`hard`, unknown = medium;
+  `settings.minesweeper.flagHoldMs`: int, absent = 300, limited to 150..750),
   `achievements.<id>` per unlocked achievement (UTC ISO date).
   Catch storage errors (blocked or full storage must not break the app).
 - **ChangeNotifier stores** notify *after* an `await`, never synchronously in a mutating call:
@@ -234,7 +235,9 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   or JS). The hint is the solver's first safe cell from the open cells (flags ignored). Opening a mine records the
   game as lost; Try again replays the same mines with the first tap open (timer from the next action). Records:
   variant `classic`, moves = clicks (opens, chords, flags), score = 10 per 3BV cleared. The colors are a
-  `MinesweeperTheme` (the selected skin); `all.everyGame`'s goal is the number of games (a test checks it).
+  `MinesweeperTheme` (the selected skin); `all.everyGame`'s goal is the number of games (a test checks it). A hold of
+  the settings' time flags a cell (`flagHold`, its own `LongPressGestureRecognizer`: Flutter's long press takes
+  500 ms) and buzzes the phone.
 - **Card suits** are drawn with `SuitIcon` (`lib/cards/`, vector). Text symbols ♥ ♦ render as color emoji on web.
   Face-down cards are drawn with `CardBackView` and the selected skin.
 - **Keys for tests**: widgets that tests drive have `ValueKey`s (`game-<id>`, `stats-<id>`, `stock`, `waste`,
@@ -242,7 +245,8 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   `new-game`, `new-game-draw-<n>`, `new-game-difficulty-<name>`, `new-game-deal`, `stat-<id>` like
   `stat-winRate` or `stat-<detailKey>`, `variant-<id>`, `difficulty-<name>` (and `-all`) on the stats page,
   `overview-stats-button` (hub), `overview-stat-<id>`, `overview-game-<gameId>`, `overview-recent-<i>`,
-  `overview-achievements`, `overview-activity` on /stats, `language-menu`, `language-<code>`,
+  `overview-achievements`, `overview-activity` on /stats, `settings-button`, `language-<code>`,
+  `flag-hold`, `flag-hold-value` on /settings,
   `achievements-button`, `skins-button`, `achievement-<id>`, `achievement-tab-<gameId>`, `achievements-count` (all)
   and `achievements-count-<gameId>`, `skins-tab-<kind>` (`SkinKind` name), `skins-group-<free|gameId>`,
   `card-back-<id>`, `tile-style-<id>`, `minesweeper-theme-<id>`, `unlocked-<id>` in the win dialog; Mahjong:

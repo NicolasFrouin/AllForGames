@@ -30,6 +30,7 @@ class SettingsStore extends ChangeNotifier {
     this._tripeaksDifficulty,
     this._minesweeperDifficulty,
     this._minesweeperThemeId,
+    this._minesweeperFlagHoldMs,
   );
 
   static const localeKey = 'settings.locale';
@@ -44,6 +45,13 @@ class SettingsStore extends ChangeNotifier {
   static const tripeaksDifficultyKey = 'settings.tripeaks.difficulty';
   static const minesweeperDifficultyKey = 'settings.minesweeper.difficulty';
   static const minesweeperThemeKey = 'settings.minesweeperTheme';
+  static const minesweeperFlagHoldKey = 'settings.minesweeper.flagHoldMs';
+
+  /// How long a finger holds a Minesweeper cell to flag it, in ms. Flutter's
+  /// usual long press (500 ms) felt slow.
+  static const defaultFlagHoldMs = 300;
+  static const minFlagHoldMs = 150;
+  static const maxFlagHoldMs = 750;
 
   static const _defaultDrawCount = 1;
   static const _defaultDifficulty = KlondikeDifficulty.medium;
@@ -61,6 +69,7 @@ class SettingsStore extends ChangeNotifier {
   TriPeaksDifficulty _tripeaksDifficulty;
   MinesweeperDifficulty _minesweeperDifficulty;
   String _minesweeperThemeId;
+  int _minesweeperFlagHoldMs;
 
   static Future<SettingsStore> load([SharedPreferencesAsync? prefs]) async {
     prefs ??= SharedPreferencesAsync();
@@ -76,6 +85,7 @@ class SettingsStore extends ChangeNotifier {
     var tripeaksDifficulty = TriPeaksDifficulty.medium;
     var minesweeperDifficulty = MinesweeperDifficulty.medium;
     var minesweeperThemeId = classicMinesweeperTheme.id;
+    var minesweeperFlagHoldMs = defaultFlagHoldMs;
     try {
       locale = _supportedLocale(await prefs.getString(localeKey));
       cardBackId = _knownCardBack(await prefs.getString(cardBackKey));
@@ -117,6 +127,9 @@ class SettingsStore extends ChangeNotifier {
       minesweeperThemeId = _knownMinesweeperTheme(
         await prefs.getString(minesweeperThemeKey),
       );
+      minesweeperFlagHoldMs = _knownFlagHold(
+        await prefs.getInt(minesweeperFlagHoldKey),
+      );
     } on Object catch (error) {
       // Storage can be blocked (for example site data off in the browser).
       // The app still works, it only keeps the settings of this session.
@@ -136,6 +149,7 @@ class SettingsStore extends ChangeNotifier {
       tripeaksDifficulty,
       minesweeperDifficulty,
       minesweeperThemeId,
+      minesweeperFlagHoldMs,
     );
   }
 
@@ -179,6 +193,9 @@ class SettingsStore extends ChangeNotifier {
 
   /// Id of the theme Minesweeper draws its board with.
   String get minesweeperThemeId => _minesweeperThemeId;
+
+  /// How long a finger holds a Minesweeper cell to flag it, in ms.
+  int get minesweeperFlagHoldMs => _minesweeperFlagHoldMs;
 
   /// Listeners are told after the write, never during the call, like the
   /// other stores.
@@ -297,6 +314,17 @@ class SettingsStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Keeps the Minesweeper hold time ([ms] limited to [minFlagHoldMs] ..
+  /// [maxFlagHoldMs]).
+  Future<void> setMinesweeperFlagHold(int ms) async {
+    _minesweeperFlagHoldMs = _knownFlagHold(ms);
+    await _guard(
+      'save the Minesweeper hold time',
+      () => _prefs.setInt(minesweeperFlagHoldKey, _minesweeperFlagHoldMs),
+    );
+    notifyListeners();
+  }
+
   /// Null for a language the app does not have (for example saved by a newer
   /// app version).
   static Locale? _supportedLocale(String? languageCode) {
@@ -315,6 +343,9 @@ class SettingsStore extends ChangeNotifier {
   /// Classic for a Minesweeper theme the app does not have.
   static String _knownMinesweeperTheme(String? id) =>
       minesweeperThemeById(id ?? '').id;
+
+  static int _knownFlagHold(int? ms) =>
+      (ms ?? defaultFlagHoldMs).clamp(minFlagHoldMs, maxFlagHoldMs);
 
   static int _knownDrawCount(int? drawCount) =>
       drawCount == 3 ? 3 : _defaultDrawCount;

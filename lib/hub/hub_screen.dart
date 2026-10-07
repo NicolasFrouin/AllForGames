@@ -10,7 +10,6 @@ import '../common/format.dart';
 import '../games/game_catalog.dart';
 import '../l10n/app_localizations.dart';
 import '../saves/game_save_store.dart';
-import '../settings/settings_store.dart';
 import '../stats/game_stats.dart';
 
 class HubScreen extends StatelessWidget {
@@ -41,10 +40,7 @@ class HubScreen extends StatelessWidget {
                     SliverPadding(
                       padding: const EdgeInsets.fromLTRB(20, 28, 20, 8),
                       sliver: SliverToBoxAdapter(
-                        child: _Header(
-                          overall: stores.stats.overall,
-                          settings: stores.settings,
-                        ),
+                        child: _Header(overall: stores.stats.overall),
                       ),
                     ),
                     SliverPadding(
@@ -155,10 +151,9 @@ class _Entrance extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.overall, required this.settings});
+  const _Header({required this.overall});
 
   final GameStats overall;
-  final SettingsStore settings;
 
   /// Below this width, the title goes under the logo and the buttons, so
   /// large text never squeezes it.
@@ -184,7 +179,7 @@ class _Header extends StatelessWidget {
         ),
       ],
     );
-    final actions = _HeaderActions(settings: settings);
+    const actions = _HeaderActions();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -250,11 +245,9 @@ class _Header extends StatelessWidget {
   }
 }
 
-/// All statistics, achievements, skins and language, at the top right.
+/// All statistics, achievements, skins and settings, at the top right.
 class _HeaderActions extends StatelessWidget {
-  const _HeaderActions({required this.settings});
-
-  final SettingsStore settings;
+  const _HeaderActions();
 
   @override
   Widget build(BuildContext context) {
@@ -283,46 +276,14 @@ class _HeaderActions extends StatelessWidget {
           onPressed: () => context.go('/skins'),
           icon: const Icon(Icons.palette_outlined),
         ),
-        _LanguageMenu(settings: settings),
+        IconButton(
+          key: const ValueKey('settings-button'),
+          tooltip: l10n.settings,
+          color: Colors.white70,
+          onPressed: () => context.go('/settings'),
+          icon: const Icon(Icons.settings_outlined),
+        ),
       ],
-    );
-  }
-}
-
-class _LanguageMenu extends StatelessWidget {
-  const _LanguageMenu({required this.settings});
-
-  final SettingsStore settings;
-
-  static const _system = 'system';
-
-  /// Each language name is in its own language.
-  static const _names = {'en': 'English', 'fr': 'Français'};
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return PopupMenuButton<String>(
-      key: const ValueKey('language-menu'),
-      tooltip: l10n.language,
-      icon: const Icon(Icons.translate, color: Colors.white70),
-      onSelected: (code) =>
-          settings.setLocale(code == _system ? null : Locale(code)),
-      itemBuilder: (context) {
-        final current = settings.locale?.languageCode ?? _system;
-        PopupMenuEntry<String> item(String code, String name) =>
-            CheckedPopupMenuItem(
-              key: ValueKey('language-$code'),
-              value: code,
-              checked: code == current,
-              child: Text(name),
-            );
-        return [
-          item(_system, l10n.languageSystem),
-          for (final Locale(:languageCode) in AppLocalizations.supportedLocales)
-            item(languageCode, _names[languageCode] ?? languageCode),
-        ];
-      },
     );
   }
 }

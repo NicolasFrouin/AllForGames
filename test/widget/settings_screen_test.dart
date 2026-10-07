@@ -23,18 +23,18 @@ Future<void> pumpHub(
   await tester.pumpAndSettle();
 }
 
-Future<void> openLanguageMenu(WidgetTester tester) async {
-  await tester.tap(find.byKey(const ValueKey('language-menu')));
+Future<void> openSettings(WidgetTester tester) async {
+  await tester.tap(find.byKey(const ValueKey('settings-button')));
   await tester.pumpAndSettle();
 }
 
-/// The checked item of the open language menu: `system`, `en` or `fr`.
-String checkedLanguage(WidgetTester tester) => tester
-    .widgetList<CheckedPopupMenuItem<String>>(
-      find.byType(CheckedPopupMenuItem<String>),
-    )
-    .singleWhere((item) => item.checked)
-    .value!;
+/// The selected language on the settings page: `system`, `en` or `fr`.
+String selectedLanguage(WidgetTester tester) {
+  final chip = tester
+      .widgetList<ChoiceChip>(find.byType(ChoiceChip))
+      .singleWhere((chip) => chip.selected);
+  return (chip.key! as ValueKey<String>).value.substring('language-'.length);
+}
 
 Future<void> chooseLanguage(WidgetTester tester, String code) async {
   await tester.tap(find.byKey(ValueKey('language-$code')));
@@ -66,33 +66,56 @@ void main() {
     await pumpHub(tester);
     expect(find.text('Games'), findsOneWidget);
 
-    await openLanguageMenu(tester);
-    expect(checkedLanguage(tester), 'system');
+    await openSettings(tester);
+    expect(selectedLanguage(tester), 'system');
     await chooseLanguage(tester, 'fr');
 
+    expect(find.widgetWithText(AppBar, 'Paramètres'), findsOneWidget);
+    expect(await storedLocale(), const Locale('fr'));
+    // pageBack looks for the English tooltip.
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
     expect(find.text('Jeux'), findsOneWidget);
     expect(textOf('summary-klondike'), 'Pas encore joué · Touchez pour jouer');
-    expect(await storedLocale(), const Locale('fr'));
 
-    await openLanguageMenu(tester);
-    expect(checkedLanguage(tester), 'fr');
+    await openSettings(tester);
+    expect(selectedLanguage(tester), 'fr');
     await chooseLanguage(tester, 'en');
-    expect(find.text('Games'), findsOneWidget);
+    expect(find.widgetWithText(AppBar, 'Settings'), findsOneWidget);
     expect(await storedLocale(), const Locale('en'));
   });
 
   testWidgets('System default removes the saved language', (tester) async {
     await pumpHub(tester, language: 'fr');
 
-    await openLanguageMenu(tester);
-    expect(checkedLanguage(tester), 'fr');
+    await openSettings(tester);
+    expect(selectedLanguage(tester), 'fr');
     await chooseLanguage(tester, 'system');
 
     // Tests run with an English device.
-    expect(find.text('Games'), findsOneWidget);
+    expect(selectedLanguage(tester), 'system');
+    expect(find.widgetWithText(AppBar, 'Settings'), findsOneWidget);
     expect(
       await SharedPreferencesAsync().getString(SettingsStore.localeKey),
       isNull,
     );
+  });
+
+  testWidgets('the slider sets the time to hold a Minesweeper cell for a '
+      'flag', (tester) async {
+    await pumpHub(tester);
+    await openSettings(tester);
+    expect(textOf('flag-hold-value'), '0.3 s');
+
+    final slider = find.byKey(const ValueKey('flag-hold'));
+    await tester.drag(slider, const Offset(-1000, 0));
+    await tester.pumpAndSettle();
+    expect(textOf('flag-hold-value'), '0.15 s');
+    expect((await SettingsStore.load()).minesweeperFlagHoldMs, 150);
+
+    await tester.drag(slider, const Offset(1000, 0));
+    await tester.pumpAndSettle();
+    expect(textOf('flag-hold-value'), '0.75 s');
+    expect((await SettingsStore.load()).minesweeperFlagHoldMs, 750);
   });
 }

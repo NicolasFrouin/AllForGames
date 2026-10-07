@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'dart:math';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/scheduler.dart' show Ticker;
 import 'package:material_ui/material_ui.dart';
 
 import '../../cards/confetti.dart';
 import '../../l10n/app_localizations.dart';
+import '../../settings/settings_store.dart';
 import '../../skins/minesweeper_themes.dart';
 import 'minesweeper_art.dart';
 import 'minesweeper_controller.dart';
@@ -89,8 +92,8 @@ class _StillVersion extends ChangeNotifier {
 }
 
 /// Draws the Minesweeper board, and turns taps into actions: tap opens (or
-/// flags in [flagMode]), long press and secondary tap flag, a tap on a
-/// number chords.
+/// flags in [flagMode]), a hold of [flagHold] and a secondary tap flag, a
+/// tap on a number chords.
 ///
 /// One timeline animates the board: each action plans a [CellMotion] for
 /// the cells it changes (a reveal spreading from the tap, a flag popping,
@@ -103,6 +106,9 @@ class MinesweeperBoard extends StatefulWidget {
     required this.controller,
     this.theme = classicMinesweeperTheme,
     this.flagMode = false,
+    this.flagHold = const Duration(
+      milliseconds: SettingsStore.defaultFlagHoldMs,
+    ),
     this.onCelebrated,
     this.onLost,
   });
@@ -112,6 +118,9 @@ class MinesweeperBoard extends StatefulWidget {
 
   /// A tap flags a hidden cell instead of opening it.
   final bool flagMode;
+
+  /// How long a finger holds a cell to flag it.
+  final Duration flagHold;
 
   /// Called once after a win, when the celebration has played (at once with
   /// reduced motion): time for the win dialog.
@@ -244,116 +253,152 @@ class _MinesweeperBoardState extends State<MinesweeperBoard>
     return LayoutBuilder(
       builder: (context, constraints) => ListenableBuilder(
         listenable: _controller,
-        builder: (context, _) {
-          final state = _controller.state;
-          const frame = 2 * MinesweeperBoardGeometry.frame;
-          final room = Size(
-            max(0, constraints.maxWidth - frame),
-            max(0, constraints.maxHeight - frame),
-          );
-          final fitted = MinesweeperBoardGeometry.fit(
-            room,
-            state.columns,
-            state.rows,
-          );
-          final pans = fitted.cell < MinesweeperBoardGeometry.minCell;
-          final geometry = pans
-              ? MinesweeperBoardGeometry(
-                  state.columns,
-                  state.rows,
-                  MinesweeperBoardGeometry.minCell,
-                )
-              : fitted;
-          _geometry = geometry;
-          final art = _artFor(geometry.cell);
-          _plan(state, geometry, animate: animate);
-          final board = DecoratedBox(
-            decoration: BoxDecoration(
-              color: widget.theme.frame,
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black38,
-                  blurRadius: 12,
-                  offset: Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(MinesweeperBoardGeometry.frame),
-              child: Semantics(
-                label: l10n.minesweeperBoardLabel(state.columns, state.rows),
-                child: GestureDetector(
-                  key: const ValueKey('minesweeper-board'),
-                  behavior: HitTestBehavior.opaque,
-                  onTapDown: (details) => _press(details.localPosition),
-                  onTapCancel: _release,
-                  onTapUp: (details) {
-                    _release();
-                    _tap(details.localPosition);
-                  },
-                  onLongPressStart: (details) => _flag(details.localPosition),
-                  onSecondaryTapUp: (details) => _flag(details.localPosition),
-                  child: SizedBox.fromSize(
-                    key: _boardKey,
-                    size: geometry.size,
-                    child: Stack(
-                      children: [
-                        Positioned.fill(
-                          child: RepaintBoundary(
-                            child: CustomPaint(
-                              painter: _StillPainter(
-                                state: state,
-                                geometry: geometry,
-                                art: art,
-                                motions: _motions,
-                                hintCell: _controller.hintCell,
-                                version: _still,
-                              ),
-                            ),
-                          ),
-                        ),
-                        Positioned.fill(
-                          child: RepaintBoundary(
-                            child: CustomPaint(
-                              painter: _MotionPainter(
-                                state: state,
-                                geometry: geometry,
-                                art: art,
-                                motions: _motions,
-                                clock: _clock,
-                                pressed: _pressed,
-                                version: _still,
-                              ),
-                            ),
-                          ),
-                        ),
-                        OverlayPortal(
-                          controller: _confettiLayer,
-                          overlayChildBuilder: (context) => _confettiOverlay(),
-                          child: const SizedBox.shrink(),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
-          if (!pans) return Center(child: board);
-          // Smaller cells would be hard to tap: the player pans the board,
-          // and can zoom out to see all of it.
-          return InteractiveViewer(
-            constrained: false,
-            minScale: fitted.cell / MinesweeperBoardGeometry.minCell,
-            maxScale: 2.5,
-            boundaryMargin: const EdgeInsets.all(24),
-            child: board,
-          );
-        },
+        // The confetti layer stays out of the board, which a new hold time
+        // builds again: its controller attaches to one layer only.
+        builder: (context, _) => OverlayPortal(
+          controller: _confettiLayer,
+          overlayChildBuilder: (context) => _confettiOverlay(),
+          child: _viewer(constraints, animate: animate, l10n: l10n),
+        ),
       ),
     );
   }
+
+  /// The board, in a viewer that pans it when it is too big for the screen.
+  Widget _viewer(
+    BoxConstraints constraints, {
+    required bool animate,
+    required AppLocalizations l10n,
+  }) {
+    final state = _controller.state;
+    const frame = 2 * MinesweeperBoardGeometry.frame;
+    final room = Size(
+      max(0, constraints.maxWidth - frame),
+      max(0, constraints.maxHeight - frame),
+    );
+    final fitted = MinesweeperBoardGeometry.fit(
+      room,
+      state.columns,
+      state.rows,
+    );
+    final pans = fitted.cell < MinesweeperBoardGeometry.minCell;
+    final geometry = pans
+        ? MinesweeperBoardGeometry(
+            state.columns,
+            state.rows,
+            MinesweeperBoardGeometry.minCell,
+          )
+        : fitted;
+    _geometry = geometry;
+    final art = _artFor(geometry.cell);
+    _plan(state, geometry, animate: animate);
+    final board = DecoratedBox(
+      decoration: BoxDecoration(
+        color: widget.theme.frame,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black38,
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(MinesweeperBoardGeometry.frame),
+        child: Semantics(
+          key: const ValueKey('minesweeper-board'),
+          label: l10n.minesweeperBoardLabel(state.columns, state.rows),
+          child: RawGestureDetector(
+            // The hold time is set when the recognizer is made: a new
+            // time needs a new one.
+            key: ValueKey(widget.flagHold),
+            behavior: HitTestBehavior.opaque,
+            gestures: _gestures(),
+            child: SizedBox.fromSize(
+              key: _boardKey,
+              size: geometry.size,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: RepaintBoundary(
+                      child: CustomPaint(
+                        painter: _StillPainter(
+                          state: state,
+                          geometry: geometry,
+                          art: art,
+                          motions: _motions,
+                          hintCell: _controller.hintCell,
+                          version: _still,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned.fill(
+                    child: RepaintBoundary(
+                      child: CustomPaint(
+                        painter: _MotionPainter(
+                          state: state,
+                          geometry: geometry,
+                          art: art,
+                          motions: _motions,
+                          clock: _clock,
+                          pressed: _pressed,
+                          version: _still,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    if (!pans) return Center(child: board);
+    // Smaller cells would be hard to tap: the player pans the board, and can
+    // zoom out to see all of it.
+    return InteractiveViewer(
+      constrained: false,
+      minScale: fitted.cell / MinesweeperBoardGeometry.minCell,
+      maxScale: 2.5,
+      boundaryMargin: const EdgeInsets.all(24),
+      child: board,
+    );
+  }
+
+  Map<Type, GestureRecognizerFactory> _gestures() => {
+    TapGestureRecognizer:
+        GestureRecognizerFactoryWithHandlers<TapGestureRecognizer>(
+          () => TapGestureRecognizer(debugOwner: this),
+          (tap) => tap
+            ..onTapDown = _onTapDown
+            ..onTapCancel = _release
+            ..onTapUp = _onTapUp
+            ..onSecondaryTapUp = _onSecondaryTapUp,
+        ),
+    LongPressGestureRecognizer:
+        GestureRecognizerFactoryWithHandlers<LongPressGestureRecognizer>(
+          () => LongPressGestureRecognizer(
+            duration: widget.flagHold,
+            debugOwner: this,
+          ),
+          (hold) => hold.onLongPressStart = _onHold,
+        ),
+  };
+
+  void _onTapDown(TapDownDetails details) => _press(details.localPosition);
+
+  void _onTapUp(TapUpDetails details) {
+    _release();
+    _tap(details.localPosition);
+  }
+
+  void _onSecondaryTapUp(TapUpDetails details) => _flag(details.localPosition);
+
+  void _onHold(LongPressStartDetails details) =>
+      _flag(details.localPosition, felt: true);
 
   MinesweeperArt _artFor(double cell) {
     final art = _art;
@@ -619,9 +664,13 @@ class _MinesweeperBoardState extends State<MinesweeperBoard>
     if (!done && refused && !state.isOver && _animate) _shake(cell);
   }
 
-  void _flag(Offset position) {
+  /// With [felt], the phone buzzes when the flag changes: the finger can
+  /// let go.
+  void _flag(Offset position, {bool felt = false}) {
     final cell = _geometry?.cellAt(position);
-    if (cell != null) _controller.toggleFlag(cell);
+    if (cell != null && _controller.toggleFlag(cell) && felt) {
+      unawaited(Feedback.forLongPress(context));
+    }
   }
 
   void _shake(int cell) {

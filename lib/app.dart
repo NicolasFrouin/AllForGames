@@ -17,6 +17,7 @@ import 'games/tripeaks/tripeaks_difficulty.dart';
 import 'games/tripeaks/tripeaks_screen.dart';
 import 'hub/hub_screen.dart';
 import 'l10n/app_localizations.dart';
+import 'settings/settings_screen.dart';
 import 'skins/skin_rewards.dart';
 import 'skins/skins_screen.dart';
 import 'stats/overview_screen.dart';
@@ -162,6 +163,11 @@ class _AllForGamesAppState extends State<AllForGamesApp> {
               stores: widget.stores,
               gameId: state.uri.queryParameters['game'],
             ),
+          ),
+          GoRoute(
+            path: 'settings',
+            builder: (context, state) =>
+                SettingsScreen(settings: widget.stores.settings),
           ),
           GoRoute(
             path: 'skins',

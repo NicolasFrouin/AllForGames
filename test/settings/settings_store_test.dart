@@ -266,6 +266,28 @@ void main() {
     expect(store.spiderDifficulty, SpiderDifficulty.medium);
   });
 
+  test('the Minesweeper hold time is 300 ms without a saved choice', () async {
+    final store = await createStore();
+    expect(store.minesweeperFlagHoldMs, 300);
+  });
+
+  test('keeps the Minesweeper hold time after a reload', () async {
+    final store = await createStore();
+
+    await store.setMinesweeperFlagHold(450);
+
+    expect(store.minesweeperFlagHoldMs, 450);
+    expect((await SettingsStore.load()).minesweeperFlagHoldMs, 450);
+  });
+
+  test('a Minesweeper hold time out of the range is limited to it', () async {
+    final store = await createStore({SettingsStore.minesweeperFlagHoldKey: 5});
+    expect(store.minesweeperFlagHoldMs, SettingsStore.minFlagHoldMs);
+
+    await store.setMinesweeperFlagHold(5000);
+    expect(store.minesweeperFlagHoldMs, SettingsStore.maxFlagHoldMs);
+  });
+
   test('listeners are told after the write, not during the call', () async {
     final store = await createStore();
     var notified = 0;
@@ -325,5 +347,7 @@ void main() {
     expect(store.freecellDifficulty, FreeCellDifficulty.easy);
     await store.setSpiderDifficulty(SpiderDifficulty.easy);
     expect(store.spiderDifficulty, SpiderDifficulty.easy);
+    await store.setMinesweeperFlagHold(200);
+    expect(store.minesweeperFlagHoldMs, 200);
   });
 }

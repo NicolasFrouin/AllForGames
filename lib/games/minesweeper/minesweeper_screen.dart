@@ -241,12 +241,19 @@ class _MinesweeperScreenState extends State<MinesweeperScreen> {
     final settings = widget.stores.settings;
     return ListenableBuilder(
       listenable: settings,
-      builder: (context, _) =>
-          _page(context, minesweeperThemeById(settings.minesweeperThemeId)),
+      builder: (context, _) => _page(
+        context,
+        minesweeperThemeById(settings.minesweeperThemeId),
+        Duration(milliseconds: settings.minesweeperFlagHoldMs),
+      ),
     );
   }
 
-  Widget _page(BuildContext context, MinesweeperTheme theme) {
+  Widget _page(
+    BuildContext context,
+    MinesweeperTheme theme,
+    Duration flagHold,
+  ) {
     final l10n = AppLocalizations.of(context);
     final controller = _controller;
     return Scaffold(
@@ -314,6 +321,7 @@ class _MinesweeperScreenState extends State<MinesweeperScreen> {
                           controller: controller,
                           theme: theme,
                           flagMode: _flagMode,
+                          flagHold: flagHold,
                           onCelebrated: _showWinDialog,
                           onLost: () => _lossShown.value = true,
                         ),
