@@ -76,6 +76,51 @@ void main() {
     });
   });
 
+  group('flips', () {
+    test('a turn goes to a quarter turn, then comes back from the other '
+        'side: the face is never mirrored', () {
+      final turn = motion(TileMotionKind.turn);
+      final mid = turn.flipMid!;
+      expect(mid, 300);
+
+      expect(turn.poseAt(100).flipAngle, 0);
+      expect(turn.poseAt(mid - 20).flipAngle, inExclusiveRange(1.2, 1.5708));
+      expect(turn.poseAt(mid + 20).flipAngle, inExclusiveRange(-1.5708, -1.2));
+      final end = turn.poseAt(turn.end);
+      expect((end.flipAngle, end.offset, end.scale), (0.0, Offset.zero, 1.0));
+    });
+
+    test('a tile taken at once flips where it lies, then plays its motion', () {
+      final vanish = motion(
+        TileMotionKind.vanish,
+        from: const Offset(5, 0),
+      ).turnedFirst(500);
+      expect(vanish.end, 1000);
+      expect(vanish.flipMid, 100 + TileMotion.flipDuration / 2);
+
+      final flipping = vanish.poseAt(250);
+      expect(flipping.flipAngle, isNot(0));
+      expect(flipping.offset, const Offset(5, 0), reason: 'in its place');
+      expect(flipping.opacity, 1);
+      // After the flip, the face shows still until the motion starts.
+      expect(vanish.poseAt(560).flipAngle, 0);
+
+      final after = motion(
+        TileMotionKind.vanish,
+        from: const Offset(5, 0),
+      ).shifted(-500);
+      for (final time in [650.0, 800.0, 1000.0]) {
+        expect(vanish.poseAt(time).offset, after.poseAt(time).offset);
+        expect(vanish.poseAt(time).opacity, after.poseAt(time).opacity);
+      }
+      expect(vanish.shifted(50).flipMid, vanish.flipMid! - 50);
+    });
+
+    test('a motion without a flip has no side to swap', () {
+      expect(motion(TileMotionKind.fly).flipMid, isNull);
+    });
+  });
+
   group('board geometry', () {
     test('a tall phone swaps the Turtle, a wide screen does not', () {
       expect(

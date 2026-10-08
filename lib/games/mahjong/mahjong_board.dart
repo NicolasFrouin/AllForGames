@@ -296,6 +296,9 @@ class _MahjongBoardState extends State<MahjongBoard>
   static const _slideDuration = 240.0;
   static const _flashDuration = 900.0;
 
+  /// A face-down tile taken at once shows its face this long after its flip.
+  static const _faceShown = 220.0;
+
   /// From the end of the winning match to the win dialog.
   static const _celebration = 1250.0;
 
@@ -588,13 +591,34 @@ class _MahjongBoardState extends State<MahjongBoard>
         );
       }
     }
+    // A face-down tile taken at once (its pair was selected, or waits in the
+    // tray) turns over first, so the player sees its face; the rest of the
+    // action plays after.
+    if (action == MahjongAction.match || action == MahjongAction.pick) {
+      final turnedFirst = {
+        for (final MapEntry(key: id, value: target) in previous.entries)
+          if (!_targets.containsKey(id) &&
+              !target.inTray &&
+              state.isHidden(id) &&
+              !_faceUp.contains(id))
+            id,
+      };
+      if (turnedFirst.isNotEmpty) {
+        const delay = TileMotion.flipDuration + _faceShown;
+        added.updateAll(
+          (id, motion) => turnedFirst.contains(id)
+              ? motion.turnedFirst(delay)
+              : motion.shifted(-delay),
+        );
+      }
+    }
     for (final id in _turnedTiles(state)) {
       if (action != MahjongAction.deal) {
         added[id] ??= TileMotion(
           kind: TileMotionKind.turn,
           start: 0,
-          duration: 240,
-          height: geometry.tileHeight * 0.08,
+          duration: TileMotion.flipDuration,
+          height: geometry.tileHeight * 0.1,
         );
       }
     }
@@ -932,6 +956,17 @@ class _MahjongBoardState extends State<MahjongBoard>
     final id = target.id;
     final margin = geometry.margin;
     final faceSize = Size(geometry.tileWidth, geometry.tileHeight);
+    Widget side({required bool faceDown}) => RepaintBoundary(
+      child: MahjongTileView(
+        face: target.face,
+        faceSize: faceSize,
+        depth: geometry.depth,
+        style: widget.tileStyle,
+        selected: selected,
+        dimmed: dimmed,
+        faceDown: faceDown,
+      ),
+    );
     return Positioned(
       key: _TileKey(id),
       left: target.rect.left - margin,
@@ -958,17 +993,15 @@ class _MahjongBoardState extends State<MahjongBoard>
                   IgnorePointer(
                     child: Padding(
                       padding: EdgeInsets.all(margin),
-                      child: RepaintBoundary(
-                        child: MahjongTileView(
-                          face: target.face,
-                          faceSize: faceSize,
-                          depth: geometry.depth,
-                          style: widget.tileStyle,
-                          selected: selected,
-                          dimmed: dimmed,
-                          faceDown: faceDown,
+                      child: switch (motion?.flipMid) {
+                        final flipMid? when _now < motion!.end => _FlipSides(
+                          clock: _clock,
+                          flipMid: flipMid,
+                          side: side(faceDown: faceDown),
+                          other: side(faceDown: !faceDown),
                         ),
-                      ),
+                        _ => side(faceDown: faceDown),
+                      },
                     ),
                   ),
                   // Only the face takes taps: a tile's thickness lies over
@@ -1285,4 +1318,78 @@ class _DiscPainter extends CustomPainter {
   @override
   bool shouldRepaint(_DiscPainter old) =>
       old.depth != depth || old.margin != margin;
+}
+
+/// A tile during a flip: the side it turns from, then from [flipMid] on
+/// the side it ends on ([side]). Both are built once; the swap only changes
+/// which one paints.
+class _FlipSides extends StatefulWidget {
+  const _FlipSides({
+    required this.clock,
+    required this.flipMid,
+    required this.side,
+    required this.other,
+  });
+
+  final ValueListenable<double> clock;
+  final double flipMid;
+  final Widget side;
+  final Widget other;
+
+  @override
+  State<_FlipSides> createState() => _FlipSidesState();
+}
+
+class _FlipSidesState extends State<_FlipSides> {
+  late bool _turned = _turnedNow();
+  bool _listening = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncListener();
+  }
+
+  @override
+  void didUpdateWidget(_FlipSides oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_listening && oldWidget.clock != widget.clock) {
+      oldWidget.clock.removeListener(_onTick);
+      _listening = false;
+    }
+    _turned = _turnedNow();
+    _syncListener();
+  }
+
+  @override
+  void dispose() {
+    if (_listening) widget.clock.removeListener(_onTick);
+    super.dispose();
+  }
+
+  bool _turnedNow() => widget.clock.value >= widget.flipMid;
+
+  void _syncListener() {
+    final listen = !_turned;
+    if (listen == _listening) return;
+    _listening = listen;
+    if (listen) {
+      widget.clock.addListener(_onTick);
+    } else {
+      widget.clock.removeListener(_onTick);
+    }
+  }
+
+  void _onTick() {
+    if (!_turnedNow()) return;
+    setState(() => _turned = true);
+    _syncListener();
+  }
+
+  // The same side widget in the first place: the swap rebuilds no tile art.
+  @override
+  Widget build(BuildContext context) => IndexedStack(
+    index: _turned ? 0 : 1,
+    children: [widget.side, if (!_turned) widget.other],
+  );
 }

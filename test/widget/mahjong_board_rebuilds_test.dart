@@ -92,6 +92,26 @@ void main() {
     expect(controller.state.tileCount, 142);
   });
 
+  testWidgets('a hidden tile flips without rebuilding the tile art', (
+    tester,
+  ) async {
+    final controller = await pumpBoard(
+      tester,
+      state: MahjongState(
+        layout: layoutOf([(0, 0, 0), (4, 0, 0), (8, 0, 0), (12, 0, 0)]),
+        faces: [dots1, dots2, dots2, dots1],
+        slots: [0, 1, 2, 3],
+        hidden: {0, 1},
+      ),
+    );
+
+    expectCheap(await buildRates(tester, () => controller.tap(0)));
+    // 2 goes with 1 as 1 turns over: it flips, then both vanish.
+    controller.tap(2);
+    await tester.pumpAndSettle();
+    expectCheap(await buildRates(tester, () => controller.tap(1)));
+  });
+
   testWidgets('a hint pulses without rebuilding the board', (tester) async {
     final controller = await pumpBoard(tester);
     expectCheap(await buildRates(tester, controller.hint));

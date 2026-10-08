@@ -115,7 +115,11 @@ class RenderMovingTile extends RenderProxyBox {
   /// The opacity of the tile as painted now.
   double get opacity => _pose.opacity;
 
-  bool get _moved => _pose.offset != Offset.zero || _pose.scale != 1;
+  /// The flip of the tile as painted now (0 at rest).
+  double get flipAngle => _pose.flipAngle;
+
+  bool get _moved =>
+      _pose.offset != Offset.zero || _pose.scale != 1 || _pose.flipAngle != 0;
 
   @override
   bool get isRepaintBoundary => true;
@@ -159,7 +163,8 @@ class RenderMovingTile extends RenderProxyBox {
     if (pose.offset == _pose.offset &&
         pose.scale == _pose.scale &&
         pose.opacity == _pose.opacity &&
-        pose.glow == _pose.glow) {
+        pose.glow == _pose.glow &&
+        pose.flipAngle == _pose.flipAngle) {
       return;
     }
     _pose = pose;
@@ -174,14 +179,24 @@ class RenderMovingTile extends RenderProxyBox {
     _transform = null;
   }
 
-  /// The offset of the pose, and its scale around the middle of the tile.
+  /// The offset of the pose, and its flip and scale around the middle of
+  /// the tile.
   Matrix4 _transformOf(TilePose pose) {
     final center = size.center(Offset.zero);
-    return Matrix4.translationValues(
-        pose.offset.dx + center.dx,
-        pose.offset.dy + center.dy,
-        0,
-      )
+    final transform = Matrix4.translationValues(
+      pose.offset.dx + center.dx,
+      pose.offset.dy + center.dy,
+      0,
+    );
+    if (pose.flipAngle != 0) {
+      transform.multiply(
+        Matrix4.identity()
+          // Perspective, so a flip looks like a tile turning over.
+          ..setEntry(3, 2, 0.0012)
+          ..rotateY(pose.flipAngle),
+      );
+    }
+    return transform
       ..scaleByDouble(pose.scale, pose.scale, 1, 1)
       ..translateByDouble(-center.dx, -center.dy, 0, 1);
   }
@@ -209,7 +224,7 @@ class RenderMovingTile extends RenderProxyBox {
   }
 
   void _paintMoved(PaintingContext context, Offset offset) {
-    if (_pose.scale == 1) {
+    if (_pose.scale == 1 && _pose.flipAngle == 0) {
       _transformLayer.layer = null;
       _paintTile(context, offset + _pose.offset);
       return;

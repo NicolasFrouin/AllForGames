@@ -102,6 +102,19 @@ Future<void> takeTile(WidgetTester tester, int id) async {
   await tapTile(tester, id);
 }
 
+/// Whether tile [id] shows its back now: during a flip, the side that
+/// paints.
+bool showsBack(WidgetTester tester, int id) {
+  final flipping = find.descendant(
+    of: tile(id),
+    matching: find.byType(IndexedStack),
+  );
+  if (flipping.evaluate().isEmpty) return viewOf(tester, id).faceDown;
+  final sides = tester.widget<IndexedStack>(flipping);
+  final shown = sides.children[sides.index!] as RepaintBoundary;
+  return (shown.child! as MahjongTileView).faceDown;
+}
+
 MahjongTileView viewOf(WidgetTester tester, int id) => tester.widget(
   find.descendant(of: tile(id), matching: find.byType(MahjongTileView)),
 );
@@ -518,6 +531,57 @@ void main() {
     await tapTile(tester, 2);
     expect(textOf('tiles-value'), '2');
     expect(isEnabled(tester, 'undo'), isTrue);
+  });
+
+  group('flips', () {
+    /// Four free tiles apart, 1 2 2 1, with [hidden] face down.
+    MahjongState spread(Set<int> hidden) => MahjongState(
+      layout: layoutOf([(0, 0, 0), (4, 0, 0), (8, 0, 0), (12, 0, 0)]),
+      faces: rowBoard.faces,
+      slots: rowBoard.slots,
+      hidden: hidden,
+    );
+
+    testWidgets('a hidden tile turns over: its back, then its face from '
+        'half time', (tester) async {
+      await pumpGame(tester, state: spread({0}));
+
+      await tester.tap(tile(0));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(showsBack(tester, 0), isTrue);
+      expect(paintedTile(tester, 0).flipAngle, greaterThan(0.3));
+
+      await tester.pump(const Duration(milliseconds: 150));
+      expect(showsBack(tester, 0), isFalse);
+      expect(paintedTile(tester, 0).flipAngle, lessThan(-0.3));
+
+      await tester.pumpAndSettle();
+      expect(paintedTile(tester, 0).flipAngle, 0);
+      expect(viewOf(tester, 0).faceDown, isFalse);
+    });
+
+    testWidgets('a hidden tile taken at once shows its face before it goes', (
+      tester,
+    ) async {
+      await pumpGame(tester, state: spread({1}));
+      await tapTile(tester, 2);
+
+      await tester.tap(tile(1));
+      await tester.pump();
+      expect(textOf('tiles-value'), '2', reason: 'matched at once');
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(showsBack(tester, 1), isTrue);
+
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(showsBack(tester, 1), isFalse);
+      expect(paintedTile(tester, 1).opacity, 1, reason: 'its face shows');
+      expect(paintedTile(tester, 2).opacity, 1, reason: 'its pair waits');
+
+      await tester.pumpAndSettle();
+      expect(tile(1), findsNothing);
+      expect(tile(2), findsNothing);
+    });
   });
 
   testWidgets('the tiles take the style of the settings, and its changes', (

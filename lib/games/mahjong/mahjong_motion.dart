@@ -33,7 +33,8 @@ enum TileMotionKind {
   /// Tray mode: the tile slides to its new place in the tray.
   slide,
 
-  /// A face-down tile turns over (or back): it rises a little and swells.
+  /// A face-down tile turns over (or back): a flip around its vertical
+  /// axis, the other side showing from half time on.
   turn,
 
   /// Discs mode: a disc no tile lies on any more rises and fades away.
@@ -50,6 +51,7 @@ class TilePose {
     this.opacity = 1,
     this.glow = 0,
     this.elevation = 0,
+    this.flipAngle = 0,
   });
 
   final Offset offset;
@@ -57,6 +59,9 @@ class TilePose {
   final double opacity;
   final double glow;
   final double elevation;
+
+  /// Rotation around the vertical axis, in radians, during a flip.
+  final double flipAngle;
 }
 
 /// One motion of a tile on the board's timeline, in milliseconds. Every
@@ -69,11 +74,19 @@ class TileMotion {
     this.from = Offset.zero,
     this.to = Offset.zero,
     this.height = 0,
+    this.turn = 0,
   });
 
   final TileMotionKind kind;
   final double start;
   final double duration;
+
+  /// A flip played first, in ms (part of [duration]): a face-down tile taken
+  /// at once shows its face, then its motion plays.
+  final double turn;
+
+  /// How long a flip takes.
+  static const flipDuration = 340.0;
 
   /// Offsets from the tile's place at the start and at the end.
   final Offset from;
@@ -92,7 +105,26 @@ class TileMotion {
     from: from,
     to: to,
     height: height,
+    turn: turn,
   );
+
+  /// The same motion after a flip of [ms] (see [turn]).
+  TileMotion turnedFirst(double ms) => TileMotion(
+    kind: kind,
+    start: start,
+    duration: duration + ms,
+    from: from,
+    to: to,
+    height: height,
+    turn: ms,
+  );
+
+  /// When the tile shows its other side, or null without a flip.
+  double? get flipMid => kind == TileMotionKind.turn
+      ? start + duration / 2
+      : turn > 0
+      ? start + min(turn, flipDuration) / 2
+      : null;
 
   /// Share of a [TileMotionKind.collect] spent flying, before the pop.
   static const collectFlight = 0.6;
@@ -103,11 +135,27 @@ class TileMotion {
       (kind == TileMotionKind.fly ||
           kind == TileMotionKind.vanish ||
           kind == TileMotionKind.collect ||
-          kind == TileMotionKind.escape) &&
+          kind == TileMotionKind.escape ||
+          // Swollen, it may lie over its neighbors.
+          kind == TileMotionKind.turn) &&
       time >= start &&
       time < end;
 
   TilePose poseAt(double time) {
+    if (turn > 0) {
+      if (time < start + turn) {
+        final f = ((time - start) / min(turn, flipDuration)).clamp(0.0, 1.0);
+        return _flip(f, lift: 0);
+      }
+      return TileMotion(
+        kind: kind,
+        start: start + turn,
+        duration: duration - turn,
+        from: from,
+        to: to,
+        height: height,
+      ).poseAt(time);
+    }
     final t = duration <= 0 ? 1.0 : ((time - start) / duration).clamp(0.0, 1.0);
     final waiting = time < start;
     switch (kind) {
@@ -156,13 +204,24 @@ class TileMotion {
           elevation: 1,
         );
       case TileMotionKind.turn:
-        final lift = sin(pi * t);
-        return TilePose(
-          offset: Offset(0, -height * lift),
-          scale: 1 + 0.1 * lift,
-          elevation: lift * 0.5,
-        );
+        return _flip(t, lift: height);
     }
+  }
+
+  /// A flip at [f] from 0 to 1, from [from], rising by [lift]: the angle
+  /// goes to a quarter turn, then comes back from the other side (the face
+  /// is never mirrored).
+  TilePose _flip(double f, {required double lift}) {
+    // Exact ends: a tile at rest needs no transform.
+    if (f <= 0 || f >= 1) return TilePose(offset: from);
+    final eased = Curves.easeInOut.transform(f);
+    final rise = sin(pi * f);
+    return TilePose(
+      offset: from - Offset(0, lift * rise),
+      scale: 1 + 0.08 * rise,
+      elevation: rise * 0.5,
+      flipAngle: eased < 0.5 ? eased * pi : (eased - 1) * pi,
+    );
   }
 
   /// From [from] to [to] on an arc of [height], at [t] from 0 to 1.
