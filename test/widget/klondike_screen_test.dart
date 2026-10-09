@@ -380,6 +380,25 @@ void main() {
       expect(stores.stats.records, hasLength(1));
     });
 
+    testWidgets('after a win, other options opens the new game sheet; its '
+        'deal takes them', (tester) async {
+      final stores = await finish(tester);
+
+      await tester.tap(byKey('other-options'));
+      await tester.pumpAndSettle();
+      expect(find.text('You won!'), findsNothing);
+      expect(byKey('new-game-abandons'), findsNothing, reason: 'it is over');
+      await tester.tap(byKey('new-game-draw-3'));
+      await tester.tap(byKey('new-game-difficulty-hard'));
+      await tester.tap(byKey('new-game-deal'));
+      await tester.pumpAndSettle();
+
+      expect(textOf('difficulty-value'), 'Hard');
+      expect(textOf('moves-value'), '0');
+      expect(stores.settings.klondikeDrawCount, 3);
+      expect(stores.stats.records, hasLength(1), reason: 'the win only');
+    });
+
     testWidgets('the dialog waits for the celebration', (tester) async {
       await pumpGame(tester, finishBoard);
       await tester.tap(byKey('auto-complete'));

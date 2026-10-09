@@ -329,6 +329,29 @@ void main() {
       expect(byKey('play-again'), findsOneWidget);
     });
 
+    testWidgets('other options opens the new game sheet; its deal takes them', (
+      tester,
+    ) async {
+      final stores = await pumpGame(tester, state: rowBoard);
+      await win(tester);
+      await tester.pumpAndSettle();
+
+      await tester.tap(byKey('other-options'));
+      await tester.pumpAndSettle();
+      await tester.tap(byKey('new-game-difficulty-easy'));
+      await tester.tap(byKey('new-game-shape-classic'));
+      await tester.pumpAndSettle();
+      final deal = byKey('new-game-deal');
+      await tester.ensureVisible(deal);
+      await tester.tap(deal);
+      await tester.pumpAndSettle();
+
+      expect(find.text('You won!'), findsNothing);
+      expect(textOf('difficulty-value'), 'Easy');
+      expect(layoutOnScreen(tester).id, 'pyramid');
+      expect(stores.settings.mahjongDifficulty, MahjongDifficulty.easy);
+    });
+
     testWidgets('play again deals a new game of the same difficulty', (
       tester,
     ) async {

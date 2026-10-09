@@ -291,6 +291,23 @@ void main() {
     expect(find.text('You won!'), findsOneWidget);
   });
 
+  testWidgets('after a loss, other options opens the new game sheet', (
+    tester,
+  ) async {
+    final stores = await pumpGame(tester, state: cornerBoard);
+    await tapCell(tester, cornerTap);
+    await tapCell(tester, at(cornerBoard, 1, 1));
+
+    await tapKey(tester, 'other-options');
+    await tapKey(tester, 'new-game-difficulty-hard');
+    await tapKey(tester, 'new-game-deal');
+
+    expect(byKey('loss-banner'), findsNothing);
+    expect(textOf('difficulty-value'), 'Expert');
+    expect(stores.settings.minesweeperDifficulty, MinesweeperDifficulty.hard);
+    expect(stores.stats.records, hasLength(1), reason: 'the loss only');
+  });
+
   testWidgets('after a loss, New game deals a board of the same level', (
     tester,
   ) async {

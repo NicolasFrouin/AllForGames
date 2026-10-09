@@ -300,6 +300,38 @@ void main() {
       expect(savedData(stores)['mode'], 'tray');
       expect(textOf('mode-value'), 'Tray · Hard');
     });
+
+    testWidgets('other options opens the new game sheet; its deal takes them', (
+      tester,
+    ) async {
+      useReducedMotion(tester);
+      final stores = await pumpTray(
+        tester,
+        location: '/mahjong?mode=tray&difficulty=hard&shape=classic&seed=6',
+      );
+      for (final id in fourStrangers(6)) {
+        await reveal(tester, id);
+        await tester.tap(tile(id));
+        await tester.pump();
+      }
+      await tester.pump();
+
+      await tester.tap(byKey('other-options'));
+      await tester.pumpAndSettle();
+      expect(byKey('tray-full'), findsNothing);
+      await tester.tap(byKey('new-game-mode-classic'));
+      await tester.tap(byKey('new-game-difficulty-easy'));
+      await tester.pumpAndSettle();
+      final deal = byKey('new-game-deal');
+      await tester.ensureVisible(deal);
+      await tester.tap(deal);
+      await tester.pumpAndSettle();
+
+      expect(savedData(stores)['mode'], 'classic');
+      expect(textOf('difficulty-value'), 'Easy');
+      expect(byKey('tray-slot-0'), findsNothing);
+      expect(stores.stats.records, hasLength(1), reason: 'the loss only');
+    });
   });
 
   testWidgets('when any tile would fill the tray, a banner offers undo', (

@@ -187,7 +187,7 @@ class _MinesweeperScreenState extends State<MinesweeperScreen> {
     final l10n = AppLocalizations.of(context);
     final boardValue = record.details[MinesweeperStatKeys.boardValue] ?? 0;
     final seconds = record.playTime.inMilliseconds / 1000;
-    final playAgain = await showWinDialog(
+    final choice = await showWinDialog(
       context,
       stores: stores,
       record: record,
@@ -207,10 +207,13 @@ class _MinesweeperScreenState extends State<MinesweeperScreen> {
       ],
     );
     if (!mounted) return;
-    if (playAgain) {
-      _replay();
-    } else {
-      context.go('/');
+    switch (choice) {
+      case WinChoice.playAgain:
+        _replay();
+      case WinChoice.otherOptions:
+        await _newGame();
+      case WinChoice.leave:
+        context.go('/');
     }
   }
 
@@ -330,6 +333,7 @@ class _MinesweeperScreenState extends State<MinesweeperScreen> {
                         shown: _lossShown,
                         onRetry: controller.retry,
                         onNewGame: _replay,
+                        onOtherOptions: _newGame,
                       ),
                     ),
                   ],
@@ -349,11 +353,15 @@ class _LossBanner extends StatelessWidget {
     required this.shown,
     required this.onRetry,
     required this.onNewGame,
+    required this.onOtherOptions,
   });
 
   final ValueListenable<bool> shown;
   final VoidCallback onRetry;
   final VoidCallback onNewGame;
+
+  /// Opens the new game sheet.
+  final VoidCallback onOtherOptions;
 
   @override
   Widget build(BuildContext context) {
@@ -402,6 +410,11 @@ class _LossBanner extends StatelessWidget {
                             spacing: 8,
                             overflowAlignment: OverflowBarAlignment.end,
                             children: [
+                              TextButton(
+                                key: const ValueKey('other-options'),
+                                onPressed: onOtherOptions,
+                                child: Text(l10n.otherOptions),
+                              ),
                               TextButton(
                                 key: const ValueKey('lost-new-game'),
                                 onPressed: onNewGame,

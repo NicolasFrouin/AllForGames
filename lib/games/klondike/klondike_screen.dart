@@ -153,7 +153,7 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
     if (!mounted || record == null || _resultShown) return;
     _resultShown = true;
     final stores = widget.stores;
-    final playAgain = await showWinDialog(
+    final choice = await showWinDialog(
       context,
       stores: stores,
       record: record,
@@ -163,14 +163,17 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
       ),
     );
     if (!mounted) return;
-    if (playAgain) {
-      // Same options; a deal from a link has no difficulty.
-      _controller.newGame(
-        difficulty:
-            _controller.difficulty ?? stores.settings.klondikeDifficulty,
-      );
-    } else {
-      context.go('/');
+    switch (choice) {
+      case WinChoice.playAgain:
+        // Same options; a deal from a link has no difficulty.
+        _controller.newGame(
+          difficulty:
+              _controller.difficulty ?? stores.settings.klondikeDifficulty,
+        );
+      case WinChoice.otherOptions:
+        await _newGame();
+      case WinChoice.leave:
+        context.go('/');
     }
   }
 

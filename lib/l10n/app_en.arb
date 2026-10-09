@@ -189,6 +189,10 @@
   "@playAgain": {
     "description": "Win dialog button that starts a new game."
   },
+  "otherOptions": "Other options",
+  "@otherOptions": {
+    "description": "Button at the end of a game (won or lost): opens the new game sheet, to choose other options (level, mode) for the next game."
+  },
   "hubTagline": "Classic games, all in one place.",
   "@hubTagline": {
     "description": "Subtitle under the app name on the hub."

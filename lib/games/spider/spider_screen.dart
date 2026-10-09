@@ -158,7 +158,7 @@ class _SpiderScreenState extends State<SpiderScreen> {
     if (!mounted || record == null || _resultShown) return;
     _resultShown = true;
     final stores = widget.stores;
-    final playAgain = await showWinDialog(
+    final choice = await showWinDialog(
       context,
       stores: stores,
       record: record,
@@ -168,10 +168,13 @@ class _SpiderScreenState extends State<SpiderScreen> {
       ),
     );
     if (!mounted) return;
-    if (playAgain) {
-      _controller.newGame();
-    } else {
-      context.go('/');
+    switch (choice) {
+      case WinChoice.playAgain:
+        _controller.newGame();
+      case WinChoice.otherOptions:
+        await _newGame();
+      case WinChoice.leave:
+        context.go('/');
     }
   }
 

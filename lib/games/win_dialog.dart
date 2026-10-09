@@ -12,10 +12,22 @@ import '../stats/game_stats.dart';
 /// One more line of the win dialog, after time, moves and score.
 typedef WinDialogRow = ({String label, String value});
 
+/// What the player chose at the end of a won game.
+enum WinChoice {
+  /// A new deal with the same options.
+  playAgain,
+
+  /// The game's new game sheet, to choose other options.
+  otherOptions,
+
+  /// Back to the hub.
+  leave,
+}
+
 /// The dialog at the end of a won game, the same for every game: it pops in,
 /// counts up moves and score, compares with [stats] and shows the achievements
-/// that the win unlocked. Returns true for "Play again".
-Future<bool> showWinDialog(
+/// that the win unlocked.
+Future<WinChoice> showWinDialog(
   BuildContext context, {
   required AppStores stores,
   required GameRecord record,
@@ -26,7 +38,7 @@ Future<bool> showWinDialog(
   // after the save: this check unlocks what the win reached right away.
   stores.achievements.check(stores.stats.records);
   final unlocked = stores.achievements.takeAnnouncements();
-  final playAgain = await showGeneralDialog<bool>(
+  final choice = await showGeneralDialog<WinChoice>(
     context: context,
     // Light, so the confetti stays visible behind the dialog.
     barrierColor: Colors.black38,
@@ -69,19 +81,24 @@ Future<bool> showWinDialog(
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
+            onPressed: () => Navigator.of(context).pop(WinChoice.leave),
             child: Text(l10n.backToGames),
+          ),
+          TextButton(
+            key: const ValueKey('other-options'),
+            onPressed: () => Navigator.of(context).pop(WinChoice.otherOptions),
+            child: Text(l10n.otherOptions),
           ),
           FilledButton(
             key: const ValueKey('play-again'),
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () => Navigator.of(context).pop(WinChoice.playAgain),
             child: Text(l10n.playAgain),
           ),
         ],
       );
     },
   );
-  return playAgain ?? false;
+  return choice ?? WinChoice.leave;
 }
 
 class _ResultRow extends StatelessWidget {

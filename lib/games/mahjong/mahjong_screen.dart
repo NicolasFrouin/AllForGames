@@ -194,7 +194,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
     _resultShown = true;
     final stores = widget.stores;
     final l10n = AppLocalizations.of(context);
-    final playAgain = await showWinDialog(
+    final choice = await showWinDialog(
       context,
       stores: stores,
       record: record,
@@ -213,29 +213,38 @@ class _MahjongScreenState extends State<MahjongScreen> {
       ],
     );
     if (!mounted) return;
-    if (playAgain) {
-      _dealAgain();
-    } else {
-      context.go('/');
+    switch (choice) {
+      case WinChoice.playAgain:
+        _dealAgain();
+      case WinChoice.otherOptions:
+        await _newGame();
+      case WinChoice.leave:
+        context.go('/');
     }
   }
 
   /// Called by the board once the full tray has flashed: the game is lost.
-  /// Try again deals the same game, New game another one.
+  /// Try again deals the same game, New game another one, Other options
+  /// opens the new game sheet.
   Future<void> _showLossDialog() async {
     final record = _controller.result;
     if (!mounted || record == null || record.won || _resultShown) return;
     _resultShown = true;
-    final tryAgain = await showDialog<bool>(
+    final choice = await showDialog<_LossChoice>(
       context: context,
       barrierDismissible: false,
       builder: (context) => _TrayFullDialog(record: record),
     );
-    if (!mounted || tryAgain == null) return;
-    if (tryAgain) {
-      _controller.newGame(seed: _controller.seed);
-    } else {
-      _dealAgain();
+    if (!mounted) return;
+    switch (choice) {
+      case _LossChoice.tryAgain:
+        _controller.newGame(seed: _controller.seed);
+      case _LossChoice.newDeal:
+        _dealAgain();
+      case _LossChoice.otherOptions:
+        await _newGame();
+      case null:
+        break;
     }
   }
 
@@ -356,6 +365,9 @@ class _MahjongScreenState extends State<MahjongScreen> {
   }
 }
 
+/// What the player chose after a full tray.
+enum _LossChoice { tryAgain, newDeal, otherOptions }
+
 /// The tray is full: the game is lost. Shows what the game reached, and
 /// returns true for Try again (the same deal), false for New game.
 class _TrayFullDialog extends StatelessWidget {
@@ -399,13 +411,18 @@ class _TrayFullDialog extends StatelessWidget {
       ),
       actions: [
         TextButton(
+          key: const ValueKey('other-options'),
+          onPressed: () => Navigator.of(context).pop(_LossChoice.otherOptions),
+          child: Text(l10n.otherOptions),
+        ),
+        TextButton(
           key: const ValueKey('lost-new-game'),
-          onPressed: () => Navigator.of(context).pop(false),
+          onPressed: () => Navigator.of(context).pop(_LossChoice.newDeal),
           child: Text(l10n.newGame),
         ),
         FilledButton(
           key: const ValueKey('try-again'),
-          onPressed: () => Navigator.of(context).pop(true),
+          onPressed: () => Navigator.of(context).pop(_LossChoice.tryAgain),
           child: Text(l10n.tryAgain),
         ),
       ],

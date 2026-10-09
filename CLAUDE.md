@@ -120,7 +120,8 @@ lib/
                              tap), minesweeper_difficulty, minesweeper_motion; Flutter: minesweeper_art (vector
                              cells in a MinesweeperTheme), minesweeper_controller, minesweeper_board (two painters),
                              screen (loss banner), sheet, _texts
-  games/win_dialog.dart      showWinDialog: the win dialog of every game (extra rows per game)
+  games/win_dialog.dart      showWinDialog: the win dialog of every game (extra rows per game); returns a WinChoice:
+                             play again, other options (the screen opens its new game sheet), back to games
 test/                        unit (games/, stats/) and widget (widget/) tests; helpers in test/helpers and *_test_helpers.dart
 integration_test/            e2e tests (run on web by scripts/e2e_web.sh, or on a device)
 tool/                        generate_klondike_deals.dart (solves and grades deals, writes klondike_deals.dart),
@@ -293,7 +294,8 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   `update-retry`, `update-cancel` (hub), `achievements-button`, `skins-button`, `achievement-<id>`,
   `achievement-tab-<gameId>`, `achievements-count` (all) and `achievements-count-<gameId>`, `skins-tab-<kind>`
   (`SkinKind` name), `skins-group-<free|gameId>`,
-  `card-back-<id>`, `tile-style-<id>`, `minesweeper-theme-<id>`, `unlocked-<id>` in the win dialog; Mahjong:
+  `card-back-<id>`, `tile-style-<id>`, `minesweeper-theme-<id>`, `unlocked-<id>` in the win dialog, `play-again`,
+  `other-options` (the win dialog, Mahjong's full tray dialog and Minesweeper's loss banner); Mahjong:
   `tile-<id>`, `hint`, `shuffle`, `stuck-banner`, `tiles-value`, `pairs-value`, `mode-value` (tray mode),
   `new-game-mode-<mode>`, `new-game-goal-<tiles|discs>`, `new-game-shape-<shape>`, `new-game-hidden-note`,
   `discs-value`, `tray-slot-<i>`, `tray-full`, `try-again`, `lost-new-game`; FreeCell: `freecell-<i>`,

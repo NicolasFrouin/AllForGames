@@ -153,7 +153,7 @@ class _FreeCellScreenState extends State<FreeCellScreen> {
     if (!mounted || record == null || _resultShown) return;
     _resultShown = true;
     final stores = widget.stores;
-    final playAgain = await showWinDialog(
+    final choice = await showWinDialog(
       context,
       stores: stores,
       record: record,
@@ -170,14 +170,17 @@ class _FreeCellScreenState extends State<FreeCellScreen> {
       ],
     );
     if (!mounted) return;
-    if (playAgain) {
-      // Same level; a deal from a link has none.
-      _controller.newGame(
-        difficulty:
-            _controller.difficulty ?? stores.settings.freecellDifficulty,
-      );
-    } else {
-      context.go('/');
+    switch (choice) {
+      case WinChoice.playAgain:
+        // Same level; a deal from a link has none.
+        _controller.newGame(
+          difficulty:
+              _controller.difficulty ?? stores.settings.freecellDifficulty,
+        );
+      case WinChoice.otherOptions:
+        await _newGame();
+      case WinChoice.leave:
+        context.go('/');
     }
   }
 

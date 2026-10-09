@@ -154,7 +154,7 @@ class _TriPeaksScreenState extends State<TriPeaksScreen> {
     _resultShown = true;
     final stores = widget.stores;
     final l10n = AppLocalizations.of(context);
-    final playAgain = await showWinDialog(
+    final choice = await showWinDialog(
       context,
       stores: stores,
       record: record,
@@ -174,14 +174,17 @@ class _TriPeaksScreenState extends State<TriPeaksScreen> {
       ],
     );
     if (!mounted) return;
-    if (playAgain) {
-      // Same level; a deal from a link has none.
-      _controller.newGame(
-        difficulty:
-            _controller.difficulty ?? stores.settings.tripeaksDifficulty,
-      );
-    } else {
-      context.go('/');
+    switch (choice) {
+      case WinChoice.playAgain:
+        // Same level; a deal from a link has none.
+        _controller.newGame(
+          difficulty:
+              _controller.difficulty ?? stores.settings.tripeaksDifficulty,
+        );
+      case WinChoice.otherOptions:
+        await _newGame();
+      case WinChoice.leave:
+        context.go('/');
     }
   }
 
