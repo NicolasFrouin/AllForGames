@@ -251,14 +251,17 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   of the board the settings give, `MahjongTraySide`, top by default; in a column on the left or right); a full tray
   loses at once (`GameOutcome.lost`). Tray deals are built forwards (one free tile after the other, faces given so the
   order never holds more than `TrayLevel.held` tiles); the level also sets how many pairs are blind (not free
-  together) and seen together. The discs mode (`mahjong_discs.dart`, the sheet's goal under Tray) places the level's
-  discs first (`placeDiscs`: on a tile, under the tile of the next layer, 2.6 tiles wide so it peeks out) in the
-  layout (`MahjongLayout.discs`), then deals the tray mode's board on it: a disc is free when no tile of its layer or
-  above lies on it (`discCover`), and until then blocks the tiles under its round (the layout adds its cover to their
-  `above`, so the rules, the deal and the hints follow it); drawn between the layers, it rises away when freed (100
-  points); all discs free wins, tiles left or not (a full tray still loses); an undo covers it again. Records: variant
-  = layout id (`random` for a generated shape), `<mode>-<layoutId>` in the tray and discs modes (`mahjongVariant`); no
-  shuffle with the tray rules; the stats page lists the variants played.
+  together) and seen together. A pair's partner goes by a pattern picked for each pair (`_PairPattern`: under its
+  first tile, near it, far from it, anywhere), and before anything else no tile goes right under a tile of its face
+  when another place fits (always under, a quarter of the tiles lay on their pair; a test keeps it near chance). The
+  discs mode (`mahjong_discs.dart`, the sheet's goal under Tray) places the level's discs first (`placeDiscs`: on a
+  tile, under the tile of the next layer, 2.6 tiles wide so it peeks out) in the layout (`MahjongLayout.discs`), then
+  deals the tray mode's board on it: a disc is free when no tile of its layer or above lies on it (`discCover`), and
+  until then blocks the tiles under its round (the layout adds its cover to their `above`, so the rules, the deal and
+  the hints follow it); drawn between the layers, it rises away when freed (100 points); all discs free wins, tiles
+  left or not (a full tray still loses); an undo covers it again. Records: variant = layout id (`random` for a
+  generated shape), `<mode>-<layoutId>` in the tray and discs modes (`mahjongVariant`); no shuffle with the tray
+  rules; the stats page lists the variants played.
 - **Minesweeper**: levels Beginner 9x9/10, Intermediate 16x16/40, Expert 30x16/99 (`easy`/`medium`/`hard`; Expert
   is turned 16x30 on a tall screen, chosen at deal time and saved). Mines are placed at the first tap
   (`generateMines`, `DealRandom` from seed + tap): none touches it, and `MinesweeperSolver` clears the board by logic

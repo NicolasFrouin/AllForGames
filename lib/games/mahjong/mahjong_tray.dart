@@ -170,25 +170,46 @@ TrayDeal generateTrayDeal(
     return steps;
   }
 
-  /// The [choices] (a face and a position) whose tile was seen with its
-  /// face: as little as possible (then the lowest [cost]), or at least once
-  /// when [seen].
+  /// Whether a tile of [face] picked before lies right on [p]: the player
+  /// would find a tile on its pair.
+  bool onItsFace(int p, int face) {
+    final place = layout.positions[p];
+    for (final q in tilesOf[face] ?? const <int>[]) {
+      final above = layout.positions[q];
+      if (above.z == place.z + 1 && place.overlaps(above)) return true;
+    }
+    return false;
+  }
+
+  /// The [choices] (a face and a position) not right under a tile of their
+  /// face (unless [stacks]), then whose tile was seen with its face as little
+  /// as possible (then the lowest [cost]), or at least once when [seen].
   List<(int, int)> fitting(
     List<(int, int)> choices, {
     required bool seen,
     int Function(int position)? cost,
+    bool stacks = false,
   }) {
     final seenFor = [for (final (face, p) in choices) seenWith(p, face)];
+    final stacked = [
+      for (final (face, p) in choices) !stacks && onItsFace(p, face),
+    ];
     if (seen) {
       final visible = [
         for (final (i, choice) in choices.indexed)
-          if (seenFor[i] > 0) choice,
+          if (seenFor[i] > 0) (choice, stacked[i]),
       ];
-      if (visible.isNotEmpty) return visible;
+      if (visible.isNotEmpty) {
+        final apart = [
+          for (final (choice, onFace) in visible)
+            if (!onFace) choice,
+        ];
+        return apart.isNotEmpty ? apart : [for (final (c, _) in visible) c];
+      }
     }
     final costs = [
       for (final (i, (_, p)) in choices.indexed)
-        seenFor[i] * 4 + (cost?.call(p) ?? 0),
+        (stacked[i] ? 1 << 24 : 0) + seenFor[i] * 4 + (cost?.call(p) ?? 0),
     ];
     final lowest = costs.reduce(min);
     return [
@@ -257,15 +278,17 @@ TrayDeal generateTrayDeal(
       toOpen--;
     } else {
       final (face, first, since, second) = waiting.removeAt(closing);
-      // A partner under its first tile cannot show next to it in any
-      // order; one freed by the first tile alone is easy to guess.
+      // Where the partner goes follows a pattern picked for each pair. One
+      // freed by the first tile alone is easy to guess.
+      final pattern = _patterns[random.nextInt(_patterns.length)];
       choice = _pickOne(
         fitting(
           [for (final p in free) (face, p)],
           seen: !blind,
           cost: (p) =>
-              (under[first].contains(p) ? 0 : 2) +
+              pattern.cost(layout, first, p, under: under[first].contains(p)) +
               (freeSince[p] == since + 1 ? 1 : 0),
+          stacks: pattern == _PairPattern.under,
         ),
         random,
       );
@@ -292,6 +315,50 @@ TrayDeal generateTrayDeal(
     solution: order,
   );
 }
+
+/// Where the partner of a pair goes, among the places that keep the pair
+/// blind or seen as the level asks. Always under its first tile, a quarter of
+/// the tiles lay right on a tile of their face: each pair now picks one of
+/// these patterns.
+enum _PairPattern {
+  /// Under its first tile: it cannot show beside it in any order.
+  under,
+
+  /// Within a few tiles of the first one.
+  near,
+
+  /// Across the board from it.
+  far,
+
+  /// Any place.
+  anywhere;
+
+  /// From 0 (the place fits the pattern best) to 2.
+  int cost(MahjongLayout layout, int first, int place, {required bool under}) {
+    if (this == _PairPattern.under) return under ? 0 : 2;
+    if (under) return 2;
+    final a = layout.positions[first];
+    final b = layout.positions[place];
+    // In tiles.
+    final distance = sqrt(pow(a.x - b.x, 2) + pow(a.y - b.y, 2)) / 2;
+    return switch (this) {
+      _PairPattern.near => distance <= 2.5 ? 0 : (distance <= 4.5 ? 1 : 2),
+      _PairPattern.far => distance >= 6 ? 0 : (distance >= 3 ? 1 : 2),
+      _ => 0,
+    };
+  }
+}
+
+/// The patterns, as often as they are picked.
+const _patterns = [
+  _PairPattern.under,
+  _PairPattern.near,
+  _PairPattern.near,
+  _PairPattern.far,
+  _PairPattern.far,
+  _PairPattern.anywhere,
+  _PairPattern.anywhere,
+];
 
 T _pickOne<T>(List<T> items, DealRandom random) =>
     items[random.nextInt(items.length)];

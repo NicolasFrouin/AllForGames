@@ -1,4 +1,5 @@
 import 'package:all_for_games/games/mahjong/mahjong_difficulty.dart';
+import 'package:all_for_games/games/mahjong/mahjong_layout.dart';
 import 'package:all_for_games/games/mahjong/mahjong_tiles.dart';
 import 'package:all_for_games/games/mahjong/mahjong_tray.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,8 +12,8 @@ final dots4 = TileFace.of(TileSuit.dots, 4).code;
 /// it. The e2e tests and `deals_on_web_test.dart` check that the web deals
 /// the same.
 const seed1MediumTrayFaces = [
-  6, 4, 0, 0, 20, 11, 28, 31, 12, 31, 12, 8, //
-  30, 29, 6, 20, 1, 35, 13, 14, 28, 23, 2, 17,
+  8, 27, 27, 28, 1, 31, 17, 20, 32, 34, 16, 19, //
+  26, 26, 14, 2, 19, 6, 8, 7, 24, 13, 1, 11,
 ];
 
 /// A tray game of [faces] in a row, with an empty tray.
@@ -39,6 +40,40 @@ int mostHeld(TrayState state, List<int> order) {
 }
 
 void main() {
+  test('tray deals rarely put a tile right on a tile of its face', () {
+    // As often as chance would (about 3%); always under the first tile of a
+    // blind pair, it was a quarter of the upper tiles on Medium and Hard.
+    for (final difficulty in MahjongDifficulty.values) {
+      for (final shape in MahjongShape.values) {
+        var stacked = 0;
+        var upper = 0;
+        for (var seed = 1; seed <= 30; seed++) {
+          final state = generateTrayDeal(
+            difficulty.layoutFor(shape, seed),
+            seed,
+            difficulty.tray,
+          ).state;
+          final places = {
+            for (final (i, p) in state.layout.positions.indexed) p: i,
+          };
+          for (final (i, p) in state.layout.positions.indexed) {
+            if (p.z == 0) continue;
+            upper++;
+            final under = places[TilePosition(p.x, p.y, p.z - 1)];
+            if (under != null && state.faces[under] == state.faces[i]) {
+              stacked++;
+            }
+          }
+        }
+        expect(
+          stacked / upper,
+          lessThan(0.06),
+          reason: '${difficulty.name} ${shape.name}',
+        );
+      }
+    }
+  });
+
   group('picking', () {
     test('a free tile goes into the tray, a blocked one cannot', () {
       final state = trayRow([dots1, dots2, dots1]);

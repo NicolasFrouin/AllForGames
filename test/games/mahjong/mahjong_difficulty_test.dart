@@ -59,8 +59,8 @@ void main() {
   });
 
   test('in tray mode, harder levels are won less often, both ways', () {
-    // The casual player, over 200 deals: about 93%, 36% and 7%, and 98%,
-    // 62% and 45% transposed (tool/mahjong_difficulty.dart).
+    // The casual player, over 200 deals: about 97%, 38% and 9%, and 98%,
+    // 72% and 57% transposed (tool/mahjong_difficulty.dart).
     for (final transposed in [false, true]) {
       final rates = [
         for (final difficulty in MahjongDifficulty.values)
@@ -75,7 +75,7 @@ void main() {
   });
 
   test('on generated shapes too, harder levels are won less often', () {
-    // About 84%, 54% and 16% (greedy), and in tray mode 86%, 20% and 1%
+    // About 84%, 54% and 16% (greedy), and in tray mode 83%, 32% and 0%
     // (casual) over 200 deals (tool/mahjong_difficulty.dart).
     const shape = MahjongShape.generated;
     final classic = [
