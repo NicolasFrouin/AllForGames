@@ -21,3 +21,6 @@ Project conventions live in `CLAUDE.md`. Add here only lessons learned that appl
   times after a change to the deal generators.
 - Controllers that play on `Timer`s (auto-win, Finish): in `testWidgets`, `Future.delayed` never completes (fake
   time) and `pumpAndSettle` does not wait for timers; pump the pace in a loop until the expected state shows.
+- Manual phone-size checks: the agent browser window is fixed (1280x577). Serve a page with an `<iframe>` of the
+  phone size (390x844) on the app's URL and take a full-page screenshot. Flutter web takes synthetic
+  `PointerEvent`s dispatched on `flutter-view` for clicks.
