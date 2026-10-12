@@ -2,7 +2,8 @@
 
 Classic games in one app: pick a game on the hub, play, and follow detailed statistics.
 
-- **Klondike** solitaire (Draw 1 / Draw 3), with undo, drag and drop, tap-to-move and auto-finish
+- **Klondike** solitaire (Draw 1 / Draw 3), with undo, drag and drop, tap-to-move, auto-finish and an auto-win
+  that plays the deal for you (it takes back a losing move first; such a game does not count)
 - **FreeCell**, with multi-card moves and automatic moves to the foundations
 - **Spider** with 1, 2 or 4 suits
 - **TriPeaks**: clear three peaks with cards one rank above or below the waste (King and Ace wrap around)
@@ -11,7 +12,8 @@ Classic games in one app: pick a game on the hub, play, and follow detailed stat
 - **Minesweeper** (Beginner, Intermediate, Expert), never a guess: the first tap opens an area and logic alone
   clears every board; flags, chords, hints and a Try again on the same board
 - Easy, Medium and Hard levels, and every deal can be won (proven by solvers)
-- Games are saved: leave and come back to continue where you were
+- Games are saved: leave and come back to continue where you were. A new game over a game in progress does not
+  count it, unless you choose to abandon it
 - Statistics for every game: time, moves, undos, score, streaks, records and more, and an overview of all games
   (daily streaks, activity of the last 30 days, when you play, recent games)
 - 45 achievements across the games, each unlocking a skin: 30 card backs, 11 Mahjong tile styles and 7 Minesweeper

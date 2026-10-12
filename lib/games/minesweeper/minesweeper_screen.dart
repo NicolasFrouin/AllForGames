@@ -82,7 +82,7 @@ class _MinesweeperScreenState extends State<MinesweeperScreen> {
   }
 
   /// Continues the saved game, unless the widget asks for a new one: then
-  /// the saved game counts as abandoned if it was started.
+  /// the saved game leaves no record.
   MinesweeperController _openGame() {
     final saved = _restoreSavedGame();
     final newGame =
@@ -225,16 +225,18 @@ class _MinesweeperScreenState extends State<MinesweeperScreen> {
   /// chosen game and keeps its level for the next time.
   Future<void> _newGame() async {
     final settings = widget.stores.settings;
-    final difficulty = await showMinesweeperNewGameSheet(
+    final choice = await showMinesweeperNewGameSheet(
       context,
       initial: settings.minesweeperDifficulty,
-      abandons: _controller.started && !_controller.isOver,
+      inProgress: _controller.started && !_controller.isOver,
     );
-    if (difficulty == null || !mounted) return;
+    if (choice == null || !mounted) return;
+    final (options: difficulty, :abandon) = choice;
     unawaited(settings.setMinesweeperDifficulty(difficulty));
     _controller.newGame(
       difficulty: difficulty,
       turned: _fitsTurned(difficulty),
+      abandon: abandon,
     );
   }
 

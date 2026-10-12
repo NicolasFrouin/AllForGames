@@ -100,7 +100,8 @@ lib/
                              counters), klondike_board (adapter on CardTable: layout, rules callbacks, MotionStyles),
                              klondike_screen, klondike_deals (generated winnable seeds), deal_picker (pickDealSeed,
                              difficultyOfSeed), klondike_difficulty (enum) + _texts, new_game_sheet,
-                             klondike_solver (offline only: the generator and tests)
+                             klondike_solver (the generator, tests, and the auto-win in slices), klondike_auto_win
+                             (planAutoWin: the latest position of the game the solver wins from)
   games/mahjong/             pure Dart: mahjong_tiles, mahjong_layout, mahjong_shapes (generated layouts),
                              mahjong_state (rules), mahjong_generator (solvable by construction), mahjong_solver
                              (hints), mahjong_tray (tray mode: rules, generator, solver), mahjong_discs
@@ -121,7 +122,10 @@ lib/
                              cells in a MinesweeperTheme), minesweeper_controller, minesweeper_board (two painters),
                              screen (loss banner), sheet, _texts
   games/win_dialog.dart      showWinDialog: the win dialog of every game (extra rows per game); returns a WinChoice:
-                             play again, other options (the screen opens its new game sheet), back to games
+                             play again, other options (the screen opens its new game sheet), back to games;
+                             showSolvedDialog: the same choices after a game played for the player (no record)
+  games/new_game_actions.dart NewGameActions: the buttons of every new game sheet (Deal; with a game in progress, a
+                             note and Abandon and deal), which returns a NewGameChoice (options, abandon)
 test/                        unit (games/, stats/) and widget (widget/) tests; helpers in test/helpers and *_test_helpers.dart
 integration_test/            e2e tests (run on web by scripts/e2e_web.sh, or on a device)
 tool/                        generate_klondike_deals.dart (solves and grades deals, writes klondike_deals.dart),
@@ -137,8 +141,9 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
 - **Rules are pure Dart** (`klondike_state.dart`): immutable state, `move`/`draw` return a new state or null.
   The controller owns the session (undo history, score, timer, counters). Widgets only call the controller.
 - **Statistics**: records = finished games only. A game ends when it is won, lost (`GameOutcome.lost`: a mine in
-  Minesweeper, a full tray in Mahjong's tray mode), or abandoned when the player starts a new game over it (with at
-  least one move). In-progress games live in `GameSaveStore`, never as records.
+  Minesweeper, a full tray in Mahjong's tray mode), or abandoned when the player chooses Abandon and deal in the new
+  game sheet over it (with at least one move: `newGame(abandon: true)`). Any other new game over a game in progress
+  (Deal, a link) cancels it: no record. In-progress games live in `GameSaveStore`, never as records.
   Game-specific counters go in `details` (`Map<String, int>`); keys ending with `Ms` are durations in ms.
   Add a label for each new key in the game's `GameInfo.detailLabels` (a text of the ARB files).
   `GameRecord.difficulty` is optional (null: no levels, an ungraded deal, or an older record); a game with levels
@@ -146,7 +151,7 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
 - **Saved games**: leaving a game (back, app closed, tab closed) saves it; opening it again continues it.
   The controller saves itself after every action, on `pause()` and when the screen closes, and removes the save
   on a win. `toJson()` has a `version`; `restore(json)` throws `FormatException` on bad data, then the screen
-  deals a new game. Route params (`/klondike?seed=42`) start that deal and abandon the saved one.
+  deals a new game. Route params (`/klondike?seed=42`) start that deal and cancel the saved one (no record).
 - **Storage** (shared_preferences, `SharedPreferencesAsync`; localStorage on web): one key per item, never a whole
   list (other tabs and unreadable entries must survive). Keys: `stats.game.<gameId>-<startedAt µs>-<seed>` per
   record (`StatsStore.keyOf`), `save.<gameId>` per game in progress (`GameSaveStore.keyOf`), `settings.<name>` per
@@ -189,9 +194,18 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   texts are in `klondike_difficulty_texts.dart`.
 - **Klondike difficulty**: the controller keeps the difficulty of the deal (`difficultyOfSeed`, null for a seed in
   no list), saves it (optional: a save without it looks it up from the seed) and records it. The new game sheet
-  (`new-game`) opens with the settings (`klondikeDrawCount`, `klondikeDifficulty`); Deal saves them, and confirms
-  the abandon of a game with moves (the sheet says so). A game opened from the hub without a save uses them too
-  (`?draw=` overrides the draw count); Play again keeps the draw count and difficulty.
+  (`new-game`) opens with the settings (`klondikeDrawCount`, `klondikeDifficulty`); Deal saves them (the sheets of
+  every game: with a game that has moves, a note says it will not count, and `new-game-abandon` records it as
+  abandoned). A game opened from the hub without a save uses them too (`?draw=` overrides the draw count); Play
+  again keeps the draw count and difficulty.
+- **Klondike auto-win** (`auto-win` in the app bar, after a confirm dialog): `planAutoWin` solves the position on
+  screen, else a binary search over the undo history finds the latest one the solver wins from (a lost position
+  only leads to lost ones); the solver runs in slices of 2000 states with a turn of the event loop between them
+  (`solveInSlices`: no isolates on web; up to half a second of search there). The controller then takes back the
+  moves that lost the game and plays the solution on timers (`autoDrawPace`, `autoMovePace`, `autoUndoPace`), the
+  last foundation moves as one auto-complete; the player's input waits, and the same button stops it. From the
+  start of the play the game is canceled (`canceled`): no save, no record (Abandon does nothing), the clock stops;
+  the win celebrates, then `showSolvedDialog`. Without a win found, a snack bar says so and the game goes on.
 - **Card games build on `CardTable`** (`lib/cards/card_table.dart`). The game gives the piles in paint order
   (`TablePile`: id, cards, top-left offset of each card, rect, drop rect, an optional `CardSlot` with its test
   key), the card width and back, the last action (`TableAction`: serial, moved card ids in stagger order,
@@ -285,7 +299,9 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   Face-down cards are drawn with `CardBackView` and the selected skin.
 - **Keys for tests**: widgets that tests drive have `ValueKey`s (`game-<id>`, `stats-<id>`, `stock`, `waste`,
   `foundation-<suit>`, `tableau-<i>`, card ids like `hearts-1`, `moves-value`, `difficulty-value`, `undo`,
-  `new-game`, `new-game-draw-<n>`, `new-game-difficulty-<name>`, `new-game-deal`, `stat-<id>` like
+  `new-game`, `new-game-draw-<n>`, `new-game-difficulty-<name>`, `new-game-deal`, `new-game-abandon`,
+  `new-game-abandons` (the note), `auto-win`, `auto-win-dialog`, `auto-win-start`, `auto-win-none`,
+  `solved-dialog` (Klondike), `stat-<id>` like
   `stat-winRate` or `stat-<detailKey>`, `variant-<id>`, `difficulty-<name>` (and `-all`) on the stats page,
   `overview-stats-button`, `pin-<id>` (hub), `overview-stat-<id>`, `overview-game-<gameId>`, `overview-recent-<i>`,
   `overview-achievements`, `overview-activity` on /stats, `settings-button`, `language-<code>`,

@@ -5,7 +5,6 @@ import 'package:all_for_games/games/tripeaks/tripeaks_deals.dart';
 import 'package:all_for_games/games/tripeaks/tripeaks_solver.dart';
 import 'package:all_for_games/games/tripeaks/tripeaks_state.dart';
 import 'package:all_for_games/saves/game_save_store.dart';
-import 'package:all_for_games/stats/game_record.dart';
 import 'package:all_for_games/stats/stats_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -71,19 +70,16 @@ void tripeaksFlows() {
     expect(_text(tester, 'moves-value'), '1');
     expect(_text(tester, 'stock-value'), '22');
 
-    // A new game over it records it as abandoned.
+    // A new game over it leaves no record (Abandon and deal would).
     await tester.tap(find.byKey(const ValueKey('new-game')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('new-game-abandons')), findsOneWidget);
+    expect(find.byKey(const ValueKey('new-game-abandon')), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('new-game-difficulty-hard')));
     await tester.tap(find.byKey(const ValueKey('new-game-deal')));
     await tester.pumpAndSettle();
     expect(_text(tester, 'difficulty-value'), 'Hard');
-    final record = (await StatsStore.load()).records.single;
-    expect(
-      (record.gameId, record.seed, record.outcome, record.moves),
-      (TriPeaksController.gameId, 42, GameOutcome.abandoned, 1),
-    );
+    expect(_text(tester, 'moves-value'), '0');
+    expect((await StatsStore.load()).records, isEmpty);
   });
 
   testFlow('TriPeaks: the last moves of a winning line win the game', (

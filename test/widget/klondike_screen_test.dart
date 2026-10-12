@@ -553,7 +553,7 @@ void main() {
     expectTableauTops(tester, deal);
   });
 
-  testWidgets('a link to a deal records the saved game as abandoned', (
+  testWidgets('a link to a deal leaves no record of the saved game', (
     tester,
   ) async {
     useSurface(tester);
@@ -571,11 +571,8 @@ void main() {
 
     expect(textOf('moves-value'), '0');
     expectTableauTops(tester, KlondikeState.deal(7));
-    final record = stores.stats.records.single;
-    expect(
-      (record.seed, record.outcome, record.moves),
-      (42, GameOutcome.abandoned, 1),
-    );
+    expect(stores.stats.records, isEmpty);
+    expect(savedSeed(stores), 7);
     expect(stores.saves[KlondikeController.gameId]!.moves, 0);
   });
 
@@ -656,13 +653,14 @@ void main() {
     },
   );
 
-  testWidgets('the new game sheet says the game counts as abandoned; cancel '
+  testWidgets('the new game sheet offers to abandon a game with moves; cancel '
       'keeps the game', (tester) async {
     final stores = await pumpGame(tester, stockBoard);
     await tapStock(tester);
 
     await openNewGameSheet(tester);
     expect(byKey(abandonsKey), findsOneWidget);
+    expect(byKey('new-game-abandon'), findsOneWidget);
     await tester.tap(byKey('new-game-draw-3'));
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
@@ -682,6 +680,7 @@ void main() {
 
     await openNewGameSheet(tester);
     expect(byKey(abandonsKey), findsNothing);
+    expect(byKey('new-game-abandon'), findsNothing);
     await tester.tap(byKey('new-game-draw-3'));
     await tester.tap(byKey('new-game-deal'));
     await tester.pumpAndSettle();
@@ -691,8 +690,10 @@ void main() {
     expect(stores.stats.records, isEmpty);
   });
 
-  testWidgets('Deal in Draw 3 Hard deals a Hard deal, records the old game '
-      'and keeps the choice', (tester) async {
+  testWidgets('Deal in Draw 3 Hard deals a Hard deal without a record of the '
+      'old game and keeps the choice; Abandon and deal records it', (
+    tester,
+  ) async {
     final stores = await pumpGame(tester, stockBoard);
     expect(textOf('draw-value'), 'Draw 1');
     await tapStock(tester);
@@ -716,9 +717,7 @@ void main() {
     expect(textOf('difficulty-value'), 'Hard');
     expect(textOf('moves-value'), '0');
     expect(klondikeDeals[3]!['hard'], contains(savedSeed(stores)));
-    final record = stores.stats.records.single;
-    expect(record.outcome, GameOutcome.abandoned);
-    expect(record.variant, 'draw1');
+    expect(stores.stats.records, isEmpty);
     expect(stores.saves[KlondikeController.gameId]!.moves, 0);
     final settings = await SettingsStore.load();
     expect(settings.klondikeDrawCount, 3);
@@ -733,6 +732,15 @@ void main() {
     await openNewGameSheet(tester);
     expect(isChosen(tester, 'new-game-draw-3'), isTrue);
     expect(isChosen(tester, 'new-game-difficulty-hard'), isTrue);
+
+    await tester.tap(byKey('new-game-abandon'));
+    await tester.pumpAndSettle();
+    expect(textOf('moves-value'), '0');
+    final record = stores.stats.records.single;
+    expect(
+      (record.outcome, record.variant, record.moves),
+      (GameOutcome.abandoned, 'draw3', 1),
+    );
   });
 
   testWidgets('a game opened from the hub has the options of the settings', (
@@ -769,5 +777,109 @@ void main() {
     await tester.pumpAndSettle();
     expect(difficultyOfSeed(1, 13), isNull);
     expect(byKey('difficulty-value'), findsNothing);
+  });
+
+  group('auto-win', () {
+    /// Lets the auto-win search and play until [found] is on screen.
+    Future<void> playUntil(WidgetTester tester, Finder found) async {
+      for (var i = 0; i < 600 && found.evaluate().isEmpty; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(found, findsOneWidget);
+    }
+
+    Future<void> startAutoWin(WidgetTester tester) async {
+      await tester.tap(byKey('auto-win'));
+      await tester.pumpAndSettle();
+      expect(byKey('auto-win-dialog'), findsOneWidget);
+      await tester.tap(byKey('auto-win-start'));
+      await tester.pump();
+    }
+
+    String autoWinTooltip(WidgetTester tester) =>
+        tester.widget<IconButton>(byKey('auto-win')).tooltip!;
+
+    testWidgets('asks first: cancel keeps the game as it was', (tester) async {
+      final stores = await pumpGame(tester, stockBoard);
+      await tapStock(tester);
+      await tester.tap(byKey('auto-win'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(byKey('auto-win-dialog'), findsNothing);
+      expect(autoWinTooltip(tester), 'Auto-win');
+      expect(stores.saves[KlondikeController.gameId]!.moves, 1);
+    });
+
+    testWidgets('plays the game to a win; its dialog says it does not count', (
+      tester,
+    ) async {
+      // Four kings and a queen are left: a draw, a card to turn over.
+      final stores = await pumpGame(
+        tester,
+        board(
+          foundations: foundationsUpTo([12, 13, 11, 12]),
+          stock: [card('KS', up: false)],
+          tableau: [
+            [card('KH', up: false), card('QH')],
+            [card('KC')],
+          ],
+        ),
+      );
+      await startAutoWin(tester);
+      await playUntil(tester, byKey('solved-dialog'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('You won!'), findsNothing);
+      expect(at(tester, 'spades-13'), at(tester, 'foundation-3'));
+      expect(stores.stats.records, isEmpty);
+      expect(stores.saves[KlondikeController.gameId], isNull);
+
+      await tester.tap(byKey('play-again'));
+      await tester.pumpAndSettle();
+      expect(byKey('solved-dialog'), findsNothing);
+      expect(textOf('moves-value'), '0');
+      expect(autoWinTooltip(tester), 'Auto-win');
+      expect(stores.stats.records, isEmpty);
+    });
+
+    testWidgets('stop gives the game back to the player; it still does not '
+        'count', (tester) async {
+      final stores = await pumpGame(tester, KlondikeState.deal(1));
+      await startAutoWin(tester);
+      await playUntil(tester, find.byTooltip('Stop playing for me'));
+      await tester.pump(const Duration(seconds: 2));
+      final moves = textOf('moves-value');
+      expect(moves, isNot('0'));
+
+      await tester.tap(byKey('auto-win'));
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pumpAndSettle();
+      expect(textOf('moves-value'), moves);
+      expect(autoWinTooltip(tester), 'Auto-win');
+      expect(canUndo(tester), isTrue);
+
+      await openNewGameSheet(tester);
+      expect(byKey('new-game-abandon'), findsNothing, reason: 'not counted');
+      await tester.tap(byKey('new-game-deal'));
+      await tester.pumpAndSettle();
+      expect(stores.stats.records, isEmpty);
+    });
+
+    testWidgets('without a win, it says so and the game goes on', (
+      tester,
+    ) async {
+      // Three cards only: never a win.
+      final stores = await pumpGame(tester, stockBoard);
+      await tapStock(tester);
+      await startAutoWin(tester);
+      await playUntil(tester, byKey('auto-win-none'));
+
+      expect(autoWinTooltip(tester), 'Auto-win');
+      await tapStock(tester);
+      expect(textOf('moves-value'), '2');
+      expect(stores.saves[KlondikeController.gameId]!.moves, 2);
+    });
   });
 }

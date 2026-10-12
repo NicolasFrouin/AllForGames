@@ -63,9 +63,13 @@
   "@newGame": {
     "description": "Tooltip of the new game button, and title of the new game sheet."
   },
-  "newGameAbandons": "The current game will count as abandoned.",
-  "@newGameAbandons": {
-    "description": "New game sheet: shown when the game on screen has moves and is not won."
+  "newGameNotCounted": "The current game will not count in your statistics, unless you abandon it.",
+  "@newGameNotCounted": {
+    "description": "New game sheet: shown when the game on screen has moves and is not over. Deal starts the new game without a record of the current one; the abandon button records it as abandoned."
+  },
+  "newGameAbandon": "Abandon and deal",
+  "@newGameAbandon": {
+    "description": "New game sheet button, shown when the game on screen has moves: records that game as abandoned, then deals the new game."
   },
   "tryAgain": "Try again",
   "@tryAgain": {
@@ -193,6 +197,14 @@
   "@otherOptions": {
     "description": "Button at the end of a game (won or lost): opens the new game sheet, to choose other options (level, mode) for the next game."
   },
+  "solvedTitle": "Solved",
+  "@solvedTitle": {
+    "description": "Title of the dialog at the end of a game that the app played for the player (auto-win)."
+  },
+  "solvedBody": "A game played for you does not count in your statistics.",
+  "@solvedBody": {
+    "description": "Text of the dialog at the end of a game that the app played for the player."
+  },
   "hubTagline": "Classic games, all in one place.",
   "@hubTagline": {
     "description": "Subtitle under the app name on the hub."
@@ -307,6 +319,34 @@
   "klondikeAutoCompleted": "Auto-finished",
   "@klondikeAutoCompleted": {
     "description": "Klondike statistic: games finished with the Finish button."
+  },
+  "autoWin": "Auto-win",
+  "@autoWin": {
+    "description": "Tooltip of the button that lets the game find a win and play it by itself."
+  },
+  "autoWinSearching": "Looking for a win…",
+  "@autoWinSearching": {
+    "description": "Tooltip of the auto-win button while the app looks for a win."
+  },
+  "autoWinStop": "Stop playing for me",
+  "@autoWinStop": {
+    "description": "Tooltip of the button that stops the auto-win: the player continues the game by hand."
+  },
+  "autoWinTitle": "Let the game play for you?",
+  "@autoWinTitle": {
+    "description": "Title of the dialog that confirms the auto-win."
+  },
+  "autoWinBody": "The game finds a win and plays it. If a move made the game lost, it takes moves back first. This game will not count in your statistics.",
+  "@autoWinBody": {
+    "description": "Text of the dialog that confirms the auto-win."
+  },
+  "autoWinStart": "Play for me",
+  "@autoWinStart": {
+    "description": "Button of the auto-win dialog that starts it."
+  },
+  "autoWinNone": "No win found for this deal.",
+  "@autoWinNone": {
+    "description": "Message when the auto-win finds no win from the game on screen nor from its earlier positions."
   },
   "klondikeTimeToFirstMove": "Time to first move",
   "@klondikeTimeToFirstMove": {
@@ -1956,6 +1996,10 @@
   "minesweeperPlay": "Play",
   "@minesweeperPlay": {
     "description": "Button of the Minesweeper new game sheet: starts the chosen level."
+  },
+  "minesweeperAbandonPlay": "Abandon and play",
+  "@minesweeperAbandonPlay": {
+    "description": "Button of the Minesweeper new game sheet, shown when a game is in progress: records it as abandoned, then starts the chosen level."
   },
   "minesweeperMinesLeft": "Mines left",
   "@minesweeperMinesLeft": {

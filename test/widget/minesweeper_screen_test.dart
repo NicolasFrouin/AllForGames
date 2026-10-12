@@ -299,6 +299,7 @@ void main() {
     await tapCell(tester, at(cornerBoard, 1, 1));
 
     await tapKey(tester, 'other-options');
+    expect(byKey('new-game-abandon'), findsNothing, reason: 'already lost');
     await tapKey(tester, 'new-game-difficulty-hard');
     await tapKey(tester, 'new-game-deal');
 
@@ -342,7 +343,8 @@ void main() {
     expect(game.difficulty, MinesweeperDifficulty.medium);
   });
 
-  testWidgets('the new game sheet deals the chosen level and keeps it', (
+  testWidgets('the new game sheet deals the chosen level and keeps it, '
+      'without a record of the game on screen; Abandon and play records it', (
     tester,
   ) async {
     final stores = await pumpGame(
@@ -350,10 +352,16 @@ void main() {
       difficulty: MinesweeperDifficulty.easy,
       seed: 5,
     );
+    await tapKey(tester, 'new-game');
+    expect(byKey('new-game-abandons'), findsNothing, reason: 'not started');
+    expect(byKey('new-game-abandon'), findsNothing);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
     await tapCell(tester, 40);
 
     await tapKey(tester, 'new-game');
     expect(byKey('new-game-abandons'), findsOneWidget);
+    expect(byKey('new-game-abandon'), findsOneWidget);
     // The sheet starts from the level of the settings.
     expect(find.text('16 × 16 cells, 40 mines.'), findsOneWidget);
     await tapKey(tester, 'new-game-difficulty-hard');
@@ -362,8 +370,20 @@ void main() {
 
     expect(textOf('difficulty-value'), 'Expert');
     expect(textOf('mines-left-value'), '99');
-    expect(stores.stats.records.single.outcome, GameOutcome.abandoned);
+    expect(stores.stats.records, isEmpty);
     expect(stores.settings.minesweeperDifficulty, MinesweeperDifficulty.hard);
+
+    await tapCell(tester, 40);
+    final seed = gameOf(tester).seed;
+    await tapKey(tester, 'new-game');
+    await tapKey(tester, 'new-game-abandon');
+
+    expect(gameOf(tester).started, isFalse);
+    final record = stores.stats.records.single;
+    expect(
+      (record.outcome, record.seed, record.difficulty),
+      (GameOutcome.abandoned, seed, 'hard'),
+    );
   });
 
   testWidgets('a game left continues when opened again from the hub', (

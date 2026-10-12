@@ -218,8 +218,9 @@ class TriPeaksController extends ChangeNotifier {
     );
   }
 
-  /// Deals a new game and saves it. The current game counts as abandoned if
-  /// the player made at least one move and did not win it.
+  /// Deals a new game and saves it. With [abandon], the current game counts
+  /// as abandoned if the player made at least one move and did not win it;
+  /// else it leaves no record.
   ///
   /// Without [seed], the deal is a winnable one of [difficulty] that the
   /// player has not played yet (see [pickTriPeaksSeed]), and never the
@@ -229,8 +230,9 @@ class TriPeaksController extends ChangeNotifier {
     TriPeaksDifficulty? difficulty,
     int? seed,
     TriPeaksState? initialState,
+    bool abandon = false,
   }) {
-    if (!_finished && _moves > 0) {
+    if (abandon && !_finished && _moves > 0) {
       unawaited(_stats.add(_record(GameOutcome.abandoned)));
     }
     _start(
@@ -331,7 +333,7 @@ class TriPeaksController extends ChangeNotifier {
     _actionSerial++;
   }
 
-  /// A winnable seed of [difficulty] not in the records (the abandoned game
+  /// A winnable seed of [difficulty] not in the records (an abandoned game
   /// is already there) nor [current], the deal on screen.
   int _pickSeed(TriPeaksDifficulty difficulty, {int? current}) =>
       pickTriPeaksSeed(

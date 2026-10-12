@@ -244,8 +244,9 @@ class SpiderController extends ChangeNotifier {
     );
   }
 
-  /// Deals a new game and saves it. The current game counts as abandoned if
-  /// the player made at least one move and did not win it.
+  /// Deals a new game and saves it. With [abandon], the current game counts
+  /// as abandoned if the player made at least one move and did not win it;
+  /// else it leaves no record.
   ///
   /// Without [seed], the deal is a winnable one of [difficulty] that the
   /// player has not played yet (see [pickSpiderSeed]), and never the current
@@ -254,8 +255,9 @@ class SpiderController extends ChangeNotifier {
     SpiderDifficulty? difficulty,
     int? seed,
     SpiderState? initialState,
+    bool abandon = false,
   }) {
-    if (!_finished && _moves > 0) {
+    if (abandon && !_finished && _moves > 0) {
       unawaited(_stats.add(_record(GameOutcome.abandoned)));
     }
     _start(
@@ -361,7 +363,7 @@ class SpiderController extends ChangeNotifier {
     _actionSerial++;
   }
 
-  /// A winnable seed of [difficulty] not in the records of that level (the
+  /// A winnable seed of [difficulty] not in the records of that level (an
   /// abandoned game is already there) nor [current], the deal on screen.
   int _pickSeed(SpiderDifficulty difficulty, {int? current}) => pickSpiderSeed(
     difficulty: difficulty,

@@ -109,7 +109,8 @@ class KlondikeBoard extends StatelessWidget {
               onSlotTap: (pile) {
                 if (pile == PileRef.stock) controller.draw();
               },
-              celebration: controller.result == null ? null : _foundations,
+              // A canceled game (played for the player) celebrates too.
+              celebration: state.isWon ? _foundations : null,
               onCelebrated: onCelebrated,
             ),
           );
@@ -123,14 +124,15 @@ class KlondikeBoard extends StatelessWidget {
 
   bool _canDrag(PileRef pile, int index) {
     final cards = controller.state.pile(pile);
-    return pile != PileRef.stock &&
+    return controller.autoWinPhase == AutoWinPhase.off &&
+        pile != PileRef.stock &&
         cards[index].faceUp &&
         (index == cards.length - 1 || pile.type == PileType.tableau);
   }
 
   /// The stock draws; a foundation card would only move back down.
   bool _canTap(PileRef pile, int index) =>
-      pile == PileRef.stock ||
+      (pile == PileRef.stock && controller.autoWinPhase == AutoWinPhase.off) ||
       (pile.type != PileType.foundation && _canDrag(pile, index));
 
   bool _tap(PileRef pile, int index) {

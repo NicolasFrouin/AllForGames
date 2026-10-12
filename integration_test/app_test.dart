@@ -29,7 +29,7 @@ void main() {
   freecellFlows();
   tripeaksFlows();
 
-  testFlow('a game left continues; a new game records it as abandoned', (
+  testFlow('a game left continues; Abandon and deal records it as abandoned', (
     tester,
   ) async {
     await startApp(tester);
@@ -48,7 +48,7 @@ void main() {
     expect(textOf(tester, 'moves-value'), '1');
     expect(canUndo(tester), isTrue);
 
-    await confirmNewGame(tester);
+    await confirmNewGame(tester, abandon: true);
     expect(textOf(tester, 'moves-value'), '0');
     await goBack(tester);
 
@@ -126,7 +126,8 @@ void main() {
     expect(tester.getTopLeft(cardFinder).dx, tester.getTopLeft(targetSlot).dx);
   });
 
-  testFlow('a game in progress is kept in browser storage', (tester) async {
+  testFlow('a game in progress is kept in browser storage; Deal over it '
+      'leaves no record', (tester) async {
     await startApp(tester, location: '/klondike?seed=42');
     await tapStock(tester);
     await goBack(tester);
@@ -142,11 +143,38 @@ void main() {
     expect(textOf(tester, 'moves-value'), '1');
 
     await confirmNewGame(tester);
-    final record = (await StatsStore.load()).records.single;
-    expect(
-      (record.seed, record.moves, record.outcome),
-      (42, 1, GameOutcome.abandoned),
-    );
+    expect(textOf(tester, 'moves-value'), '0');
+    expect((await StatsStore.load()).records, isEmpty);
+    final next = (await GameSaveStore.load())[KlondikeController.gameId]!;
+    expect((next.moves, next.data['seed'] == 42), (0, false));
+  });
+
+  testFlow('auto-win plays a deal by itself; stop gives the game back, and '
+      'it leaves no record', (tester) async {
+    final seed = klondikeDeals[1]!['hard']!.first;
+    await startApp(tester, location: '/klondike?seed=$seed');
+    await tapStock(tester);
+    await tester.tap(find.byKey(const ValueKey('auto-win')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('auto-win-start')));
+
+    // The search runs in slices on the one thread of the web, then it plays.
+    final stop = find.byTooltip('Stop playing for me');
+    for (var i = 0; i < 100 && stop.evaluate().isEmpty; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(stop, findsOneWidget);
+    await tester.pump(const Duration(seconds: 2));
+    await tester.tap(stop);
+    await tester.pumpAndSettle();
+    final moves = textOf(tester, 'moves-value');
+    expect(int.parse(moves), greaterThan(1));
+    await tester.pump(const Duration(seconds: 1));
+    expect(textOf(tester, 'moves-value'), moves, reason: 'it stopped');
+
+    await goBack(tester);
+    expect((await GameSaveStore.load())[KlondikeController.gameId], isNull);
+    expect((await StatsStore.load()).records, isEmpty);
   });
 
   testFlow('the chosen language stays after a restart', (tester) async {
@@ -264,8 +292,12 @@ bool canUndo(WidgetTester tester) =>
     null;
 
 /// Deals a new game from the new game sheet, in Draw 1 and in [difficulty]
-/// when given. Over a game with moves, Deal also confirms the abandon.
-Future<void> confirmNewGame(WidgetTester tester, {String? difficulty}) async {
+/// when given. With [abandon], the game on screen counts as abandoned.
+Future<void> confirmNewGame(
+  WidgetTester tester, {
+  String? difficulty,
+  bool abandon = false,
+}) async {
   await tester.tap(find.byKey(const ValueKey('new-game')));
   await tester.pumpAndSettle();
   await tester.tap(find.byKey(const ValueKey('new-game-draw-1')));
@@ -273,7 +305,9 @@ Future<void> confirmNewGame(WidgetTester tester, {String? difficulty}) async {
     await tester.tap(find.byKey(ValueKey('new-game-difficulty-$difficulty')));
   }
   await tester.pumpAndSettle();
-  await tester.tap(find.byKey(const ValueKey('new-game-deal')));
+  await tester.tap(
+    find.byKey(ValueKey(abandon ? 'new-game-abandon' : 'new-game-deal')),
+  );
   await tester.pumpAndSettle();
 }
 

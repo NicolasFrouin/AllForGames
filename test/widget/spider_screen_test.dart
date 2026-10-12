@@ -382,14 +382,23 @@ void main() {
     expect(canUndo(tester), isFalse);
   });
 
-  testWidgets('the new game sheet deals a Hard game, records the old one '
-      'and keeps the choice', (tester) async {
+  testWidgets('the new game sheet deals a Hard game without a record of the '
+      'old one and keeps the choice; Abandon and deal records it', (
+    tester,
+  ) async {
     final stores = await pumpGame(tester, deal);
+    await tester.tap(byKey('new-game'));
+    await tester.pumpAndSettle();
+    expect(byKey('new-game-abandons'), findsNothing, reason: 'no move');
+    expect(byKey('new-game-abandon'), findsNothing);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
     await tapStock(tester);
 
     await tester.tap(byKey('new-game'));
     await tester.pumpAndSettle();
     expect(byKey('new-game-abandons'), findsOneWidget);
+    expect(byKey('new-game-abandon'), findsOneWidget);
     expect(
       tester.widget<ChoiceChip>(byKey('new-game-difficulty-medium')).selected,
       isTrue,
@@ -402,20 +411,37 @@ void main() {
 
     expect(textOf('difficulty-value'), '4 suits');
     expect(textOf('moves-value'), '0');
-    expect(spiderDeals['hard'], contains(savedSeed(stores)));
-    final record = stores.stats.records.single;
-    expect(
-      (record.outcome, record.variant, record.moves),
-      (GameOutcome.abandoned, 'suits2', 1),
-    );
+    final hardSeed = savedSeed(stores);
+    expect(spiderDeals['hard'], contains(hardSeed));
+    expect(stores.stats.records, isEmpty);
     expect(
       (await SettingsStore.load()).spiderDifficulty,
       SpiderDifficulty.hard,
     );
+
+    await tapStock(tester);
+    await tester.tap(byKey('new-game'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<ChoiceChip>(byKey('new-game-difficulty-hard')).selected,
+      isTrue,
+    );
+    await tester.tap(byKey('new-game-abandon'));
+    await tester.pumpAndSettle();
+
+    expect(textOf('moves-value'), '0');
+    expect(savedSeed(stores), isNot(hardSeed));
+    final record = stores.stats.records.single;
+    expect(
+      (record.outcome, record.variant, record.seed, record.moves),
+      (GameOutcome.abandoned, 'suits4', hardSeed, 1),
+    );
   });
 
   testWidgets('a game from the hub has the difficulty of the settings; a '
-      'link deals its seed and level', (tester) async {
+      'link deals its seed and level, and the saved game leaves no record', (
+    tester,
+  ) async {
     useSurface(tester);
     final stores = await createTestStores({
       SettingsStore.spiderDifficultyKey: 'easy',
@@ -436,6 +462,6 @@ void main() {
     expect(savedSeed(stores), 42);
     final top = SpiderState.deal(42, SpiderDifficulty.hard).columns[0].last;
     expect(at(tester, top.id).dx, at(tester, 'column-0').dx);
-    expect(stores.stats.records.single.outcome, GameOutcome.abandoned);
+    expect(stores.stats.records, isEmpty);
   });
 }

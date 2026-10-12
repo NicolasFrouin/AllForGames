@@ -202,19 +202,26 @@ void main() {
     expect(game.started, isFalse);
     expect(game.lastAction, MinesweeperAction.deal);
 
-    game.newGame();
+    game.newGame(abandon: true);
     await flush();
     expect(stats.records, hasLength(1));
   });
 
-  test('a new game over a started one records it as abandoned', () async {
-    final game = controller(seed: 3)..newGame(seed: 4);
+  test('a new game over a started one leaves no record; with abandon, it '
+      'records it as abandoned', () async {
+    final game = controller(seed: 2)..open(10);
+    game.newGame(seed: 3);
+    await flush();
+    expect(stats.records, isEmpty, reason: 'canceled');
+    expect((game.seed, game.started), (3, false));
+
+    game.newGame(seed: 4, abandon: true);
     await flush();
     expect(stats.records, isEmpty, reason: 'not started');
 
     game.open(10);
     wait(8);
-    game.newGame(difficulty: MinesweeperDifficulty.medium);
+    game.newGame(difficulty: MinesweeperDifficulty.medium, abandon: true);
     await flush();
 
     final record = stats.records.single;

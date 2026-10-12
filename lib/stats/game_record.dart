@@ -1,5 +1,7 @@
-/// A game that ends without a win is abandoned (the player started another
-/// one), or lost (a mine in Minesweeper, a full tray in Mahjong's tray mode).
+/// A game that ends without a win is abandoned (the player chose to abandon
+/// it for another one), or lost (a mine in Minesweeper, a full tray in
+/// Mahjong's tray mode). A new game over a game in progress without that
+/// choice cancels it: no record.
 enum GameOutcome { won, abandoned, lost }
 
 /// One finished (won, abandoned or lost) game, for any game of the app.

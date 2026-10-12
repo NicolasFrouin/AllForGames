@@ -79,27 +79,49 @@ Future<WinChoice> showWinDialog(
             ],
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(WinChoice.leave),
-            child: Text(l10n.backToGames),
-          ),
-          TextButton(
-            key: const ValueKey('other-options'),
-            onPressed: () => Navigator.of(context).pop(WinChoice.otherOptions),
-            child: Text(l10n.otherOptions),
-          ),
-          FilledButton(
-            key: const ValueKey('play-again'),
-            onPressed: () => Navigator.of(context).pop(WinChoice.playAgain),
-            child: Text(l10n.playAgain),
-          ),
-        ],
+        actions: _choices(context, l10n),
       );
     },
   );
   return choice ?? WinChoice.leave;
 }
+
+/// The dialog at the end of a game that the app played for the player: it
+/// does not count, so there is nothing to compare.
+Future<WinChoice> showSolvedDialog(BuildContext context) async {
+  final choice = await showDialog<WinChoice>(
+    context: context,
+    barrierColor: Colors.black38,
+    builder: (context) {
+      final l10n = AppLocalizations.of(context);
+      return AlertDialog(
+        key: const ValueKey('solved-dialog'),
+        icon: const Icon(Icons.smart_toy_outlined, size: 48),
+        title: Text(l10n.solvedTitle),
+        content: Text(l10n.solvedBody),
+        actions: _choices(context, l10n),
+      );
+    },
+  );
+  return choice ?? WinChoice.leave;
+}
+
+List<Widget> _choices(BuildContext context, AppLocalizations l10n) => [
+  TextButton(
+    onPressed: () => Navigator.of(context).pop(WinChoice.leave),
+    child: Text(l10n.backToGames),
+  ),
+  TextButton(
+    key: const ValueKey('other-options'),
+    onPressed: () => Navigator.of(context).pop(WinChoice.otherOptions),
+    child: Text(l10n.otherOptions),
+  ),
+  FilledButton(
+    key: const ValueKey('play-again'),
+    onPressed: () => Navigator.of(context).pop(WinChoice.playAgain),
+    child: Text(l10n.playAgain),
+  ),
+];
 
 class _ResultRow extends StatelessWidget {
   const _ResultRow(this.label, this.value, {this.count});

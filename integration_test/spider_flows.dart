@@ -74,11 +74,11 @@ void spiderFlows() {
     expect(_text(tester, 'difficulty-value'), '1 suit');
     expect(_columnOf(tester, moving), to);
 
-    // A new game over it records it as abandoned.
+    // Abandon and deal records it as abandoned.
     await tester.tap(find.byKey(const ValueKey('new-game')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('new-game-abandons')), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('new-game-deal')));
+    await tester.tap(find.byKey(const ValueKey('new-game-abandon')));
     await tester.pumpAndSettle();
     final record = (await StatsStore.load()).records.single;
     expect(

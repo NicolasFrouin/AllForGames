@@ -502,8 +502,9 @@ class MahjongController extends ChangeNotifier {
     );
   }
 
-  /// Deals a new game and saves it. The current game counts as abandoned if
-  /// the player made at least one move and did not finish it.
+  /// Deals a new game and saves it. With [abandon], the current game counts
+  /// as abandoned if the player made at least one move and did not finish it;
+  /// else it leaves no record.
   ///
   /// [difficulty], [mode] and [shape] default to the current ones;
   /// [transposed] (rows and columns swapped, for tall screens) to what
@@ -515,8 +516,9 @@ class MahjongController extends ChangeNotifier {
     bool? transposed,
     int? seed,
     MahjongState? initialState,
+    bool abandon = false,
   }) {
-    if (!_finished && _moves > 0) {
+    if (abandon && !_finished && _moves > 0) {
       unawaited(_stats.add(_record(GameOutcome.abandoned)));
     }
     _start(

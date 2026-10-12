@@ -85,7 +85,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
   }
 
   /// Continues the saved game, unless the widget asks for a new deal: then
-  /// the saved game counts as abandoned if it has moves.
+  /// the saved game leaves no record.
   MahjongController _openGame() {
     final saved = _restoreSavedGame();
     final newDeal =
@@ -255,21 +255,26 @@ class _MahjongScreenState extends State<MahjongScreen> {
   /// the chosen game and keeps its options for the next time.
   Future<void> _newGame() async {
     final settings = widget.stores.settings;
-    final options = await showMahjongNewGameSheet(
+    final choice = await showMahjongNewGameSheet(
       context,
       initial: (
         mode: settings.mahjongMode,
         difficulty: settings.mahjongDifficulty,
         shape: settings.mahjongShape,
       ),
-      abandons: _controller.moves > 0 && _controller.result == null,
+      inProgress: _controller.moves > 0 && _controller.result == null,
     );
-    if (options == null || !mounted) return;
-    final (:mode, :difficulty, :shape) = options;
+    if (choice == null || !mounted) return;
+    final (options: (:mode, :difficulty, :shape), :abandon) = choice;
     unawaited(settings.setMahjongMode(mode));
     unawaited(settings.setMahjongDifficulty(difficulty));
     unawaited(settings.setMahjongShape(shape));
-    _controller.newGame(difficulty: difficulty, mode: mode, shape: shape);
+    _controller.newGame(
+      difficulty: difficulty,
+      mode: mode,
+      shape: shape,
+      abandon: abandon,
+    );
   }
 
   void _openStats() => context.push('/stats/${MahjongController.gameId}');

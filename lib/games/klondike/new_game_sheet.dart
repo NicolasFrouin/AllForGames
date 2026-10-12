@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../new_game_actions.dart';
 import 'klondike_difficulty.dart';
 import 'klondike_difficulty_texts.dart';
 
@@ -10,28 +11,28 @@ typedef KlondikeNewGameOptions = ({
 });
 
 /// Lets the player choose the draw count and the difficulty of a new game,
-/// starting from [initial]. With [abandons], it says that the game on screen
-/// will count as abandoned, so Deal also confirms that.
+/// starting from [initial]. With [inProgress] (a game with moves on screen),
+/// the player also chooses whether that game counts as abandoned.
 ///
-/// Returns the chosen options, or null when the player closes the sheet.
-Future<KlondikeNewGameOptions?> showNewGameSheet(
+/// Returns the choice, or null when the player closes the sheet.
+Future<NewGameChoice<KlondikeNewGameOptions>?> showNewGameSheet(
   BuildContext context, {
   required KlondikeNewGameOptions initial,
-  required bool abandons,
-}) => showModalBottomSheet<KlondikeNewGameOptions>(
+  required bool inProgress,
+}) => showModalBottomSheet<NewGameChoice<KlondikeNewGameOptions>>(
   context: context,
   // As tall as its content, which scrolls when the text is large.
   isScrollControlled: true,
   useSafeArea: true,
   showDragHandle: true,
-  builder: (context) => _NewGameSheet(initial: initial, abandons: abandons),
+  builder: (context) => _NewGameSheet(initial: initial, inProgress: inProgress),
 );
 
 class _NewGameSheet extends StatefulWidget {
-  const _NewGameSheet({required this.initial, required this.abandons});
+  const _NewGameSheet({required this.initial, required this.inProgress});
 
   final KlondikeNewGameOptions initial;
-  final bool abandons;
+  final bool inProgress;
 
   @override
   State<_NewGameSheet> createState() => _NewGameSheetState();
@@ -50,13 +51,13 @@ class _NewGameSheetState extends State<_NewGameSheet> {
       padding: const EdgeInsets.only(top: 16, bottom: 8),
       child: Text(text, style: theme.textTheme.titleSmall),
     );
-    Widget note(IconData icon, Color color, String text, {Key? key}) => Padding(
+    Widget note(IconData icon, Color color, String text) => Padding(
       padding: const EdgeInsets.only(top: 12),
       child: Row(
         children: [
           Icon(icon, size: 20, color: color),
           const SizedBox(width: 8),
-          Expanded(child: Text(text, key: key)),
+          Expanded(child: Text(text)),
         ],
       ),
     );
@@ -106,32 +107,9 @@ class _NewGameSheetState extends State<_NewGameSheet> {
           ),
           const SizedBox(height: 4),
           note(Icons.verified_outlined, colors.primary, l10n.newGameWinnable),
-          if (widget.abandons)
-            note(
-              Icons.flag_outlined,
-              colors.error,
-              l10n.newGameAbandons,
-              key: const ValueKey('new-game-abandons'),
-            ),
-          const SizedBox(height: 20),
-          OverflowBar(
-            alignment: MainAxisAlignment.end,
-            overflowAlignment: OverflowBarAlignment.end,
-            spacing: 8,
-            overflowSpacing: 8,
-            children: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text(l10n.cancel),
-              ),
-              FilledButton(
-                key: const ValueKey('new-game-deal'),
-                onPressed: () =>
-                    Navigator.of(context)
-                        .pop((drawCount: _drawCount, difficulty: _difficulty)),
-                child: Text(l10n.newGameDeal),
-              ),
-            ],
+          NewGameActions(
+            inProgress: widget.inProgress,
+            options: () => (drawCount: _drawCount, difficulty: _difficulty),
           ),
         ],
       ),

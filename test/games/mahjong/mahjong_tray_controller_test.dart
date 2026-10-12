@@ -168,7 +168,7 @@ void main() {
       }
       expect(game.isLost, isTrue);
 
-      game.newGame(seed: game.seed);
+      game.newGame(seed: game.seed, abandon: true);
 
       expect(stats.records, hasLength(1));
       expect(game.state.faces, faces);
@@ -266,11 +266,18 @@ void main() {
       expect(await storedSave(gameId), isNull);
     });
 
-    test('a new game over a game with a pick records it as abandoned', () {
-      final game = controller(difficulty: MahjongDifficulty.hard, seed: 3);
+    test('a new game over a game with a pick leaves no record; with '
+        'abandon, it records it as abandoned', () async {
+      final game = controller(difficulty: MahjongDifficulty.hard, seed: 2);
       game.tap(game.hintPick()!);
+      game.newGame(seed: 3);
+      await flush();
+      expect(stats.records, isEmpty, reason: 'canceled');
+      expect((game.seed, game.moves), (3, 0));
+      expect(game.tray, isEmpty);
 
-      game.newGame(mode: MahjongMode.classic);
+      game.tap(game.hintPick()!);
+      game.newGame(mode: MahjongMode.classic, abandon: true);
 
       final record = stats.records.single;
       expect(record.outcome, GameOutcome.abandoned);

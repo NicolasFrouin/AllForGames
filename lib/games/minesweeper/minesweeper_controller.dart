@@ -123,7 +123,7 @@ class MinesweeperController extends ChangeNotifier {
   int? get firstTap => _firstTap;
 
   /// The player has played: the timer runs from then, and a new game over
-  /// this one records it as abandoned.
+  /// this one can record it as abandoned.
   bool get started => _started;
 
   /// Opens, chords and flags that changed the board.
@@ -252,8 +252,9 @@ class MinesweeperController extends ChangeNotifier {
     );
   }
 
-  /// Deals a new game and saves it. The current game counts as abandoned if
-  /// the player has started it and did not finish it.
+  /// Deals a new game and saves it. With [abandon], the current game counts
+  /// as abandoned if the player has started it and did not finish it;
+  /// else it leaves no record.
   ///
   /// [difficulty] and [turned] default to the current ones.
   void newGame({
@@ -261,8 +262,9 @@ class MinesweeperController extends ChangeNotifier {
     bool? turned,
     int? seed,
     MinesweeperState? initialState,
+    bool abandon = false,
   }) {
-    if (_started && !_state.isOver) {
+    if (abandon && _started && !_state.isOver) {
       unawaited(_stats.add(_record(GameOutcome.abandoned)));
     }
     _start(

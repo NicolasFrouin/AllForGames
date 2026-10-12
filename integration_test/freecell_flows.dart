@@ -4,7 +4,6 @@ import 'package:all_for_games/games/freecell/freecell_controller.dart';
 import 'package:all_for_games/games/freecell/freecell_deals.dart';
 import 'package:all_for_games/games/freecell/freecell_state.dart';
 import 'package:all_for_games/saves/game_save_store.dart';
-import 'package:all_for_games/stats/game_record.dart';
 import 'package:all_for_games/stats/stats_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -65,19 +64,16 @@ void freecellFlows() {
     expect(_text(tester, 'moves-value'), '1');
     expect(tester.getTopLeft(find.byKey(ValueKey(top))), moved);
 
-    // A new game over it records it as abandoned.
+    // A new game over it leaves no record (Abandon and deal would).
     await tester.tap(find.byKey(const ValueKey('new-game')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('new-game-abandons')), findsOneWidget);
+    expect(find.byKey(const ValueKey('new-game-abandon')), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('new-game-difficulty-hard')));
     await tester.tap(find.byKey(const ValueKey('new-game-deal')));
     await tester.pumpAndSettle();
     expect(_text(tester, 'difficulty-value'), 'Hard');
-    final record = (await StatsStore.load()).records.single;
-    expect(
-      (record.gameId, record.seed, record.outcome, record.moves),
-      (FreeCellController.gameId, 42, GameOutcome.abandoned, 1),
-    );
+    expect(_text(tester, 'moves-value'), '0');
+    expect((await StatsStore.load()).records, isEmpty);
   });
 
   testFlow('FreeCell: a near-won saved game finishes itself', (tester) async {

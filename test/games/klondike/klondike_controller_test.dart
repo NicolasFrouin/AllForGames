@@ -3,6 +3,7 @@ import 'package:all_for_games/games/klondike/klondike_controller.dart';
 import 'package:all_for_games/games/klondike/deal_picker.dart';
 import 'package:all_for_games/games/klondike/klondike_deals.dart';
 import 'package:all_for_games/games/klondike/klondike_difficulty.dart';
+import 'package:all_for_games/games/klondike/klondike_solver.dart' as solver;
 import 'package:all_for_games/games/klondike/klondike_state.dart';
 import 'package:all_for_games/saves/game_save_store.dart';
 import 'package:all_for_games/stats/game_record.dart';
@@ -63,9 +64,9 @@ void main() {
 
   void wait(int seconds) => now = now.add(Duration(seconds: seconds));
 
-  /// Starts a new game, so [game] counts as abandoned, and returns its record.
+  /// Abandons [game] for a new one and returns its record.
   GameRecord abandon(KlondikeController game) {
-    game.newGame();
+    game.newGame(abandon: true);
     return stats.records.last;
   }
 
@@ -617,29 +618,36 @@ void main() {
     game.newGame();
     expect(game.seed, a, reason: 'a has no record, b is on screen');
     game.draw();
-    game.newGame();
+    game.newGame(abandon: true);
     expect(game.seed, b, reason: 'a is now recorded as abandoned');
     game.draw();
-    game.newGame();
+    game.newGame(abandon: true);
     expect(listOf(1, medium), contains(game.seed), reason: 'all played');
   });
 
-  test('newGame after a move records an abandoned game once', () async {
+  test('newGame over a game with moves leaves no record; with abandon, it '
+      'records an abandoned game once', () async {
     final game = controller();
     game.draw();
-    wait(60);
     game.newGame(seed: 2);
-    game.newGame(seed: 3);
+    expect(game.seed, 2);
+    expect(game.canAbandon, isFalse, reason: 'no move yet');
+
+    game.draw();
+    wait(60);
+    expect(game.canAbandon, isTrue);
+    game.newGame(seed: 3, abandon: true);
+    game.newGame(seed: 4, abandon: true);
 
     await flush();
     final record = stats.records.single;
     expect(record.outcome, GameOutcome.abandoned);
-    expect(record.seed, 1);
+    expect(record.seed, 2);
     expect(record.moves, 1);
     expect(record.playTime, const Duration(minutes: 1));
     expect(record.details[KlondikeStatKeys.stockDraws], 1);
     expect((await storedRecords()).single.moves, 1);
-    expect(restore(await storedSave(gameId)).seed, 3);
+    expect(restore(await storedSave(gameId)).seed, 4);
   });
 
   test('newGame records the old game and resets the counters', () {
@@ -648,7 +656,7 @@ void main() {
     game.draw();
     game.undo();
 
-    game.newGame(drawCount: 3, seed: 2);
+    game.newGame(drawCount: 3, seed: 2, abandon: true);
     expect(game.seed, 2);
     expect(game.moves, 0);
     expect(game.undos, 0);
@@ -657,7 +665,7 @@ void main() {
     expect(game.state.tableau, KlondikeState.deal(2, drawCount: 3).tableau);
 
     game.draw();
-    game.newGame();
+    game.newGame(abandon: true);
     final [first, second] = stats.records;
     expect(
       (first.seed, first.variant, first.moves, first.undos),
@@ -703,5 +711,121 @@ void main() {
     final details = abandon(game).details;
     expect(details[KlondikeStatKeys.timeToFirstMoveMs], 4000);
     expect(details[KlondikeStatKeys.longestThinkMs], 9000);
+  });
+
+  group('auto-win', () {
+    /// Lets the auto-win search and play until [done], at most [seconds].
+    Future<void> playUntil(
+      WidgetTester tester,
+      bool Function() done, {
+      int seconds = 120,
+    }) async {
+      for (var i = 0; i < seconds * 10 && !done(); i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(done(), isTrue);
+    }
+
+    testWidgets('plays the game to a win that leaves no record nor save', (
+      tester,
+    ) async {
+      final game = controller();
+      game.draw();
+      expect(saves[gameId], isNotNull);
+
+      final found = game.startAutoWin();
+      expect(game.autoWinPhase, AutoWinPhase.searching);
+      expect(game.draw(), isFalse, reason: 'the player waits');
+      expect(game.canUndo, isFalse);
+      await playUntil(
+        tester,
+        () => game.autoWinPhase != AutoWinPhase.searching,
+      );
+      expect(await found, isTrue);
+      expect(game.autoWinPhase, AutoWinPhase.playing);
+      expect(game.canceled, isTrue);
+      expect(game.canAbandon, isFalse);
+      expect(saves[gameId], isNull);
+
+      final moves = game.moves;
+      await tester.pump(KlondikeController.autoMovePace);
+      expect(game.moves, moves + 1, reason: 'one action at a time');
+      expect(game.tap(PileRef.waste, 1), isFalse);
+      await playUntil(tester, () => game.state.isWon);
+      expect(game.autoWinPhase, AutoWinPhase.off);
+      expect(game.result, isNull);
+      expect(game.lastAction, KlondikeAction.autoComplete);
+
+      game.newGame(abandon: true);
+      await tester.pump();
+      expect(stats.records, isEmpty);
+    });
+
+    testWidgets('takes back the moves that lost the game first', (
+      tester,
+    ) async {
+      final game = KlondikeController(
+        stats: stats,
+        saves: saves,
+        drawCount: 3,
+        seed: 213,
+        clock: () => now,
+      );
+      for (final action in actionsToLose(game.state, seed: 2)) {
+        final played = switch (action) {
+          solver.DrawAction() => game.draw(),
+          solver.MoveAction(:final from, :final count, :final to) => game.move(
+            from,
+            count,
+            to,
+          ),
+        };
+        expect(played, isTrue);
+      }
+      expect(game.undos, 0);
+
+      final found = game.startAutoWin();
+      await playUntil(tester, () => game.state.isWon);
+      expect(await found, isTrue);
+      expect(game.undos, greaterThan(0));
+      expect(stats.records, isEmpty);
+    });
+
+    testWidgets('stop: the player goes on by hand, and the game still does '
+        'not count', (tester) async {
+      final game = controller();
+      final found = game.startAutoWin();
+      await playUntil(tester, () => game.autoWinPhase == AutoWinPhase.playing);
+      expect(await found, isTrue);
+      await tester.pump(KlondikeController.autoMovePace * 3);
+
+      game.stopAutoWin();
+      final moves = game.moves;
+      await tester.pump(const Duration(seconds: 5));
+      expect(game.moves, moves, reason: 'it stopped');
+      expect(game.autoWinPhase, AutoWinPhase.off);
+      expect(game.canUndo, isTrue);
+      expect(game.draw(), isTrue);
+
+      game.pause();
+      expect(saves[gameId], isNull);
+      game.newGame(abandon: true);
+      await tester.pump();
+      expect(stats.records, isEmpty);
+    });
+
+    testWidgets('a new deal during the search ends it', (tester) async {
+      final game = controller();
+      game.draw();
+      final found = game.startAutoWin();
+      game.newGame(seed: 2);
+      expect(game.autoWinPhase, AutoWinPhase.off);
+
+      await tester.pump(const Duration(seconds: 5));
+      expect(await found, isTrue, reason: 'seed 1 has a win');
+      expect(game.moves, 0, reason: 'nothing played on the new deal');
+      expect(game.canceled, isFalse);
+      expect(saves[gameId], isNotNull);
+    });
   });
 }

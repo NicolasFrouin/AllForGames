@@ -98,7 +98,7 @@ void main() {
           AllForGamesApp(stores: stores, initialLocation: '/klondike?seed=1'),
         );
         await tester.pumpAndSettle();
-        // A move, so the sheet also says that the game counts as abandoned.
+        // A move, so the sheet also has its note and Abandon and deal.
         await tester.tap(
           find.byKey(const ValueKey('stock')),
           warnIfMissed: false,
@@ -109,6 +109,7 @@ void main() {
         await tester.tap(find.byKey(const ValueKey('new-game')));
         await tester.pumpAndSettle();
         expect(find.byKey(const ValueKey('new-game-abandons')), findsOneWidget);
+        expect(find.byKey(const ValueKey('new-game-abandon')), findsOneWidget);
         final deal = find.byKey(const ValueKey('new-game-deal'));
         await tester.ensureVisible(deal);
         await tester.pumpAndSettle();

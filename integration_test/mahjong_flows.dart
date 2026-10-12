@@ -71,15 +71,15 @@ void mahjongFlows() {
     expect(_text(tester, 'tiles-value'), '142');
     expect(_text(tester, 'difficulty-value'), 'Hard');
 
-    // A new game over it records it as abandoned.
+    // Abandon and deal records it as abandoned.
     await tester.tap(find.byKey(const ValueKey('new-game')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('new-game-abandons')), findsOneWidget);
-    // The sheet is taller than the window: Deal is further down.
-    final deal = find.byKey(const ValueKey('new-game-deal'));
-    await tester.ensureVisible(deal);
+    // The sheet is taller than the window: the buttons are further down.
+    final abandon = find.byKey(const ValueKey('new-game-abandon'));
+    await tester.ensureVisible(abandon);
     await tester.pumpAndSettle();
-    await tester.tap(deal);
+    await tester.tap(abandon);
     await tester.pumpAndSettle();
     final record = (await StatsStore.load()).records.single;
     expect(

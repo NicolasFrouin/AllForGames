@@ -69,7 +69,7 @@ class _SpiderScreenState extends State<SpiderScreen> {
   }
 
   /// Continues the saved game, unless the widget asks for a new deal: then
-  /// the saved game counts as abandoned if it has moves.
+  /// the saved game leaves no record.
   SpiderController _openGame() {
     final saved = _restoreSavedGame();
     final newDeal =
@@ -182,14 +182,15 @@ class _SpiderScreenState extends State<SpiderScreen> {
   /// deals the chosen game and keeps its difficulty for the next time.
   Future<void> _newGame() async {
     final settings = widget.stores.settings;
-    final difficulty = await showSpiderNewGameSheet(
+    final choice = await showSpiderNewGameSheet(
       context,
       initial: settings.spiderDifficulty,
-      abandons: _controller.moves > 0 && _controller.result == null,
+      inProgress: _controller.moves > 0 && _controller.result == null,
     );
-    if (difficulty == null || !mounted) return;
+    if (choice == null || !mounted) return;
+    final (options: difficulty, :abandon) = choice;
     unawaited(settings.setSpiderDifficulty(difficulty));
-    _controller.newGame(difficulty: difficulty);
+    _controller.newGame(difficulty: difficulty, abandon: abandon);
   }
 
   void _openStats() => context.push('/stats/${SpiderController.gameId}');

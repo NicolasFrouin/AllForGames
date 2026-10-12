@@ -57,9 +57,9 @@ void main() {
 
   void wait(int seconds) => now = now.add(Duration(seconds: seconds));
 
-  /// Starts a new game, so [game] counts as abandoned, and returns its record.
+  /// Abandons [game] for a new one and returns its record.
   GameRecord abandon(SpiderController game) {
-    game.newGame();
+    game.newGame(abandon: true);
     return stats.records.last;
   }
 
@@ -211,7 +211,7 @@ void main() {
       expect(stats.records.single.outcome, GameOutcome.won);
       expect(await storedSave(gameId), isNull);
 
-      game.newGame();
+      game.newGame(abandon: true);
       expect(
         stats.records,
         hasLength(1),
@@ -220,10 +220,27 @@ void main() {
     },
   );
 
-  test('a new game without a move records nothing', () {
-    final game = controller();
-    game.newGame();
-    expect(stats.records, isEmpty);
+  test('a new game leaves no record of the current one, unless it abandons '
+      'it after a move', () async {
+    final game = controller(dealBoard)..dealStock();
+    game.newGame(seed: 2);
+    await flush();
+    expect(stats.records, isEmpty, reason: 'canceled');
+    expect(game.seed, 2);
+    expect(game.moves, 0);
+
+    game.newGame(seed: 3, abandon: true);
+    await flush();
+    expect(stats.records, isEmpty, reason: 'no move');
+
+    expect(game.dealStock(), isTrue);
+    game.newGame(abandon: true);
+    await flush();
+    final record = stats.records.single;
+    expect(record.outcome, GameOutcome.abandoned);
+    expect(record.seed, 3);
+    expect(record.moves, 1);
+    expect(await storedRecords(), hasLength(1));
   });
 
   test('thinking times: before the first move and the longest one', () {

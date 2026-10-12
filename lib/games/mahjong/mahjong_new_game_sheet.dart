@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../new_game_actions.dart';
 import 'mahjong_difficulty.dart';
 import 'mahjong_difficulty_texts.dart';
 
@@ -12,28 +13,28 @@ typedef MahjongNewGame = ({
 });
 
 /// Lets the player choose the mode, the difficulty and the shape of a new game,
-/// starting from [initial]. With [abandons], it says that the game on screen
-/// will count as abandoned, so Deal also confirms that.
+/// starting from [initial]. With [inProgress] (a game with moves on screen),
+/// the player also chooses whether that game counts as abandoned.
 ///
-/// Returns the chosen options, or null when the player closes the sheet.
-Future<MahjongNewGame?> showMahjongNewGameSheet(
+/// Returns the choice, or null when the player closes the sheet.
+Future<NewGameChoice<MahjongNewGame>?> showMahjongNewGameSheet(
   BuildContext context, {
   required MahjongNewGame initial,
-  required bool abandons,
-}) => showModalBottomSheet<MahjongNewGame>(
+  required bool inProgress,
+}) => showModalBottomSheet<NewGameChoice<MahjongNewGame>>(
   context: context,
   // As tall as its content, which scrolls when the text is large.
   isScrollControlled: true,
   useSafeArea: true,
   showDragHandle: true,
-  builder: (context) => _NewGameSheet(initial: initial, abandons: abandons),
+  builder: (context) => _NewGameSheet(initial: initial, inProgress: inProgress),
 );
 
 class _NewGameSheet extends StatefulWidget {
-  const _NewGameSheet({required this.initial, required this.abandons});
+  const _NewGameSheet({required this.initial, required this.inProgress});
 
   final MahjongNewGame initial;
-  final bool abandons;
+  final bool inProgress;
 
   @override
   State<_NewGameSheet> createState() => _NewGameSheetState();
@@ -189,31 +190,10 @@ class _NewGameSheetState extends State<_NewGameSheet> {
               l10n.mahjongHiddenNote,
               key: const ValueKey('new-game-hidden-note'),
             ),
-          if (widget.abandons)
-            note(
-              Icons.flag_outlined,
-              colors.error,
-              l10n.newGameAbandons,
-              key: const ValueKey('new-game-abandons'),
-            ),
-          const SizedBox(height: 20),
-          OverflowBar(
-            alignment: MainAxisAlignment.end,
-            overflowAlignment: OverflowBarAlignment.end,
-            spacing: 8,
-            overflowSpacing: 8,
-            children: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text(l10n.cancel),
-              ),
-              FilledButton(
-                key: const ValueKey('new-game-deal'),
-                onPressed: () => Navigator.of(context)
-                    .pop((mode: _mode, difficulty: _difficulty, shape: _shape)),
-                child: Text(l10n.newGameDeal),
-              ),
-            ],
+          NewGameActions(
+            inProgress: widget.inProgress,
+            options: () =>
+                (mode: _mode, difficulty: _difficulty, shape: _shape),
           ),
         ],
       ),

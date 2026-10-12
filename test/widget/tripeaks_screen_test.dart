@@ -397,7 +397,7 @@ void main() {
     expect(canUndo(tester), isFalse);
   });
 
-  testWidgets('a link to a deal records the saved game as abandoned', (
+  testWidgets('a link to a deal leaves no record of the saved game', (
     tester,
   ) async {
     useSurface(tester);
@@ -417,11 +417,8 @@ void main() {
     expect(textOf('moves-value'), '0');
     final seven = TriPeaksState.deal(7);
     expect(at(tester, seven.wasteTop.id), at(tester, 'waste'));
-    final record = stores.stats.records.single;
-    expect(
-      (record.seed, record.outcome, record.moves, record.variant),
-      (42, GameOutcome.abandoned, 1, TriPeaksController.variant),
-    );
+    expect(savedSeed(stores), 7);
+    expect(stores.stats.records, isEmpty);
   });
 
   testWidgets('a link to a level deals a seed of its list', (tester) async {
@@ -454,13 +451,19 @@ void main() {
     expect(byKey('difficulty-value'), findsNothing);
   });
 
-  testWidgets('the new game sheet says the game counts as abandoned; cancel '
-      'keeps the game', (tester) async {
+  testWidgets('the new game sheet offers to abandon only a game with moves; '
+      'cancel keeps the game', (tester) async {
     final stores = await pumpGame(tester, deal);
+    await openNewGameSheet(tester);
+    expect(byKey('new-game-abandons'), findsNothing);
+    expect(byKey('new-game-abandon'), findsNothing);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
     await tapStock(tester);
 
     await openNewGameSheet(tester);
     expect(byKey('new-game-abandons'), findsOneWidget);
+    expect(byKey('new-game-abandon'), findsOneWidget);
     await tester.tap(byKey('new-game-difficulty-hard'));
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
@@ -470,8 +473,8 @@ void main() {
     expect(stores.settings.tripeaksDifficulty, TriPeaksDifficulty.medium);
   });
 
-  testWidgets('Deal in Hard deals a Hard deal, records the old game and '
-      'keeps the choice', (tester) async {
+  testWidgets('Deal in Hard deals a Hard deal without a record of the old '
+      'game and keeps the choice; Abandon and deal records it', (tester) async {
     final stores = await pumpGame(tester, deal);
     await tapStock(tester);
 
@@ -492,15 +495,27 @@ void main() {
 
     expect(textOf('difficulty-value'), 'Hard');
     expect(textOf('moves-value'), '0');
-    expect(triPeaksDeals['hard'], contains(savedSeed(stores)));
-    expect(stores.stats.records.single.outcome, GameOutcome.abandoned);
+    final hardSeed = savedSeed(stores);
+    expect(triPeaksDeals['hard'], contains(hardSeed));
+    expect(stores.stats.records, isEmpty);
     expect(
       (await SettingsStore.load()).tripeaksDifficulty,
       TriPeaksDifficulty.hard,
     );
 
+    await tapStock(tester);
     await openNewGameSheet(tester);
     expect(isChosen(tester, 'new-game-difficulty-hard'), isTrue);
+    await tester.tap(byKey('new-game-abandon'));
+    await tester.pumpAndSettle();
+
+    expect(textOf('moves-value'), '0');
+    expect(savedSeed(stores), isNot(hardSeed));
+    final record = stores.stats.records.single;
+    expect(
+      (record.seed, record.outcome, record.moves, record.difficulty),
+      (hardSeed, GameOutcome.abandoned, 1, 'hard'),
+    );
   });
 
   testWidgets('a game opened from the hub has the difficulty of the '

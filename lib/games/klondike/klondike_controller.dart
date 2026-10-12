@@ -9,13 +9,19 @@ import '../../stats/game_record.dart';
 import '../../stats/play_timer.dart';
 import '../../stats/stats_store.dart';
 import 'deal_picker.dart';
+import 'klondike_auto_win.dart';
 import 'klondike_difficulty.dart';
+// Its KlondikeAction is one step of a solution.
+import 'klondike_solver.dart' as solver;
 import 'klondike_state.dart';
 
 enum MoveInput { tap, drag }
 
 /// What changed the board last, so the board can animate it.
 enum KlondikeAction { none, deal, draw, recycle, move, autoComplete, undo }
+
+/// Where the auto-win is: off, looking for a win, or playing it.
+enum AutoWinPhase { off, searching, playing }
 
 /// Keys of the Klondike-specific counters in [GameRecord.details].
 abstract final class KlondikeStatKeys {
@@ -84,6 +90,12 @@ class KlondikeController extends ChangeNotifier {
 
   static const gameId = 'klondike';
 
+  /// Time before each action of the auto-win: a draw, a move, a move taken
+  /// back. Quick, but slow enough to follow.
+  static const autoDrawPace = Duration(milliseconds: 100);
+  static const autoMovePace = Duration(milliseconds: 300);
+  static const autoUndoPace = Duration(milliseconds: 150);
+
   /// Version of the [toJson] format.
   static const _saveVersion = 1;
 
@@ -107,6 +119,8 @@ class KlondikeController extends ChangeNotifier {
   Duration _longestThink = Duration.zero;
   GameRecord? _result;
   bool _finished = false;
+  bool _canceled = false;
+  _AutoWinRun? _autoWin;
   Set<String> _lastMovedCardIds = const {};
   KlondikeAction _lastAction = KlondikeAction.none;
   int _actionSerial = 0;
@@ -121,8 +135,22 @@ class KlondikeController extends ChangeNotifier {
   int get moves => _moves;
   int get undos => _undos;
   Duration get playTime => _timer.elapsed;
-  bool get canUndo => !_finished && _history.isNotEmpty;
-  bool get canAutoComplete => !_finished && _state.canAutoComplete;
+  bool get canUndo => !_finished && _autoWin == null && _history.isNotEmpty;
+  bool get canAutoComplete =>
+      !_finished && _autoWin == null && _state.canAutoComplete;
+
+  /// The game was played for the player ([startAutoWin]): it leaves no
+  /// record and no save.
+  bool get canceled => _canceled;
+
+  /// A new game over this one can record it as abandoned.
+  bool get canAbandon => !_finished && !_canceled && _moves > 0;
+
+  AutoWinPhase get autoWinPhase => switch (_autoWin) {
+    null => AutoWinPhase.off,
+    _AutoWinRun(playing: false) => AutoWinPhase.searching,
+    _ => AutoWinPhase.playing,
+  };
 
   /// The record of the won game, or null while the game runs.
   GameRecord? get result => _result;
@@ -137,7 +165,9 @@ class KlondikeController extends ChangeNotifier {
   /// Changes at every action, so the board sees each one once.
   int get actionSerial => _actionSerial;
 
-  bool draw() {
+  bool draw() => _autoWin == null && _draw();
+
+  bool _draw() {
     if (_finished) return false;
     final result = _state.draw();
     if (result == null) return false;
@@ -159,7 +189,9 @@ class KlondikeController extends ChangeNotifier {
     int count,
     PileRef to, {
     MoveInput input = MoveInput.drag,
-  }) {
+  }) => _autoWin == null && _move(from, count, to, input);
+
+  bool _move(PileRef from, int count, PileRef to, MoveInput input) {
     if (_finished) return false;
     final result = _state.move(from, count, to);
     if (result == null) return false;
@@ -177,14 +209,17 @@ class KlondikeController extends ChangeNotifier {
 
   /// Moves the tapped cards to the best legal pile, if there is one.
   bool tap(PileRef from, int count) {
-    if (_finished) return false;
+    if (_finished || _autoWin != null) return false;
     final to = _state.autoTarget(from, count);
     return to != null && move(from, count, to, input: MoveInput.tap);
   }
 
   /// Sends all remaining cards to the foundations. Counts as one move.
   void autoComplete() {
-    if (!canAutoComplete) return;
+    if (canAutoComplete) _autoComplete();
+  }
+
+  void _autoComplete() {
     var next = _state;
     var scoreDelta = 0;
     final order = <String>{};
@@ -203,7 +238,10 @@ class KlondikeController extends ChangeNotifier {
   }
 
   void undo() {
-    if (!canUndo) return;
+    if (canUndo) _undo();
+  }
+
+  void _undo() {
     final previous = _history.removeLast();
     _lastMovedCardIds = _movedCardIds(_state, previous.state);
     _lastAction = KlondikeAction.undo;
@@ -223,13 +261,83 @@ class KlondikeController extends ChangeNotifier {
   }
 
   void resume() {
-    if (!_finished) _timer.start();
+    if (!_finished && !_canceled) _timer.start();
+  }
+
+  /// Finds a win and plays it, one action every [autoMovePace] or so (first
+  /// taking back the moves that lost the game, if any). From then on, the
+  /// game is canceled: no record, no save. Returns whether a win was found;
+  /// without one, or when [stopAutoWin] came first, the game goes on as it
+  /// was.
+  Future<bool> startAutoWin() async {
+    if (_finished || _autoWin != null) return false;
+    final run = _autoWin = _AutoWinRun();
+    notifyListeners();
+    final plan = await planAutoWin([
+      for (final entry in _history) entry.state,
+      _state,
+    ]);
+    // Stopped, a new deal, or the screen closed in the meantime.
+    if (!identical(run, _autoWin)) return plan != null;
+    if (plan == null) {
+      _autoWin = null;
+      notifyListeners();
+      return false;
+    }
+    _canceled = true;
+    _timer.pause();
+    unawaited(_saves.remove(gameId));
+    run.playing = true;
+    notifyListeners();
+    _playAutoWin(
+      run,
+      [
+        for (var i = 0; i < plan.undos; i++) (autoUndoPace, _undo),
+        for (final action in plan.actions)
+          switch (action) {
+            solver.DrawAction() => (autoDrawPace, () => _draw()),
+            solver.MoveAction(:final from, :final count, :final to) => (
+              autoMovePace,
+              () => _move(from, count, to, MoveInput.tap),
+            ),
+          },
+      ].iterator,
+    );
+    return true;
+  }
+
+  /// Plays the next of [steps] after its pace, until the game is won. Once
+  /// only foundation moves are left, they go as one auto-complete.
+  void _playAutoWin(
+    _AutoWinRun run,
+    Iterator<(Duration, void Function())> steps,
+  ) {
+    final next = _state.canAutoComplete
+        ? (autoMovePace, _autoComplete)
+        : steps.moveNext()
+        ? steps.current
+        : null;
+    if (next == null) return stopAutoWin();
+    final (pace, play) = next;
+    run.timer = Timer(pace, () {
+      play();
+      _finished ? stopAutoWin() : _playAutoWin(run, steps);
+    });
+  }
+
+  /// Stops the auto-win: the player goes on by hand (a canceled game stays
+  /// canceled).
+  void stopAutoWin() {
+    if (_autoWin == null) return;
+    _autoWin!.timer?.cancel();
+    _autoWin = null;
+    notifyListeners();
   }
 
   /// Saves the game so the player can continue it later. A won game is not
   /// saved: it is in the statistics.
   void save() {
-    if (_finished) return;
+    if (_finished || _canceled) return;
     unawaited(
       _saves.save(
         SavedGame(
@@ -243,8 +351,9 @@ class KlondikeController extends ChangeNotifier {
     );
   }
 
-  /// Deals a new game and saves it. The current game counts as abandoned if
-  /// the player made at least one move and did not win it.
+  /// Deals a new game and saves it. With [abandon], the current game counts
+  /// as abandoned if the player made at least one move and did not win it;
+  /// else it leaves no record.
   ///
   /// Without [seed], the deal is a winnable one of [difficulty] that the
   /// player has not played yet (see [pickDealSeed]), and never the current
@@ -255,8 +364,9 @@ class KlondikeController extends ChangeNotifier {
     KlondikeDifficulty? difficulty,
     int? seed,
     KlondikeState? initialState,
+    bool abandon = false,
   }) {
-    if (!_finished && _moves > 0) {
+    if (abandon && canAbandon) {
       unawaited(_stats.add(_record(GameOutcome.abandoned)));
     }
     _start(
@@ -353,13 +463,16 @@ class KlondikeController extends ChangeNotifier {
     _longestThink = Duration.zero;
     _result = null;
     _finished = false;
+    _canceled = false;
+    _autoWin?.timer?.cancel();
+    _autoWin = null;
     _lastMovedCardIds = const {};
     _lastAction = KlondikeAction.deal;
     _actionSerial++;
   }
 
   /// A winnable seed of [difficulty] not in the records of [drawCount] games
-  /// (the abandoned game is already there) nor [current], the deal on screen.
+  /// (an abandoned game is already there) nor [current], the deal on screen.
   int _pickSeed(int drawCount, KlondikeDifficulty difficulty, {int? current}) =>
       pickDealSeed(
         drawCount: drawCount,
@@ -394,9 +507,11 @@ class KlondikeController extends ChangeNotifier {
     if (_state.isWon) {
       _finished = true;
       _timer.pause();
-      final record = _record(GameOutcome.won);
-      _result = record;
-      unawaited(_stats.add(record));
+      if (!_canceled) {
+        final record = _record(GameOutcome.won);
+        _result = record;
+        unawaited(_stats.add(record));
+      }
       unawaited(_saves.remove(gameId));
     } else {
       save();
@@ -413,6 +528,13 @@ class KlondikeController extends ChangeNotifier {
   }
 
   void _bump(String key) => _counters[key] = (_counters[key] ?? 0) + 1;
+
+  @override
+  void dispose() {
+    _autoWin?.timer?.cancel();
+    _autoWin = null;
+    super.dispose();
+  }
 
   GameRecord _record(GameOutcome outcome) => GameRecord(
     gameId: gameId,
@@ -454,4 +576,11 @@ class KlondikeController extends ChangeNotifier {
     ])
       for (final card in state.pile(ref)) card.id: ref,
   };
+}
+
+/// One auto-win: it looks for a win, then plays it ([playing]), one action
+/// per [timer].
+class _AutoWinRun {
+  bool playing = false;
+  Timer? timer;
 }

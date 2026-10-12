@@ -1,6 +1,6 @@
 /// A "thoughtful" Klondike solver (it sees the face-down cards), used offline
-/// to prove deals winnable and to grade them. Pure Dart: it runs in the
-/// generator tool and in tests, never in the app.
+/// to prove deals winnable and to grade them, and by the app's auto-win (in
+/// slices: [KlondikeSolver.solveInSlices]). Pure Dart.
 ///
 /// Technique, after Blake & Gent, "The Winnability of Klondike Solitaire and
 /// Many Other Patience Games" (arXiv:1906.12314, JAIR):
@@ -165,6 +165,21 @@ class KlondikeSolver {
 
   SolveResult solve(KlondikeState state, {int maxNodes = defaultMaxNodes}) =>
       _Search(_Board.from(state), maxNodes).run();
+
+  /// [solve], [slice] states at a time with a turn of the event loop between
+  /// them: the app solves on its UI thread (web has no isolates), and a
+  /// search of [maxNodes] states takes up to half a second there.
+  Future<SolveResult> solveInSlices(
+    KlondikeState state, {
+    int maxNodes = defaultMaxNodes,
+    int slice = 2000,
+  }) async {
+    final search = _Search(_Board.from(state), maxNodes);
+    while (true) {
+      if (search.step(slice) case final result?) return result;
+      await Future<void>.delayed(Duration.zero);
+    }
+  }
 
   /// Plays [state] like a casual player: no lookahead, no undo, only the
   /// face-up cards are known. Each turn takes the first legal move of: any
@@ -803,10 +818,20 @@ class _Search {
   final _path = <_Move>[];
   final _frames = <_Frame>[];
   int _nodes = 0;
+  _Outcome? _outcome;
 
-  SolveResult run() {
-    var outcome = _enter();
+  SolveResult run() => step(null)!;
+
+  /// Searches on until it ends or [nodes] more states (null: no limit) were
+  /// expanded: then returns null, and the next call goes on from there.
+  SolveResult? step(int? nodes) {
+    final stop = nodes == null ? null : _nodes + nodes;
+    var outcome = _outcome ??= _enter();
     while (outcome == _Outcome.open && _frames.isNotEmpty) {
+      if (stop != null && _nodes >= stop) {
+        _outcome = outcome;
+        return null;
+      }
       final frame = _frames.last;
       if (frame.next < frame.moves.length) {
         final m = frame.moves[frame.next++];
@@ -826,6 +851,7 @@ class _Search {
         if (_frames.isNotEmpty) board.undo(_path.removeLast());
       }
     }
+    _outcome = outcome;
     return switch (outcome) {
       _Outcome.solved => SolveResult(SolveStatus.solved, _nodes, _actions()),
       _Outcome.budget => SolveResult(SolveStatus.unknown, _nodes),

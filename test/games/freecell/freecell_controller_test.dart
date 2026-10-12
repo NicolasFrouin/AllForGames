@@ -71,9 +71,9 @@ void main() {
 
   void wait(int seconds) => now = now.add(Duration(seconds: seconds));
 
-  /// Starts a new game, so [game] counts as abandoned, and returns its record.
+  /// Abandons [game] for a new one and returns its record.
   GameRecord abandon(FreeCellController game) {
-    game.newGame();
+    game.newGame(abandon: true);
     return stats.records.last;
   }
 
@@ -484,25 +484,38 @@ void main() {
     game.newGame();
     expect(game.seed, a, reason: 'a has no record, b is on screen');
     game.tap(col(0), 1);
-    game.newGame();
+    game.newGame(abandon: true);
     expect(game.seed, b, reason: 'a is now recorded as abandoned');
   });
 
-  test('newGame after a move records an abandoned game once', () async {
+  test('newGame over a game with moves leaves no record; with abandon, it '
+      'records an abandoned game once', () async {
     final game = controller();
     game.tap(col(0), 1);
-    wait(60);
     game.newGame(seed: 2);
-    game.newGame(seed: 3);
+    await flush();
+    expect(stats.records, isEmpty, reason: 'canceled');
+    expect(game.seed, 2);
+    expect(game.moves, 0);
+    expect(restore(await storedSave(gameId)).seed, 2);
+
+    game.newGame(seed: 3, abandon: true);
+    await flush();
+    expect(stats.records, isEmpty, reason: 'no move');
+
+    game.tap(col(0), 1);
+    wait(60);
+    game.newGame(seed: 4, abandon: true);
+    game.newGame(seed: 5, abandon: true);
 
     await flush();
     final record = stats.records.single;
     expect(record.outcome, GameOutcome.abandoned);
-    expect(record.seed, 1);
+    expect(record.seed, 3);
     expect(record.moves, 1);
     expect(record.playTime, const Duration(minutes: 1));
     expect((await storedRecords()).single.moves, 1);
-    expect(restore(await storedSave(gameId)).seed, 3);
+    expect(restore(await storedSave(gameId)).seed, 5);
   });
 
   test('records time to first move and longest think time', () {

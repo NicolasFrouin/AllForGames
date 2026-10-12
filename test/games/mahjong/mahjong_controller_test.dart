@@ -58,14 +58,14 @@ void main() {
 
   void wait(int seconds) => now = now.add(Duration(seconds: seconds));
 
-  /// Starts a new game, so [game] counts as abandoned, and returns its record.
+  /// Abandons [game] for a new one and returns its record.
   GameRecord abandon(MahjongController game) {
-    game.newGame();
+    game.newGame(abandon: true);
     return stats.records.last;
   }
 
-  /// Matches the first free pair and starts a new game, so [game] counts as
-  /// abandoned; returns its record.
+  /// Matches the first free pair and abandons [game] for a new one; returns
+  /// its record.
   GameRecord abandonAfterMatch(MahjongController game) {
     final (a, b) = game.state.freePairs.first;
     game.match(a, b);
@@ -261,8 +261,16 @@ void main() {
       expect(game.match(1, 2), isFalse);
     });
 
-    test('a new game over a game with a match records it as abandoned', () {
-      final game = controller(seed: 3);
+    test('a new game over a game with a match leaves no record; with '
+        'abandon, it records it as abandoned', () async {
+      final game = controller(seed: 2);
+      final (x, y) = game.state.freePairs.first;
+      game.match(x, y);
+      game.newGame(seed: 3);
+      await flush();
+      expect(stats.records, isEmpty, reason: 'canceled');
+      expect((game.seed, game.moves), (3, 0));
+
       final (a, b) = game.state.freePairs.first;
       game.match(a, b);
       game.undo();
@@ -280,11 +288,12 @@ void main() {
       expect(record.details[MahjongStatKeys.tilesLeft], 142);
     });
 
-    test('a new game over a game without a match records nothing', () {
+    test('a new game over a game without a match records nothing, even '
+        'abandoned', () {
       final game = controller();
       game.hint();
 
-      game.newGame(difficulty: MahjongDifficulty.easy);
+      game.newGame(difficulty: MahjongDifficulty.easy, abandon: true);
 
       expect(stats.records, isEmpty);
       expect(game.state.tileCount, 72);
@@ -347,7 +356,7 @@ void main() {
       final (a, b) = game.hint()!;
       game.match(a, b);
 
-      game.newGame(seed: 6);
+      game.newGame(seed: 6, abandon: true);
 
       expect(game.state.layout.id, 'random');
       expect(

@@ -63,7 +63,7 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
   }
 
   /// Continues the saved game, unless the widget asks for a new deal: then
-  /// the saved game counts as abandoned if it has moves.
+  /// the saved game leaves no record.
   KlondikeController _openGame() {
     final saved = _restoreSavedGame();
     final newDeal =
@@ -144,24 +144,27 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
   }
 
   void _onGameChanged() {
-    if (_controller.result == null) _resultShown = false;
+    if (!_controller.state.isWon) _resultShown = false;
   }
 
-  /// Called by the board once the win celebration has played.
+  /// Called by the board once the win celebration has played. A game played
+  /// for the player has no record: its dialog says so.
   Future<void> _showWinDialog() async {
-    final record = _controller.result;
-    if (!mounted || record == null || _resultShown) return;
+    if (!mounted || !_controller.state.isWon || _resultShown) return;
     _resultShown = true;
+    final record = _controller.result;
     final stores = widget.stores;
-    final choice = await showWinDialog(
-      context,
-      stores: stores,
-      record: record,
-      stats: stores.stats.statsFor(
-        KlondikeController.gameId,
-        variant: record.variant,
-      ),
-    );
+    final choice = record == null
+        ? await showSolvedDialog(context)
+        : await showWinDialog(
+            context,
+            stores: stores,
+            record: record,
+            stats: stores.stats.statsFor(
+              KlondikeController.gameId,
+              variant: record.variant,
+            ),
+          );
     if (!mounted) return;
     switch (choice) {
       case WinChoice.playAgain:
@@ -181,24 +184,62 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
   /// the chosen game and keeps its options for the next time.
   Future<void> _newGame() async {
     final settings = widget.stores.settings;
-    final options = await showNewGameSheet(
+    final choice = await showNewGameSheet(
       context,
       initial: (
         drawCount: settings.klondikeDrawCount,
         difficulty: settings.klondikeDifficulty,
       ),
-      abandons: _controller.moves > 0 && _controller.result == null,
+      inProgress: _controller.canAbandon,
     );
-    if (options == null || !mounted) return;
+    if (choice == null || !mounted) return;
+    final (options: (:drawCount, :difficulty), :abandon) = choice;
     unawaited(
-      settings.setKlondikeNewGame(
-        drawCount: options.drawCount,
-        difficulty: options.difficulty,
-      ),
+      settings.setKlondikeNewGame(drawCount: drawCount, difficulty: difficulty),
     );
     _controller.newGame(
-      drawCount: options.drawCount,
-      difficulty: options.difficulty,
+      drawCount: drawCount,
+      difficulty: difficulty,
+      abandon: abandon,
+    );
+  }
+
+  /// Asks first, as the game will not count, then lets it play for the
+  /// player.
+  Future<void> _autoWin() async {
+    final start = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        final l10n = AppLocalizations.of(context);
+        return AlertDialog(
+          key: const ValueKey('auto-win-dialog'),
+          icon: const Icon(Icons.smart_toy_outlined),
+          title: Text(l10n.autoWinTitle),
+          content: Text(l10n.autoWinBody),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              key: const ValueKey('auto-win-start'),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(l10n.autoWinStart),
+            ),
+          ],
+        );
+      },
+    );
+    if (start != true || !mounted) return;
+    final found = await _controller.startAutoWin();
+    if (found || !mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          AppLocalizations.of(context).autoWinNone,
+          key: const ValueKey('auto-win-none'),
+        ),
+      ),
     );
   }
 
@@ -221,6 +262,35 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
               onPressed: _controller.canUndo ? _controller.undo : null,
               icon: const Icon(Icons.undo),
             ),
+          ),
+          ListenableBuilder(
+            listenable: _controller,
+            builder: (context, _) => switch (_controller.autoWinPhase) {
+              AutoWinPhase.off => IconButton(
+                key: const ValueKey('auto-win'),
+                tooltip: l10n.autoWin,
+                onPressed: _controller.state.isWon ? null : _autoWin,
+                icon: const Icon(Icons.smart_toy_outlined),
+              ),
+              AutoWinPhase.searching => IconButton(
+                key: const ValueKey('auto-win'),
+                tooltip: l10n.autoWinSearching,
+                onPressed: _controller.stopAutoWin,
+                icon: const SizedBox.square(
+                  dimension: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              AutoWinPhase.playing => IconButton(
+                key: const ValueKey('auto-win'),
+                tooltip: l10n.autoWinStop,
+                onPressed: _controller.stopAutoWin,
+                icon: const Icon(Icons.stop_circle_outlined),
+              ),
+            },
           ),
           IconButton(
             key: const ValueKey('new-game'),

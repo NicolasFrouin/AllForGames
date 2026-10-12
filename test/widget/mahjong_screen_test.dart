@@ -430,13 +430,13 @@ void main() {
   });
 
   group('new game sheet', () {
-    testWidgets('says that a game with a match counts as abandoned', (
-      tester,
-    ) async {
+    testWidgets('offers to abandon a game with a match: Deal leaves no '
+        'record of it, Abandon and deal records it', (tester) async {
       final stores = await pumpGame(tester, state: rowBoard);
       await tester.tap(byKey('new-game'));
       await tester.pumpAndSettle();
       expect(byKey('new-game-abandons'), findsNothing);
+      expect(byKey('new-game-abandon'), findsNothing);
       await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
 
@@ -445,12 +445,25 @@ void main() {
       await tester.tap(byKey('new-game'));
       await tester.pumpAndSettle();
       expect(byKey('new-game-abandons'), findsOneWidget);
+      expect(byKey('new-game-abandon'), findsOneWidget);
       await tester.tap(byKey('new-game-deal'));
+      await tester.pumpAndSettle();
+
+      expect(stores.stats.records, isEmpty);
+      final tiles = layoutOnScreen(tester).length;
+      expect(textOf('tiles-value'), '$tiles');
+      final (a, b) = boardOnScreen(tester).freePairs.first;
+      await takeTile(tester, a);
+      await takeTile(tester, b);
+      expect(textOf('tiles-value'), '${tiles - 2}');
+      await tester.tap(byKey('new-game'));
+      await tester.pumpAndSettle();
+      await tester.tap(byKey('new-game-abandon'));
       await tester.pumpAndSettle();
 
       final record = stores.stats.records.single;
       expect(record.outcome, GameOutcome.abandoned);
-      expect(record.details[MahjongStatKeys.tilesLeft], 2);
+      expect(record.details[MahjongStatKeys.tilesLeft], tiles - 2);
     });
 
     testWidgets('deals the chosen difficulty and keeps it in the settings', (

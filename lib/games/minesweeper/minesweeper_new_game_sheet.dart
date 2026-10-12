@@ -1,32 +1,33 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../new_game_actions.dart';
 import 'minesweeper_difficulty.dart';
 import 'minesweeper_difficulty_texts.dart';
 
 /// Lets the player choose the level of a new game, starting from [initial].
-/// With [abandons], it says that the game on screen will count as abandoned,
-/// so Deal also confirms that.
+/// With [inProgress] (a game with moves on screen), the player also chooses
+/// whether that game counts as abandoned.
 ///
-/// Returns the chosen level, or null when the player closes the sheet.
-Future<MinesweeperDifficulty?> showMinesweeperNewGameSheet(
+/// Returns the choice, or null when the player closes the sheet.
+Future<NewGameChoice<MinesweeperDifficulty>?> showMinesweeperNewGameSheet(
   BuildContext context, {
   required MinesweeperDifficulty initial,
-  required bool abandons,
-}) => showModalBottomSheet<MinesweeperDifficulty>(
+  required bool inProgress,
+}) => showModalBottomSheet<NewGameChoice<MinesweeperDifficulty>>(
   context: context,
   // As tall as its content, which scrolls when the text is large.
   isScrollControlled: true,
   useSafeArea: true,
   showDragHandle: true,
-  builder: (context) => _NewGameSheet(initial: initial, abandons: abandons),
+  builder: (context) => _NewGameSheet(initial: initial, inProgress: inProgress),
 );
 
 class _NewGameSheet extends StatefulWidget {
-  const _NewGameSheet({required this.initial, required this.abandons});
+  const _NewGameSheet({required this.initial, required this.inProgress});
 
   final MinesweeperDifficulty initial;
-  final bool abandons;
+  final bool inProgress;
 
   @override
   State<_NewGameSheet> createState() => _NewGameSheetState();
@@ -40,13 +41,13 @@ class _NewGameSheetState extends State<_NewGameSheet> {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    Widget note(IconData icon, Color color, String text, {Key? key}) => Padding(
+    Widget note(IconData icon, Color color, String text) => Padding(
       padding: const EdgeInsets.only(top: 12),
       child: Row(
         children: [
           Icon(icon, size: 20, color: color),
           const SizedBox(width: 8),
-          Expanded(child: Text(text, key: key)),
+          Expanded(child: Text(text)),
         ],
       ),
     );
@@ -89,30 +90,11 @@ class _NewGameSheetState extends State<_NewGameSheet> {
             colors.primary,
             l10n.minesweeperNoGuess,
           ),
-          if (widget.abandons)
-            note(
-              Icons.flag_outlined,
-              colors.error,
-              l10n.newGameAbandons,
-              key: const ValueKey('new-game-abandons'),
-            ),
-          const SizedBox(height: 20),
-          OverflowBar(
-            alignment: MainAxisAlignment.end,
-            overflowAlignment: OverflowBarAlignment.end,
-            spacing: 8,
-            overflowSpacing: 8,
-            children: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text(l10n.cancel),
-              ),
-              FilledButton(
-                key: const ValueKey('new-game-deal'),
-                onPressed: () => Navigator.of(context).pop(_difficulty),
-                child: Text(l10n.minesweeperPlay),
-              ),
-            ],
+          NewGameActions(
+            inProgress: widget.inProgress,
+            options: () => _difficulty,
+            dealLabel: l10n.minesweeperPlay,
+            abandonLabel: l10n.minesweeperAbandonPlay,
           ),
         ],
       ),

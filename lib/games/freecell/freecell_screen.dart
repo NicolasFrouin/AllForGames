@@ -66,7 +66,7 @@ class _FreeCellScreenState extends State<FreeCellScreen> {
   }
 
   /// Continues the saved game, unless the widget asks for a new deal: then
-  /// the saved game counts as abandoned if it has moves.
+  /// the saved game leaves no record.
   FreeCellController _openGame() {
     final saved = _restoreSavedGame();
     final newDeal =
@@ -188,14 +188,15 @@ class _FreeCellScreenState extends State<FreeCellScreen> {
   /// deals the chosen game and keeps its difficulty for the next time.
   Future<void> _newGame() async {
     final settings = widget.stores.settings;
-    final difficulty = await showFreeCellNewGameSheet(
+    final choice = await showFreeCellNewGameSheet(
       context,
       initial: settings.freecellDifficulty,
-      abandons: _controller.moves > 0 && _controller.result == null,
+      inProgress: _controller.moves > 0 && _controller.result == null,
     );
-    if (difficulty == null || !mounted) return;
+    if (choice == null || !mounted) return;
+    final (options: difficulty, :abandon) = choice;
     unawaited(settings.setFreecellDifficulty(difficulty));
-    _controller.newGame(difficulty: difficulty);
+    _controller.newGame(difficulty: difficulty, abandon: abandon);
   }
 
   void _openStats() => context.push('/stats/${FreeCellController.gameId}');
