@@ -4,6 +4,11 @@ import '../l10n/app_localizations.dart';
 
 String _twoDigits(int value) => value.toString().padLeft(2, '0');
 
+/// [text] with its narrow no-break spaces (U+202F, in French numbers and
+/// English hours) made plain no-break spaces: the bundled font has no narrow
+/// one, and the web app offline cannot download a font that has it.
+String _bundledSpaces(String text) => text.replaceAll('\u202F', '\u00A0');
+
 /// Clock style: `4:05` or `1:04:05`.
 String formatClock(Duration duration) {
   final hours = duration.inHours;
@@ -41,7 +46,7 @@ String formatShortDate(DateTime dateTime, String localeName) =>
 
 /// An hour of the day: `6 AM` in English, `06 h` in French.
 String formatHour(int hour, String localeName) =>
-    DateFormat.j(localeName).format(DateTime(2000, 1, 1, hour));
+    _bundledSpaces(DateFormat.j(localeName).format(DateTime(2000, 1, 1, hour)));
 
 /// Short name of [weekday] (`DateTime.monday` to `DateTime.sunday`): `Mon`
 /// in English.
@@ -59,7 +64,7 @@ List<int> weekdaysInOrder(String localeName) {
 
 /// `12,345` in English, `12 345` in French.
 String formatCount(int value, String localeName) =>
-    NumberFormat.decimalPattern(localeName).format(value);
+    _bundledSpaces(NumberFormat.decimalPattern(localeName).format(value));
 
 /// `33%` in English, `33 %` in French.
 String formatPercent(double ratio, String localeName) =>

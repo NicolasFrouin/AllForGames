@@ -34,6 +34,18 @@ void main() {
     });
   });
 
+  test('numbers and hours use no narrow space: the bundled font has none', () {
+    expect(formatCount(12345, fr.localeName), '12\u00A0345');
+    expect(formatHour(18, en.localeName), '6\u00A0PM');
+    for (final text in [
+      formatCount(1234567, fr.localeName),
+      formatHour(9, en.localeName),
+      formatHour(9, fr.localeName),
+    ]) {
+      expect(text.contains('\u202F'), isFalse, reason: text);
+    }
+  });
+
   test('formatPercent rounds to a whole percent', () {
     expect(formatPercent(1 / 3, en.localeName), '33%');
     expect(formatPercent(2 / 3, en.localeName), '67%');
