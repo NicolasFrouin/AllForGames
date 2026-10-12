@@ -4,8 +4,8 @@ Guide for AI agents working on this repo. Read it fully before you change code.
 
 ## Project
 
-All For Games: one Flutter app with a hub of classic games: Klondike, FreeCell, Spider, TriPeaks, Mahjong and
-Minesweeper.
+All For Games: one Flutter app with a hub of classic games: Klondike, FreeCell, Spider, TriPeaks, Mahjong,
+Minesweeper and Sudoku.
 Targets: web and Android first, then iOS and desktop, from one codebase.
 Product priorities: rich player statistics, a polished hub, good unit + widget + e2e tests.
 
@@ -27,6 +27,7 @@ dart run tool/generate_spider_deals.dart      # regenerates spider_deals.dart (a
 dart run tool/generate_tripeaks_deals.dart    # regenerates tripeaks_deals.dart (about 10 seconds; --stats N)
 dart run tool/mahjong_difficulty.dart [deals] # win rates of simulated players per Mahjong level and shape
 dart run tool/minesweeper_generation.dart [n] # Minesweeper generator time per level (node runs its JS build too)
+dart run tool/generate_sudoku_puzzles.dart    # regenerates sudoku_puzzles.dart (about 5 seconds; --stats N)
 flutter build web --release --wasm            # release web build in build/web
 scripts/make_icons.sh                         # app icons of every platform from assets/icon/*.svg (rsvg-convert, magick)
 flutter build apk                             # release APK (android/key.properties signs it, else the debug key)
@@ -61,7 +62,7 @@ lib/
                              /freecell?difficulty=hard&seed=42, /spider?difficulty=hard&seed=42,
                              /tripeaks?difficulty=hard&seed=42, /minesweeper?difficulty=hard&seed=42,
                              /mahjong?mode=tray&difficulty=easy&shape=classic&belt=true&seed=42, /stats,
-                             /stats/:gameId,
+                             /sudoku?level=7&seed=42, /stats/:gameId,
                              /achievements?game=klondike, /skins?kind=tileStyle, /settings (without params, a
                              game route continues the saved game; the two pages open on their first tab)
   app_stores.dart            AppStores: every store (stats, saves, settings, achievements), loaded once, given to
@@ -75,7 +76,8 @@ lib/
                              entry)
   skins/                     card_backs (CardBackSkin list, CardBackView), tile_styles (TileStyle list for Mahjong:
                              colors, optional gilding `ornamentColor` and relief `domed`; TileStylePreview),
-                             minesweeper_themes (MinesweeperTheme list, preview), skin_rewards
+                             minesweeper_themes (MinesweeperTheme list, preview), sudoku_themes (SudokuTheme
+                             list, preview), skin_rewards
                              (SkinReward, skinRewardOf: what an achievement unlocks), skins_screen (Skins page: one
                              tab per SkinKind from `_tabOf`: label, games that use it, skins; grouped as free, then
                              by game of the unlocking achievement)
@@ -123,6 +125,11 @@ lib/
                              tap), minesweeper_difficulty, minesweeper_motion; Flutter: minesweeper_art (vector
                              cells in a MinesweeperTheme), minesweeper_controller, minesweeper_board (two painters),
                              screen (loss banner), sheet, _texts
+  games/sudoku/              pure Dart: sudoku_grid (units, peers, 81-digit strings), sudoku_solver (bit masks:
+                             count solutions), sudoku_grader (human techniques -> level), sudoku_puzzles
+                             (generated), sudoku_deal (a puzzle of the level changed by the seed), sudoku_state
+                             (rules), sudoku_level (enum); Flutter: sudoku_controller, sudoku_board (painter, win
+                             wave), sudoku_keypad, screen, sheet, _texts
   games/win_dialog.dart      showWinDialog: the win dialog of every game (extra rows per game); returns a WinChoice:
                              play again, other options (the screen opens its new game sheet), back to games;
                              showSolvedDialog: the same choices after a game played for the player (no record)
@@ -164,7 +171,8 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   `generated`/`classic`, unknown = generated; `settings.mahjong.belt`: bool, absent = false;
   `settings.<game>.difficulty`: `easy`/`medium`/`hard`, unknown = medium;
   `settings.minesweeper.flagHoldMs`: int, absent = 300, limited to 150..750; `settings.minesweeper.vibrate`: bool,
-  absent = false; `settings.pinnedGames`: string list of game ids, the last pinned first), `achievements.<id>` per
+  absent = false; `settings.sudoku.level`: `level1`..`level12`, unknown = level3; `settings.sudoku.notes`: bool,
+  absent = false; `settings.sudokuTheme`: theme id, unknown = classic; `settings.pinnedGames`: string list of game ids, the last pinned first), `achievements.<id>` per
   unlocked achievement (UTC ISO date), `update.dismissed` (the version the player answered Later to).
   Catch storage errors (blocked or full storage must not break the app).
 - **ChangeNotifier stores** notify *after* an `await`, never synchronously in a mutating call:
@@ -311,6 +319,19 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   500 ms) and, with the vibration setting (off by default), buzzes the phone. Two fingers zoom every board
   (`InteractiveViewer`, cells up to `maxZoomCell`); cells smaller than `minCell` keep that size and the board pans. A
   new board size resets the zoom.
+- **Sudoku**: 12 levels (`SudokuLevel`; records: variant `classic`, difficulty `level1`..`level12`). The puzzles are
+  generated offline (`tool/generate_sudoku_puzzles.dart`, 50 per level, each with one solution) and graded by
+  `gradeSudoku`, a solver that always takes the simplest human technique (singles, locked candidates, subsets, fish,
+  wings, chains; level 12 = none of them solves it). A deal (`SudokuDeal.deal(level, seed)`, must never change) picks
+  a puzzle of the level and changes it with `DealRandom`: digits renamed, rows and columns moved inside their bands
+  and stacks, bands and stacks moved, maybe turned over the diagonal; the one solution and the grade stay
+  (`sudoku_puzzles_test` checks it). The solution is solved at deal time (a few ms) and saved. The rules accept any
+  digit in an empty cell: a digit twice in a unit shows as a clash (`conflicts`), and the grid wins when it equals the
+  solution. A digit takes itself out of the small numbers of its row, column and box. Undo and redo keep the changed
+  cells of each action (saved with the game). Small numbers (notes) need the setting: it shows the Notes switch of the
+  keypad. Score = 10 per cell filled right × level number. Layout: the grid as large as it fits; under it on a tall
+  screen (3 rows of 3 digit keys when they fit, else one row of 9), beside it on a wide one. Keyboard: digits,
+  Backspace/Delete/0, arrows, N (notes), Ctrl/Cmd + Z, Y, Shift + Z.
 - **In-app update** (Android only, `Platform.isAndroid`: never in tests, web or desktop): the check reads
   `https://api.github.com/repos/NicolasFrouin/AllForGames/releases` (the repository is public: no key in the app),
   skips drafts and tags with a suffix, and offers the highest version above the installed `versionName` (the tag
@@ -327,12 +348,13 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   `stat-winRate` or `stat-<detailKey>`, `variant-<id>`, `difficulty-<name>` (and `-all`) on the stats page,
   `overview-stats-button`, `pin-<id>` (hub), `overview-stat-<id>`, `overview-game-<gameId>`, `overview-recent-<i>`,
   `overview-achievements`, `overview-activity` on /stats, `settings-button`, `language-<code>`,
-  `tray-side-<side>`, `flag-hold`, `flag-hold-value`, `flag-vibrate` on /settings,
+  `tray-side-<side>`, `flag-hold`, `flag-hold-value`, `flag-vibrate`, `sudoku-notes` on /settings,
   `update-button`, `update-dialog`, `update-later`, `update-now`, `update-progress`, `update-percent`, `update-error`,
   `update-retry`, `update-cancel` (hub), `achievements-button`, `skins-button`, `achievement-<id>`,
   `achievement-tab-<gameId>`, `achievements-count` (all) and `achievements-count-<gameId>`, `skins-tab-<kind>`
   (`SkinKind` name), `skins-group-<free|gameId>`,
-  `card-back-<id>`, `tile-style-<id>`, `minesweeper-theme-<id>`, `unlocked-<id>` in the win dialog, `play-again`,
+  `card-back-<id>`, `tile-style-<id>`, `minesweeper-theme-<id>`, `sudoku-theme-<id>`, `unlocked-<id>` in the win
+  dialog, `play-again`,
   `other-options` (the win dialog, Mahjong's full tray dialog and Minesweeper's loss banner); Mahjong:
   `tile-<id>`, `hint`, `shuffle`, `stuck-banner`, `tiles-value`, `pairs-value`, `mode-value` (tray mode),
   `new-game-mode-<mode>`, `new-game-goal-<tiles|discs>`, `new-game-shape-<shape>`, `new-game-belt`,
@@ -341,7 +363,8 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   `cascade-<i>`, `foundation-<i>`, `auto-complete`; Spider: `stock`, `column-<i>`, `foundation-<i>`, `deals-left`,
   card ids like `spades-1-7`; TriPeaks: `stock`, `waste`, `run-value`, `stock-value`, `stuck-banner`, `stuck-undo`,
   `stuck-new-game`; Minesweeper: `minesweeper-board` (tests tap cells by position on it), `flag-mode`, `hint`,
-  `mines-left-value`, `time-value`, `loss-banner`, `try-again`, `lost-new-game`, ...).
+  `mines-left-value`, `time-value`, `loss-banner`, `try-again`, `lost-new-game`; Sudoku: `sudoku-board` (tests tap
+  cells by position on it), `digit-<d>`, `undo`, `redo`, `erase`, `notes`, `new-game-level`, `new-game-hint`, ...).
   Keep them stable. Keys never depend on the language (no `ValueKey('stat-$label')`).
 - Keep code simple: no extra abstraction or packages unless clearly needed. Match the existing style; comments only for the why.
 

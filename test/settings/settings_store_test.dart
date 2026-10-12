@@ -4,6 +4,7 @@ import 'package:all_for_games/games/freecell/freecell_difficulty.dart';
 import 'package:all_for_games/games/klondike/klondike_difficulty.dart';
 import 'package:all_for_games/games/mahjong/mahjong_difficulty.dart';
 import 'package:all_for_games/games/spider/spider_difficulty.dart';
+import 'package:all_for_games/games/sudoku/sudoku_level.dart';
 import 'package:all_for_games/settings/settings_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -339,6 +340,28 @@ void main() {
     await store.setMahjongShape(MahjongShape.classic);
 
     expect((await SettingsStore.load()).mahjongShape, MahjongShape.classic);
+  });
+
+  test('Sudoku: level 3, no small numbers and the classic theme until the '
+      'player chooses; an unknown value is the default', () async {
+    var store = await createStore({
+      SettingsStore.sudokuLevelKey: 'level13',
+      SettingsStore.sudokuThemeKey: 'plaid',
+    });
+    expect(store.sudokuLevel, SudokuLevel.level3);
+    expect(store.sudokuNotes, isFalse);
+    expect(store.sudokuThemeId, 'classic');
+
+    await store.setSudokuLevel(SudokuLevel.level11);
+    await store.setSudokuNotes(true);
+    await store.setSudokuTheme('chalk');
+
+    store = await SettingsStore.load();
+    expect(store.sudokuLevel, SudokuLevel.level11);
+    expect(store.sudokuNotes, isTrue);
+    expect(store.sudokuThemeId, 'chalk');
+    await store.setSudokuTheme('plaid');
+    expect((await SettingsStore.load()).sudokuThemeId, 'classic');
   });
 
   test('a new Mahjong deal has no belt until the player turns it on', () async {

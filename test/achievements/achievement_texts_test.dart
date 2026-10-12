@@ -3,6 +3,7 @@ import 'package:all_for_games/achievements/achievements.dart';
 import 'package:all_for_games/l10n/app_localizations.dart';
 import 'package:all_for_games/skins/card_backs.dart';
 import 'package:all_for_games/skins/minesweeper_themes.dart';
+import 'package:all_for_games/skins/sudoku_themes.dart';
 import 'package:all_for_games/skins/tile_styles.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -36,6 +37,12 @@ void main() {
     test('every Minesweeper theme has a name in $language', () {
       for (final MinesweeperTheme(:id) in minesweeperThemes) {
         expect(minesweeperThemeName(id, l10n), isTextOf(id), reason: id);
+      }
+    });
+
+    test('every Sudoku theme has a name in $language', () {
+      for (final SudokuTheme(:id) in sudokuThemes) {
+        expect(sudokuThemeName(id, l10n), isTextOf(id), reason: id);
       }
     });
   }

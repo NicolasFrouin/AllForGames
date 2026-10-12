@@ -14,6 +14,8 @@ import '../games/minesweeper/minesweeper_controller.dart';
 import '../games/minesweeper/minesweeper_difficulty.dart';
 import '../games/spider/spider_controller.dart';
 import '../games/spider/spider_difficulty.dart';
+import '../games/sudoku/sudoku_controller.dart';
+import '../games/sudoku/sudoku_level.dart';
 import '../games/tripeaks/tripeaks_controller.dart';
 import '../games/tripeaks/tripeaks_difficulty.dart';
 import '../stats/game_record.dart';
@@ -57,6 +59,7 @@ const achievementGameIds = [
   TriPeaksController.gameId,
   MahjongController.gameId,
   MinesweeperController.gameId,
+  SudokuController.gameId,
   allGamesId,
 ];
 
@@ -377,11 +380,60 @@ const achievements = [
     progress: _minesweeperWinCount,
   ),
   Achievement(
+    id: 'sudoku.firstWin',
+    gameId: SudokuController.gameId,
+    icon: Icons.grid_3x3,
+    goal: 1,
+    progress: _sudokuWinCount,
+  ),
+  Achievement(
+    id: 'sudoku.level4Win',
+    gameId: SudokuController.gameId,
+    icon: Icons.trending_up,
+    goal: 1,
+    progress: _sudokuLevel4Wins,
+  ),
+  Achievement(
+    id: 'sudoku.level8Win',
+    gameId: SudokuController.gameId,
+    icon: Icons.lightbulb,
+    goal: 1,
+    progress: _sudokuLevel8Wins,
+  ),
+  Achievement(
+    id: 'sudoku.level12Win',
+    gameId: SudokuController.gameId,
+    icon: Icons.school,
+    goal: 1,
+    progress: _sudokuLevel12Wins,
+  ),
+  Achievement(
+    id: 'sudoku.noNotesWin',
+    gameId: SudokuController.gameId,
+    icon: Icons.edit_off,
+    goal: 1,
+    progress: _sudokuNoNotesWins,
+  ),
+  Achievement(
+    id: 'sudoku.fastWin',
+    gameId: SudokuController.gameId,
+    icon: Icons.edit,
+    goal: 1,
+    progress: _sudokuFastWins,
+  ),
+  Achievement(
+    id: 'sudoku.wins25',
+    gameId: SudokuController.gameId,
+    icon: Icons.apps,
+    goal: 25,
+    progress: _sudokuWinCount,
+  ),
+  Achievement(
     id: 'all.everyGame',
     gameId: allGamesId,
     icon: Icons.category,
     // Every game of achievementGameIds but allGamesId (a test checks it).
-    goal: 6,
+    goal: 7,
     progress: _gamesWon,
   ),
   Achievement(
@@ -651,6 +703,48 @@ int _minesweeperNoFlagWins(List<GameRecord> records) =>
               (record.difficulty == MinesweeperDifficulty.medium.name ||
                   record.difficulty == MinesweeperDifficulty.hard.name) &&
               record.details[MinesweeperStatKeys.flagsPlaced] == 0,
+        )
+        .length;
+
+int _sudokuWinCount(List<GameRecord> records) =>
+    _winsOf(records, SudokuController.gameId).length;
+
+/// The level number of a Sudoku record, 0 when it has none.
+int _sudokuLevelOf(GameRecord record) =>
+    SudokuLevel.values.asNameMap()[record.difficulty]?.number ?? 0;
+
+int _sudokuLevel4Wins(List<GameRecord> records) => _winsOf(
+  records,
+  SudokuController.gameId,
+).where((record) => _sudokuLevelOf(record) >= 4).length;
+
+int _sudokuLevel8Wins(List<GameRecord> records) => _winsOf(
+  records,
+  SudokuController.gameId,
+).where((record) => _sudokuLevelOf(record) >= 8).length;
+
+int _sudokuLevel12Wins(List<GameRecord> records) => _winsOf(
+  records,
+  SudokuController.gameId,
+).where((record) => _sudokuLevelOf(record) == 12).length;
+
+/// Level 6 and up: the first levels need no small numbers anyway.
+int _sudokuNoNotesWins(List<GameRecord> records) =>
+    _winsOf(records, SudokuController.gameId)
+        .where(
+          (record) =>
+              _sudokuLevelOf(record) >= 6 &&
+              (record.details[SudokuStatKeys.notesPlaced] ?? 0) == 0,
+        )
+        .length;
+
+/// Level 3 and up in under 5 minutes: about 50 cells, six seconds each.
+int _sudokuFastWins(List<GameRecord> records) =>
+    _winsOf(records, SudokuController.gameId)
+        .where(
+          (record) =>
+              _sudokuLevelOf(record) >= 3 &&
+              record.playTime < const Duration(minutes: 5),
         )
         .length;
 

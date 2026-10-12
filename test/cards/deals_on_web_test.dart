@@ -3,6 +3,9 @@ import 'package:all_for_games/games/klondike/klondike_state.dart';
 import 'package:all_for_games/games/mahjong/mahjong_difficulty.dart';
 import 'package:all_for_games/games/spider/spider_difficulty.dart';
 import 'package:all_for_games/games/spider/spider_state.dart';
+import 'package:all_for_games/games/sudoku/sudoku_deal.dart';
+import 'package:all_for_games/games/sudoku/sudoku_grid.dart';
+import 'package:all_for_games/games/sudoku/sudoku_level.dart';
 import 'package:all_for_games/games/tripeaks/tripeaks_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -13,6 +16,7 @@ import '../games/mahjong/mahjong_shapes_test.dart' as shapes;
 import '../games/mahjong/mahjong_tray_test.dart' as tray;
 import '../games/minesweeper/minesweeper_generator_test.dart' as minesweeper;
 import '../games/spider/spider_state_test.dart' as spider;
+import '../games/sudoku/sudoku_test_helpers.dart' as sudoku;
 import '../games/tripeaks/tripeaks_state_test.dart' as tripeaks;
 
 /// Every game deals from a seed, and the lists of winnable deals were proven
@@ -60,5 +64,11 @@ void main() {
 
   test('Minesweeper', () {
     expect(minesweeper.seed1Hard(), minesweeper.seed1HardMines);
+  });
+
+  test('Sudoku', () {
+    final deal = SudokuDeal.deal(SudokuLevel.level1, 1);
+    expect(SudokuGrid.encode(deal.givens), sudoku.seed1Level1Givens);
+    expect(SudokuGrid.encode(deal.solution), sudoku.seed1Level1Solution);
   });
 }

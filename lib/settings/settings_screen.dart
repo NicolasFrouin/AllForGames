@@ -139,6 +139,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 16),
+                _Section(
+                  title: l10n.sudokuTitle,
+                  children: [
+                    SwitchListTile(
+                      key: const ValueKey('sudoku-notes'),
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(l10n.settingsSudokuNotes),
+                      subtitle: Text(l10n.settingsSudokuNotesHint),
+                      value: settings.sudokuNotes,
+                      onChanged: settings.setSudokuNotes,
+                    ),
+                  ],
+                ),
               ],
             ),
           ),

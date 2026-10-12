@@ -13,6 +13,8 @@ import 'games/minesweeper/minesweeper_difficulty.dart';
 import 'games/minesweeper/minesweeper_screen.dart';
 import 'games/spider/spider_difficulty.dart';
 import 'games/spider/spider_screen.dart';
+import 'games/sudoku/sudoku_level.dart';
+import 'games/sudoku/sudoku_screen.dart';
 import 'games/tripeaks/tripeaks_difficulty.dart';
 import 'games/tripeaks/tripeaks_screen.dart';
 import 'hub/hub_screen.dart';
@@ -114,6 +116,23 @@ class _AllForGamesAppState extends State<AllForGamesApp> {
                 stores: widget.stores,
                 difficulty: MinesweeperDifficulty.values
                     .asNameMap()[query['difficulty']],
+                seed: int.tryParse(query['seed'] ?? ''),
+              );
+            },
+          ),
+          GoRoute(
+            path: 'sudoku',
+            // Query parameters start a given game: /sudoku?level=7&seed=42.
+            // Without them, the saved game continues.
+            builder: (context, state) {
+              final query = state.uri.queryParameters;
+              return SudokuScreen(
+                stores: widget.stores,
+                level: switch (int.tryParse(query['level'] ?? '')) {
+                  final number? when number >= 1 && number <= 12 =>
+                    SudokuLevel.ofNumber(number),
+                  _ => null,
+                },
                 seed: int.tryParse(query['seed'] ?? ''),
               );
             },

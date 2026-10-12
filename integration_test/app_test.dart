@@ -19,12 +19,14 @@ import 'fast_animations.dart';
 import 'mahjong_flows.dart';
 import 'minesweeper_flows.dart';
 import 'spider_flows.dart';
+import 'sudoku_flows.dart';
 import 'tripeaks_flows.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   mahjongFlows();
   minesweeperFlows();
+  sudokuFlows();
   spiderFlows();
   freecellFlows();
   tripeaksFlows();

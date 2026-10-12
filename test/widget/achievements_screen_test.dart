@@ -131,6 +131,7 @@ void main() {
       'tripeaks': ('TriPeaks', '0/6', '0 / 6 unlocked'),
       'mahjong': ('Mahjong', '2/13', '2 / 13 unlocked'),
       'minesweeper': ('Minesweeper', '0/6', '0 / 6 unlocked'),
+      'sudoku': ('Sudoku', '0/7', '0 / 7 unlocked'),
       'all': ('All games', '0/3', '0 / 3 unlocked'),
     };
     for (final MapEntry(key: gameId, value: (title, tabCount, count))
@@ -149,7 +150,7 @@ void main() {
           if (achievement.gameId == gameId) achievement.id,
       }, reason: gameId);
     }
-    expect(textIn('all.everyGame', 'progress'), '2 / 6');
+    expect(textIn('all.everyGame', 'progress'), '2 / 7');
 
     await openTab(tester, 'mahjong');
     expect(

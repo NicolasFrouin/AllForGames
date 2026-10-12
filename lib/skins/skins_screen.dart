@@ -12,12 +12,14 @@ import '../games/klondike/klondike_controller.dart';
 import '../games/mahjong/mahjong_controller.dart';
 import '../games/minesweeper/minesweeper_controller.dart';
 import '../games/spider/spider_controller.dart';
+import '../games/sudoku/sudoku_controller.dart';
 import '../games/tripeaks/tripeaks_controller.dart';
 import '../l10n/app_localizations.dart';
 import '../stats/game_record.dart';
 import 'card_backs.dart';
 import 'minesweeper_themes.dart';
 import 'skin_rewards.dart';
+import 'sudoku_themes.dart';
 import 'tile_styles.dart';
 
 /// A skin as the page shows it.
@@ -130,6 +132,26 @@ _KindTab _tabOf(SkinKind kind) => switch (kind) {
         ),
     ],
   ),
+  SkinKind.sudokuTheme => _KindTab(
+    label: (l10n) => l10n.sudokuTitle,
+    icon: Icons.grid_3x3,
+    title: (l10n) => l10n.sudokuThemes,
+    gameIds: const [SudokuController.gameId],
+    skins: (stores, l10n) => [
+      for (final theme in sudokuThemes)
+        _Skin(
+          key: 'sudoku-theme-${theme.id}',
+          name: sudokuThemeName(theme.id, l10n),
+          preview: Center(
+            child: SudokuThemePreview(theme: theme, width: _SkinPreview.width),
+          ),
+          selected: theme.id == stores.settings.sudokuThemeId,
+          unlocked: stores.achievements.isUnlockedBy(theme.unlockedBy),
+          unlockedBy: theme.unlockedBy,
+          select: () => stores.settings.setSudokuTheme(theme.id),
+        ),
+    ],
+  ),
 };
 
 /// [skins] by where they come from: the free ones first (key null), then
@@ -150,8 +172,8 @@ Map<String?, List<_Skin>> _bySource(List<_Skin> skins) {
   return groups..removeWhere((_, list) => list.isEmpty);
 }
 
-/// Every card back, Mahjong tile style and Minesweeper theme, one tab per
-/// [SkinKind]: tapping an unlocked one selects it for the games.
+/// Every card back, Mahjong tile style, Minesweeper and Sudoku theme, one
+/// tab per [SkinKind]: tapping an unlocked one selects it for the games.
 class SkinsScreen extends StatelessWidget {
   const SkinsScreen({super.key, required this.stores, this.kind});
 

@@ -8,10 +8,12 @@ import '../games/klondike/klondike_difficulty.dart';
 import '../games/mahjong/mahjong_difficulty.dart';
 import '../games/minesweeper/minesweeper_difficulty.dart';
 import '../games/spider/spider_difficulty.dart';
+import '../games/sudoku/sudoku_level.dart';
 import '../games/tripeaks/tripeaks_difficulty.dart';
 import '../l10n/app_localizations.dart';
 import '../skins/card_backs.dart';
 import '../skins/minesweeper_themes.dart';
+import '../skins/sudoku_themes.dart';
 import '../skins/tile_styles.dart';
 
 /// The player's settings, one storage key per setting.
@@ -36,6 +38,9 @@ class SettingsStore extends ChangeNotifier {
     this._pinnedGames,
     this._mahjongShape,
     this._mahjongBelt,
+    this._sudokuLevel,
+    this._sudokuNotes,
+    this._sudokuThemeId,
   );
 
   static const localeKey = 'settings.locale';
@@ -56,6 +61,9 @@ class SettingsStore extends ChangeNotifier {
   static const minesweeperThemeKey = 'settings.minesweeperTheme';
   static const minesweeperFlagHoldKey = 'settings.minesweeper.flagHoldMs';
   static const minesweeperVibrateKey = 'settings.minesweeper.vibrate';
+  static const sudokuLevelKey = 'settings.sudoku.level';
+  static const sudokuNotesKey = 'settings.sudoku.notes';
+  static const sudokuThemeKey = 'settings.sudokuTheme';
 
   /// How long a finger holds a Minesweeper cell to flag it, in ms. Flutter's
   /// usual long press (500 ms) felt slow.
@@ -85,6 +93,9 @@ class SettingsStore extends ChangeNotifier {
   List<String> _pinnedGames;
   MahjongShape _mahjongShape;
   bool _mahjongBelt;
+  SudokuLevel _sudokuLevel;
+  bool _sudokuNotes;
+  String _sudokuThemeId;
 
   static Future<SettingsStore> load([SharedPreferencesAsync? prefs]) async {
     prefs ??= SharedPreferencesAsync();
@@ -106,6 +117,9 @@ class SettingsStore extends ChangeNotifier {
     var pinnedGames = <String>[];
     var mahjongShape = MahjongShape.generated;
     var mahjongBelt = false;
+    var sudokuLevel = SudokuLevel.level3;
+    var sudokuNotes = false;
+    var sudokuThemeId = classicSudokuTheme.id;
     try {
       locale = _supportedLocale(await prefs.getString(localeKey));
       cardBackId = _knownCardBack(await prefs.getString(cardBackKey));
@@ -163,6 +177,13 @@ class SettingsStore extends ChangeNotifier {
           )] ??
           MahjongShape.generated;
       mahjongBelt = await prefs.getBool(mahjongBeltKey) ?? false;
+      sudokuLevel =
+          SudokuLevel.values.asNameMap()[await prefs.getString(
+            sudokuLevelKey,
+          )] ??
+          SudokuLevel.level3;
+      sudokuNotes = await prefs.getBool(sudokuNotesKey) ?? false;
+      sudokuThemeId = _knownSudokuTheme(await prefs.getString(sudokuThemeKey));
     } on Object catch (error) {
       // Storage can be blocked (for example site data off in the browser).
       // The app still works, it only keeps the settings of this session.
@@ -188,6 +209,9 @@ class SettingsStore extends ChangeNotifier {
       pinnedGames,
       mahjongShape,
       mahjongBelt,
+      sudokuLevel,
+      sudokuNotes,
+      sudokuThemeId,
     );
   }
 
@@ -252,6 +276,15 @@ class SettingsStore extends ChangeNotifier {
 
   /// Whether the phone buzzes when a hold flags a Minesweeper cell.
   bool get minesweeperVibrate => _minesweeperVibrate;
+
+  /// Level of the last new Sudoku the player dealt, for the next one.
+  SudokuLevel get sudokuLevel => _sudokuLevel;
+
+  /// Whether the Sudoku keypad can write small numbers (candidates).
+  bool get sudokuNotes => _sudokuNotes;
+
+  /// Id of the theme Sudoku draws its grid with.
+  String get sudokuThemeId => _sudokuThemeId;
 
   /// Listeners are told after the write, never during the call, like the
   /// other stores.
@@ -430,6 +463,35 @@ class SettingsStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setSudokuLevel(SudokuLevel level) async {
+    _sudokuLevel = level;
+    await _guard(
+      'save the Sudoku level',
+      () => _prefs.setString(sudokuLevelKey, level.name),
+    );
+    notifyListeners();
+  }
+
+  Future<void> setSudokuNotes(bool notes) async {
+    _sudokuNotes = notes;
+    await _guard(
+      'save the Sudoku small numbers',
+      () => _prefs.setBool(sudokuNotesKey, notes),
+    );
+    notifyListeners();
+  }
+
+  /// Selects the Sudoku theme [id] (classic for an unknown id). The caller
+  /// checks that the player has unlocked it.
+  Future<void> setSudokuTheme(String id) async {
+    _sudokuThemeId = _knownSudokuTheme(id);
+    await _guard(
+      'save the Sudoku theme',
+      () => _prefs.setString(sudokuThemeKey, _sudokuThemeId),
+    );
+    notifyListeners();
+  }
+
   /// Null for a language the app does not have (for example saved by a newer
   /// app version).
   static Locale? _supportedLocale(String? languageCode) {
@@ -448,6 +510,9 @@ class SettingsStore extends ChangeNotifier {
   /// Classic for a Minesweeper theme the app does not have.
   static String _knownMinesweeperTheme(String? id) =>
       minesweeperThemeById(id ?? '').id;
+
+  /// Classic for a Sudoku theme the app does not have.
+  static String _knownSudokuTheme(String? id) => sudokuThemeById(id ?? '').id;
 
   static int _knownFlagHold(int? ms) =>
       (ms ?? defaultFlagHoldMs).clamp(minFlagHoldMs, maxFlagHoldMs);

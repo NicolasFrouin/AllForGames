@@ -4,24 +4,27 @@ import '../achievements/achievement_texts.dart';
 import '../l10n/app_localizations.dart';
 import 'card_backs.dart';
 import 'minesweeper_themes.dart';
+import 'sudoku_themes.dart';
 import 'tile_styles.dart';
 
-enum SkinKind { cardBack, tileStyle, minesweeperTheme }
+enum SkinKind { cardBack, tileStyle, minesweeperTheme, sudokuTheme }
 
-/// A skin that an achievement unlocks: a card back, a Mahjong tile style or
-/// a Minesweeper theme.
+/// A skin that an achievement unlocks: a card back, a Mahjong tile style, a
+/// Minesweeper theme or a Sudoku theme.
 class SkinReward {
   const SkinReward(this.kind, this.id);
 
   final SkinKind kind;
 
-  /// Id of the [CardBackSkin], [TileStyle] or [MinesweeperTheme].
+  /// Id of the [CardBackSkin], [TileStyle], [MinesweeperTheme] or
+  /// [SudokuTheme].
   final String id;
 
   String name(AppLocalizations l10n) => switch (kind) {
     SkinKind.cardBack => cardBackName(id, l10n),
     SkinKind.tileStyle => tileStyleName(id, l10n),
     SkinKind.minesweeperTheme => minesweeperThemeName(id, l10n),
+    SkinKind.sudokuTheme => sudokuThemeName(id, l10n),
   };
 
   /// What an achievement gives, on the achievements page.
@@ -31,6 +34,7 @@ class SkinReward {
     SkinKind.minesweeperTheme => l10n.achievementRewardMinesweeperTheme(
       name(l10n),
     ),
+    SkinKind.sudokuTheme => l10n.achievementRewardSudokuTheme(name(l10n)),
   };
 
   /// What a just unlocked achievement gives, in the win dialog.
@@ -38,6 +42,7 @@ class SkinReward {
     SkinKind.cardBack => l10n.newCardBack(name(l10n)),
     SkinKind.tileStyle => l10n.newTileStyle(name(l10n)),
     SkinKind.minesweeperTheme => l10n.newMinesweeperTheme(name(l10n)),
+    SkinKind.sudokuTheme => l10n.newSudokuTheme(name(l10n)),
   };
 
   /// The skin [width] pixels wide: a card back, a sample tile or a corner
@@ -54,6 +59,10 @@ class SkinReward {
     ),
     SkinKind.minesweeperTheme => MinesweeperThemePreview(
       theme: minesweeperThemeById(id),
+      width: width,
+    ),
+    SkinKind.sudokuTheme => SudokuThemePreview(
+      theme: sudokuThemeById(id),
       width: width,
     ),
   };
@@ -74,6 +83,11 @@ SkinReward? skinRewardOf(String achievementId) {
   for (final theme in minesweeperThemes) {
     if (theme.unlockedBy == achievementId) {
       return SkinReward(SkinKind.minesweeperTheme, theme.id);
+    }
+  }
+  for (final theme in sudokuThemes) {
+    if (theme.unlockedBy == achievementId) {
+      return SkinReward(SkinKind.sudokuTheme, theme.id);
     }
   }
   return null;

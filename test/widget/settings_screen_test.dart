@@ -125,6 +125,18 @@ void main() {
     expect((await SettingsStore.load()).minesweeperVibrate, isTrue);
   });
 
+  testWidgets('the switch turns the Sudoku small numbers on', (tester) async {
+    await pumpHub(tester);
+    await openSettings(tester);
+
+    final notes = find.byKey(const ValueKey('sudoku-notes'));
+    await tester.scrollUntilVisible(notes, 200);
+    await tester.tap(notes);
+    await tester.pumpAndSettle();
+
+    expect((await SettingsStore.load()).sudokuNotes, isTrue);
+  });
+
   testWidgets('the slider sets the time to hold a Minesweeper cell for a '
       'flag', (tester) async {
     await pumpHub(tester);

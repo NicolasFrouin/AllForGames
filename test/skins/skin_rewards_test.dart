@@ -3,6 +3,7 @@ import 'package:all_for_games/l10n/app_localizations.dart';
 import 'package:all_for_games/skins/card_backs.dart';
 import 'package:all_for_games/skins/minesweeper_themes.dart';
 import 'package:all_for_games/skins/skin_rewards.dart';
+import 'package:all_for_games/skins/sudoku_themes.dart';
 import 'package:all_for_games/skins/tile_styles.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -17,6 +18,8 @@ void main() {
           if (style.unlockedBy == achievement.id) style.id,
         for (final theme in minesweeperThemes)
           if (theme.unlockedBy == achievement.id) theme.id,
+        for (final theme in sudokuThemes)
+          if (theme.unlockedBy == achievement.id) theme.id,
       ];
       expect(skins, hasLength(1), reason: achievement.id);
     }
@@ -29,6 +32,8 @@ void main() {
     expect((jade.kind, jade.id), (SkinKind.tileStyle, 'jade'));
     final ocean = skinRewardOf('minesweeper.firstWin')!;
     expect((ocean.kind, ocean.id), (SkinKind.minesweeperTheme, 'ocean'));
+    final paper = skinRewardOf('sudoku.firstWin')!;
+    expect((paper.kind, paper.id), (SkinKind.sudokuTheme, 'paper'));
     expect(skinRewardOf('unknown'), isNull);
   });
 

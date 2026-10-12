@@ -62,8 +62,9 @@ GameRecord perfect(String gameId, {String? variant}) => game(
       },
   playTime: const Duration(minutes: 1),
   undos: 0,
-  difficulty: 'hard',
+  difficulty: gameId == 'sudoku' ? 'level12' : 'hard',
   details: const {
+    'notesPlaced': 0,
     'mostFreeCellsUsed': 0,
     'hints': 0,
     'bestCombo': 50,
@@ -169,6 +170,7 @@ void main() {
       'tripeaks',
       'mahjong',
       'minesweeper',
+      'sudoku',
     ];
     for (final gameId in games) {
       final others = [
@@ -695,6 +697,79 @@ void main() {
           reason: difficulty,
         );
       }
+    });
+  });
+
+  group('Sudoku', () {
+    GameRecord sudoku({
+      int level = 1,
+      Duration playTime = const Duration(minutes: 20),
+      int notes = 12,
+      GameOutcome outcome = GameOutcome.won,
+    }) => game(
+      gameId: 'sudoku',
+      variant: 'classic',
+      outcome: outcome,
+      playTime: playTime,
+      difficulty: 'level$level',
+      details: {'notesPlaced': notes},
+    );
+
+    test('win counts count only won Sudoku games', () {
+      final records = [
+        sudoku(),
+        sudoku(outcome: GameOutcome.abandoned),
+        game(),
+      ];
+      expect(progress('sudoku.firstWin', records), 1);
+      expect(progress('sudoku.wins25', records), 1);
+      final many = [for (var i = 0; i < 25; i++) sudoku()];
+      expect(progress('sudoku.wins25', many), 25);
+    });
+
+    test('the level achievements need a win at that level or above', () {
+      final records = [
+        sudoku(level: 3),
+        sudoku(level: 12, outcome: GameOutcome.abandoned),
+      ];
+      for (final id in ['level4Win', 'level8Win', 'level12Win']) {
+        expect(progress('sudoku.$id', records), 0, reason: id);
+      }
+      expect(progress('sudoku.level4Win', [sudoku(level: 4)]), 1);
+      expect(progress('sudoku.level8Win', [sudoku(level: 7)]), 0);
+      expect(progress('sudoku.level8Win', [sudoku(level: 11)]), 1);
+      expect(progress('sudoku.level12Win', [sudoku(level: 11)]), 0);
+      expect(progress('sudoku.level12Win', [sudoku(level: 12)]), 1);
+    });
+
+    test('noNotesWin needs a win of level 6 or more without small numbers', () {
+      final others = [
+        sudoku(level: 5, notes: 0),
+        sudoku(level: 9, notes: 1),
+        sudoku(level: 9, notes: 0, outcome: GameOutcome.abandoned),
+      ];
+      expect(progress('sudoku.noNotesWin', others), 0);
+      expect(
+        progress('sudoku.noNotesWin', [...others, sudoku(level: 6, notes: 0)]),
+        1,
+      );
+    });
+
+    test('fastWin needs a win of level 3 or more in under 5 minutes', () {
+      const fast = Duration(minutes: 4, seconds: 59);
+      final others = [
+        sudoku(level: 2, playTime: fast),
+        sudoku(level: 5, playTime: const Duration(minutes: 5)),
+        sudoku(level: 5, playTime: fast, outcome: GameOutcome.abandoned),
+      ];
+      expect(progress('sudoku.fastWin', others), 0);
+      expect(
+        progress('sudoku.fastWin', [
+          ...others,
+          sudoku(level: 3, playTime: fast),
+        ]),
+        1,
+      );
     });
   });
 

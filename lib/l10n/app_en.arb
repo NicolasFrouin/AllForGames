@@ -2176,5 +2176,190 @@
   "updateRetry": "Try again",
   "@updateRetry": {
     "description": "Download dialog button after a failed download: downloads again."
+  },
+  "redo": "Redo",
+  "@redo": {
+    "description": "Button that plays again the last action taken back by Undo."
+  },
+  "sudokuTitle": "Sudoku",
+  "@sudokuTitle": {
+    "description": "Name of the Sudoku game."
+  },
+  "sudokuTagline": "Fill the grid: each digit once in every row, column and box.",
+  "@sudokuTagline": {
+    "description": "Short description of Sudoku on the hub."
+  },
+  "sudokuClassic": "Classic",
+  "@sudokuClassic": {
+    "description": "Name of the only Sudoku variant, on the statistics page."
+  },
+  "sudokuLevel": "Level {number}",
+  "@sudokuLevel": {
+    "description": "Name of a Sudoku level (1 to 12).",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "sudokuLevelGroup": "{group, select, 0{Easy} 1{Medium} 2{Hard} other{Expert}}",
+  "@sudokuLevelGroup": {
+    "description": "How hard a group of three Sudoku levels is: 0 for levels 1 to 3, 1 for 4 to 6, 2 for 7 to 9, 3 for 10 to 12.",
+    "placeholders": {
+      "group": {
+        "type": "String"
+      }
+    }
+  },
+  "sudokuLevelHint": "{number, select, 1{Many digits are given. Each missing digit has only one place in its box.} 2{Fewer digits are given. Each missing digit still has only one place in its box.} 3{Look along the rows and columns too: a digit can have only one place in a line.} 4{Some cells can take only one digit: look at what their row, column and box already hold.} 5{When a digit can only go in one line of a box, it cannot go in the rest of that line.} 6{Pairs: two cells of a unit that share the same two possible digits.} 7{Triples: three cells of a unit that share three possible digits.} 8{X-Wing: a digit with two places in two rows, in the same two columns.} 9{XY-Wing and Swordfish.} 10{XYZ-Wing, quads, Jellyfish, Skyscraper, 2-String Kite and W-Wing.} 11{Chains of links: on one digit (X-chain), or through cells with two possible digits (XY-chain).} other{Beyond these techniques: long chains of reasoning.}}",
+  "@sudokuLevelHint": {
+    "description": "What a Sudoku level asks of the player, in the new game sheet. The technique names (X-Wing, Swordfish...) are the usual English names.",
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "sudokuOneSolution": "Every grid has exactly one solution.",
+  "@sudokuOneSolution": {
+    "description": "Note in the Sudoku new game sheet."
+  },
+  "sudokuErase": "Erase",
+  "@sudokuErase": {
+    "description": "Sudoku keypad button: takes the digit, or the small numbers, out of the selected cell."
+  },
+  "sudokuNotes": "Notes",
+  "@sudokuNotes": {
+    "description": "Sudoku keypad switch: the digit keys then write small numbers (candidates) in the selected cell."
+  },
+  "sudokuNotesPlaced": "Small numbers written",
+  "@sudokuNotesPlaced": {
+    "description": "Statistic of a Sudoku game: how many small numbers the player wrote."
+  },
+  "sudokuErases": "Erases",
+  "@sudokuErases": {
+    "description": "Statistic of a Sudoku game: how many times the player erased a cell."
+  },
+  "sudokuConflicts": "Clashing digits placed",
+  "@sudokuConflicts": {
+    "description": "Statistic of a Sudoku game: digits placed in a row, column or box that already held them."
+  },
+  "settingsSudokuNotes": "Small numbers",
+  "@settingsSudokuNotes": {
+    "description": "Sudoku setting (a switch): shows the Notes button of the keypad."
+  },
+  "settingsSudokuNotesHint": "Adds a Notes button to the keypad: the digits then write small numbers in the cell, to keep track of the possible digits.",
+  "@settingsSudokuNotesHint": {
+    "description": "Explains the Sudoku small numbers setting."
+  },
+  "sudokuThemes": "Sudoku themes",
+  "@sudokuThemes": {
+    "description": "Title of the Sudoku tab of the skins page."
+  },
+  "sudokuThemeClassic": "Classic",
+  "@sudokuThemeClassic": {
+    "description": "Name of a Sudoku theme, shown on the skins page and as a reward."
+  },
+  "sudokuThemePaper": "Paper",
+  "@sudokuThemePaper": {
+    "description": "Name of a Sudoku theme, shown on the skins page and as a reward."
+  },
+  "sudokuThemeMint": "Mint",
+  "@sudokuThemeMint": {
+    "description": "Name of a Sudoku theme, shown on the skins page and as a reward."
+  },
+  "sudokuThemeNight": "Night",
+  "@sudokuThemeNight": {
+    "description": "Name of a Sudoku theme, shown on the skins page and as a reward."
+  },
+  "sudokuThemeChalk": "Chalkboard",
+  "@sudokuThemeChalk": {
+    "description": "Name of a Sudoku theme, shown on the skins page and as a reward."
+  },
+  "sudokuThemeNeon": "Neon",
+  "@sudokuThemeNeon": {
+    "description": "Name of a Sudoku theme, shown on the skins page and as a reward."
+  },
+  "sudokuThemeSakura": "Sakura",
+  "@sudokuThemeSakura": {
+    "description": "Name of a Sudoku theme, shown on the skins page and as a reward."
+  },
+  "sudokuThemeGold": "Gold",
+  "@sudokuThemeGold": {
+    "description": "Name of a Sudoku theme, shown on the skins page and as a reward."
+  },
+  "achievementRewardSudokuTheme": "Reward: {name} theme",
+  "@achievementRewardSudokuTheme": {
+    "description": "What an achievement unlocks: a Sudoku theme.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "newSudokuTheme": "New Sudoku theme: {name}",
+  "@newSudokuTheme": {
+    "description": "In the win dialog: the Sudoku theme an achievement just unlocked.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "achievementSudokuFirstWinTitle": "First grid",
+  "@achievementSudokuFirstWinTitle": {
+    "description": "Title of the Sudoku achievement for a first win."
+  },
+  "achievementSudokuFirstWinDescription": "Win a Sudoku.",
+  "@achievementSudokuFirstWinDescription": {
+    "description": "How to unlock the Sudoku first win achievement."
+  },
+  "achievementSudokuLevel4WinTitle": "Getting serious",
+  "@achievementSudokuLevel4WinTitle": {
+    "description": "Title of the Sudoku achievement for a win at level 4 or more."
+  },
+  "achievementSudokuLevel4WinDescription": "Win a Sudoku of level 4 or more.",
+  "@achievementSudokuLevel4WinDescription": {
+    "description": "How to unlock the Sudoku level 4 achievement."
+  },
+  "achievementSudokuLevel8WinTitle": "Logician",
+  "@achievementSudokuLevel8WinTitle": {
+    "description": "Title of the Sudoku achievement for a win at level 8 or more."
+  },
+  "achievementSudokuLevel8WinDescription": "Win a Sudoku of level 8 or more.",
+  "@achievementSudokuLevel8WinDescription": {
+    "description": "How to unlock the Sudoku level 8 achievement."
+  },
+  "achievementSudokuLevel12WinTitle": "Grandmaster",
+  "@achievementSudokuLevel12WinTitle": {
+    "description": "Title of the Sudoku achievement for a win at level 12."
+  },
+  "achievementSudokuLevel12WinDescription": "Win a Sudoku of level 12.",
+  "@achievementSudokuLevel12WinDescription": {
+    "description": "How to unlock the Sudoku level 12 achievement."
+  },
+  "achievementSudokuNoNotesWinTitle": "All in the head",
+  "@achievementSudokuNoNotesWinTitle": {
+    "description": "Title of the Sudoku achievement for a win without small numbers."
+  },
+  "achievementSudokuNoNotesWinDescription": "Win a Sudoku of level 6 or more without small numbers.",
+  "@achievementSudokuNoNotesWinDescription": {
+    "description": "How to unlock the Sudoku achievement without small numbers."
+  },
+  "achievementSudokuFastWinTitle": "Quick pencil",
+  "@achievementSudokuFastWinTitle": {
+    "description": "Title of the Sudoku achievement for a fast win."
+  },
+  "achievementSudokuFastWinDescription": "Win a Sudoku of level 3 or more in less than 5 minutes.",
+  "@achievementSudokuFastWinDescription": {
+    "description": "How to unlock the Sudoku fast win achievement."
+  },
+  "achievementSudokuWins25Title": "Grid lover",
+  "@achievementSudokuWins25Title": {
+    "description": "Title of the Sudoku achievement for 25 wins."
+  },
+  "achievementSudokuWins25Description": "Win 25 Sudoku.",
+  "@achievementSudokuWins25Description": {
+    "description": "How to unlock the Sudoku 25 wins achievement."
   }
 }

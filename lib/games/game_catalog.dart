@@ -15,6 +15,9 @@ import 'minesweeper/minesweeper_difficulty.dart';
 import 'minesweeper/minesweeper_difficulty_texts.dart';
 import 'spider/spider_controller.dart';
 import 'spider/spider_difficulty_texts.dart';
+import 'sudoku/sudoku_controller.dart';
+import 'sudoku/sudoku_level.dart';
+import 'sudoku/sudoku_level_texts.dart';
 import 'tripeaks/tripeaks_controller.dart';
 import 'tripeaks/tripeaks_difficulty.dart';
 import 'tripeaks/tripeaks_difficulty_texts.dart';
@@ -143,6 +146,19 @@ final gameCatalog = [
         difficulty.name: difficulty.label,
     },
     detailLabels: MinesweeperStatKeys.labels,
+  ),
+  GameInfo(
+    id: SudokuController.gameId,
+    title: (l10n) => l10n.sudokuTitle,
+    tagline: (l10n) => l10n.sudokuTagline,
+    icon: Icons.grid_3x3,
+    color: const Color(0xFFAD1457),
+    route: '/sudoku',
+    variants: {SudokuController.variant: (l10n) => l10n.sudokuClassic},
+    difficulties: {
+      for (final level in SudokuLevel.values) level.name: level.label,
+    },
+    detailLabels: SudokuStatKeys.labels,
   ),
 ];
 
