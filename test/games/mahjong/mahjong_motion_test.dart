@@ -116,6 +116,25 @@ void main() {
       expect(vanish.shifted(50).flipMid, vanish.flipMid! - 50);
     });
 
+    test('a tile taken at once rises while it flips, then plays its motion '
+        'from its place', () {
+      final vanish = motion(
+        TileMotionKind.vanish,
+        from: const Offset(5, 0),
+      ).turnedFirst(600, lift: 12);
+      final top = vanish.poseAt(vanish.flipMid!);
+      expect(top.offset, const Offset(5, -12));
+      expect(top.scale, greaterThan(1.1));
+
+      final flipped = vanish.poseAt(100 + TileMotion.flipDuration);
+      expect((flipped.offset, flipped.scale), (const Offset(5, 0), 1.0));
+      expect(
+        vanish.shifted(50).poseAt(vanish.flipMid! - 50).offset,
+        top.offset,
+        reason: 'a shift keeps the lift',
+      );
+    });
+
     test('a motion without a flip has no side to swap', () {
       expect(motion(TileMotionKind.fly).flipMid, isNull);
     });

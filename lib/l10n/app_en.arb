@@ -416,6 +416,14 @@
   "@freecellAutoFinished": {
     "description": "FreeCell statistic: games finished with the Finish button."
   },
+  "mahjongAutoFinished": "Auto-finished",
+  "@mahjongAutoFinished": {
+    "description": "Mahjong statistic: games whose last pairs the game played by itself (Finish button)."
+  },
+  "mahjongFinish": "Finish",
+  "@mahjongFinish": {
+    "description": "Mahjong button shown when few tiles are left and the game can be won: the game plays the last pairs by itself."
+  },
   "freecellTimeToFirstMove": "Time to first move",
   "@freecellTimeToFirstMove": {
     "description": "FreeCell statistic: time from the deal to the first move."

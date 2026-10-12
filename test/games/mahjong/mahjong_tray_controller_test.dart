@@ -342,4 +342,24 @@ void main() {
       }
     });
   });
+
+  group('auto-finish', () {
+    testWidgets('picks the tiles of a known win one by one', (tester) async {
+      expect(controller(state: losingStack).canAutoFinish, isFalse);
+
+      final game = controller(state: rowBoard);
+      expect(game.canAutoFinish, isTrue);
+      game.autoFinish();
+      await tester.pump(MahjongController.autoFinishPace);
+      expect((game.tilesLeft, game.tray.length), (4, 1));
+      await tester.pump(MahjongController.autoFinishPace * 3);
+
+      expect(game.state.isWon, isTrue);
+      await tester.pump();
+      final record = stats.records.single;
+      expect(record.outcome, GameOutcome.won);
+      expect(record.details[MahjongStatKeys.autoFinished], 1);
+      expect(record.details[MahjongStatKeys.mostHeld], 1);
+    });
+  });
 }

@@ -89,7 +89,7 @@ void main() {
     expect(game.result?.won, isTrue);
   });
 
-  test('a tile turned over stays when another pair matches', () {
+  test('a tap on any other tile turns the tile turned over back', () {
     final game = controller(
       MahjongState(
         layout: layoutOf([(0, 0, 0), (4, 0, 0), (8, 0, 0), (12, 0, 0)]),
@@ -99,12 +99,42 @@ void main() {
       ),
     )..tap(0);
 
-    game
-      ..tap(1)
-      ..tap(2);
+    expect(game.tap(1), TileTap.selected);
+    expect((game.revealed, game.isFaceUp(0)), (null, false));
 
+    game.tap(0);
+    expect(game.tap(2), TileTap.matched, reason: 'with the selected 1');
     expect(game.state.tileIds, [0, 3]);
-    expect(game.revealed, 0);
+    expect((game.revealed, game.isFaceUp(0)), (null, false));
+
+    // A hidden tile selected, then let go, stays turned over until the next
+    // tap elsewhere.
+    game
+      ..tap(0)
+      ..tap(0)
+      ..tap(0);
+    expect((game.selected, game.revealed), (null, 0));
+    game.tap(3);
+    expect(game.state.tileIds, isEmpty, reason: '3 is the pair of 0');
+  });
+
+  test('a tap on a blocked tile turns the tile turned over back too', () {
+    final game = controller(
+      MahjongState(
+        layout: layoutOf([(0, 0, 0), (2, 0, 0), (4, 0, 0), (8, 0, 0)]),
+        faces: [dots1, dots2, dots1, dots2],
+        slots: [0, 1, 2, 3],
+        hidden: {3},
+      ),
+    );
+    var notified = 0;
+    game
+      ..addListener(() => notified++)
+      ..tap(3);
+
+    expect(game.tap(1), TileTap.blocked);
+    expect((game.revealed, game.isFaceUp(3)), (null, false));
+    expect(notified, 2, reason: 'the board turns it back');
   });
 
   test('a blocked hidden tile stays face down', () {
@@ -142,6 +172,14 @@ void main() {
       expect(game.tap(1), TileTap.matched);
       expect(game.tray, isEmpty);
       expect(game.state.tileIds, [0, 2]);
+    });
+
+    test('a pick of another tile turns the tile turned over back', () {
+      final game = controller(spreadBoard, mode: MahjongMode.tray)..tap(0);
+
+      expect(game.tap(3), TileTap.picked);
+      expect(game.tray, [3]);
+      expect((game.revealed, game.isFaceUp(0)), (null, false));
     });
 
     test('a tap on the pair of the tile turned over takes both; the tray '

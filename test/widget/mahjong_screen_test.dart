@@ -295,6 +295,34 @@ void main() {
     expect(savedData(stores)['counters'], {MahjongStatKeys.shuffles: 1});
   });
 
+  group('finish', () {
+    testWidgets('with few tiles left and a win, the game plays the end; it '
+        'counts as a win', (tester) async {
+      final stores = await pumpGame(tester, state: rowBoard);
+      await tester.tap(byKey('auto-complete'));
+      await tester.pump();
+      expect(isEnabled(tester, 'undo'), isFalse);
+      expect(isEnabled(tester, 'hint'), isFalse);
+
+      await tester.pump(MahjongController.autoFinishPace);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(textOf('tiles-value'), '2');
+      expect(byKey('auto-complete'), findsNothing, reason: 'it plays');
+      await tester.pump(MahjongController.autoFinishPace);
+      await tester.pumpAndSettle();
+
+      expect(find.text('You won!'), findsOneWidget);
+      final record = stores.stats.records.single;
+      expect(record.won, isTrue);
+      expect(record.details[MahjongStatKeys.autoFinished], 1);
+    });
+
+    testWidgets('no button without a known win', (tester) async {
+      await pumpGame(tester, state: stuckBoard);
+      expect(byKey('auto-complete'), findsNothing);
+    });
+  });
+
   group('winning', () {
     Future<void> win(WidgetTester tester) async {
       await tapTile(tester, 0);
@@ -595,6 +623,22 @@ void main() {
       await tester.pumpAndSettle();
       expect(paintedTile(tester, 0).flipAngle, 0);
       expect(viewOf(tester, 0).faceDown, isFalse);
+    });
+
+    testWidgets('a tap on another tile turns the hidden tile back', (
+      tester,
+    ) async {
+      await pumpGame(tester, state: spread({0}));
+      await tapTile(tester, 0);
+      expect(viewOf(tester, 0).faceDown, isFalse);
+
+      await tester.tap(tile(1));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(showsBack(tester, 0), isFalse, reason: 'its face goes first');
+      await tester.pumpAndSettle();
+      expect(viewOf(tester, 0).faceDown, isTrue);
+      expect(viewOf(tester, 1).selected, isTrue);
     });
 
     testWidgets('a hidden tile taken at once shows its face before it goes', (

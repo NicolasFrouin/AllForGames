@@ -73,8 +73,9 @@ lib/
                              groups), AchievementStore (unlock dates), achievement_texts (id -> title/description,
                              card back and tile style names), achievements page (one tab per achievementGameIds
                              entry)
-  skins/                     card_backs (CardBackSkin list, CardBackView), tile_styles (TileStyle list for Mahjong,
-                             TileStylePreview), minesweeper_themes (MinesweeperTheme list, preview), skin_rewards
+  skins/                     card_backs (CardBackSkin list, CardBackView), tile_styles (TileStyle list for Mahjong:
+                             colors, optional gilding `ornamentColor` and relief `domed`; TileStylePreview),
+                             minesweeper_themes (MinesweeperTheme list, preview), skin_rewards
                              (SkinReward, skinRewardOf: what an achievement unlocks), skins_screen (Skins page: one
                              tab per SkinKind from `_tabOf`: label, games that use it, skins; grouped as free, then
                              by game of the unlocking achievement)
@@ -246,20 +247,28 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   Deals are built at runtime from the seed (`DealRandom`), solvable by construction (removing pairs of free places
   from the full layout gives a clearing order). Shapes (`MahjongShape`, a setting): `generated` by default, a new
   layout per deal from its seed (`generateLayout`, `mahjong_shapes.dart`; id `random`): a symmetric base and smaller
-  layers on it, the level's `ShapeLevel` size (Hard: 128 to 144 tiles, up to 8 layers), a multiple of 4 tiles, steps
+  layers on it, the level's `ShapeLevel` size (Medium and Hard: a base 7 tiles wide, taller than wide, 7x9 and 7x11,
+  so a phone held upright shows them unturned with bigger tiles; Hard: 128 to 144 tiles, up to 8 layers), a multiple
+  of 4 tiles, steps
   of at most 3 layers between neighbor cells (a layer is drawn up and to the left: a steeper stack would hide the
   middle of the tile beside it); or `classic`, the level's fixed layout (Pyramid, Turtle). Saves hold the layout's
   positions (version 3). A level is a shape plus a trap rate, checked by `tool/mahjong_difficulty.dart` and unit tests
-  that keep the levels ordered, for both shapes. On a tall screen the layout is dealt with rows and columns swapped
-  (the controller's `orient` decides at deal time; saved with the game). Hidden tiles (`MahjongState.hidden`, the
+  that keep the levels ordered, for both shapes. When the other orientation gives clearly bigger tiles, the layout is
+  dealt with rows and columns swapped (a wide layout on a tall screen, a tall one on a wide screen; the controller's
+  `orient` decides at deal time; saved with the game). Hidden tiles (`MahjongState.hidden`, the
   level's `hiddenPercent`: Medium 10%, Hard 20%, chosen with their own random numbers so a seed's faces stay the same)
   lie face down: a tap on a free one turns it over (`TileTap.revealed`; one at a time, the selected tile stays face
-  up), the next tap selects it or puts it in the tray; the rules ignore it. A tile turned over also counts as taken: a
+  up), the next tap selects it or puts it in the tray; a tap on any other tile (even a blocked one) turns it back,
+  unless it takes it; the rules ignore it. A tile turned over also counts as taken: a
   tap on its pair (face up or down) takes both, and turning over the pair of the selected tile or of a tile of the
   tray takes it at once; in tray mode the pair goes only while the tray has room for one more (no tile goes into a
   tray to lose on its own). A turn is a 3D flip (`TileMotionKind.turn`, `flipAngle` with perspective in `MovingTile`;
   the board's `_FlipSides` builds both sides once and swaps which one paints at `flipMid`); a face-down tile taken at
-  once flips where it lies and shows its face first (`TileMotion.turnedFirst`; the rest of the action waits). Tests
+  once flips where it lies and shows its face first (`TileMotion.turnedFirst`; the rest of the action waits). Flips
+  rise (`_flipLift`) and take `TileMotion.flipDuration`, slow enough to see the face (`_faceShown` more for a tile
+  taken at once). Almost won (at most `autoFinishTiles` tiles left, board and tray, and a known winning order: the
+  hint solver's), a Finish button (`auto-complete`) plays the last pairs (picks) one every `autoFinishPace`
+  (`autoFinish`; taps, undo and hints wait); it counts as a win, with the detail `autoFinished`. Tests
   take tiles with `take`/`takeTile`, which turn them over first. Tile art is vector (no emoji, no CJK font). Three
   modes (`MahjongMode`, one save slot holding the mode): classic, tray (`mahjong_tray.dart`) and discs (`usesTray`:
   the tray rules): a tapped free tile goes into a tray of 4 places where two of a face clear each other (on the side

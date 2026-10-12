@@ -75,6 +75,7 @@ class TileMotion {
     this.to = Offset.zero,
     this.height = 0,
     this.turn = 0,
+    this.turnLift = 0,
   });
 
   final TileMotionKind kind;
@@ -85,8 +86,11 @@ class TileMotion {
   /// at once shows its face, then its motion plays.
   final double turn;
 
-  /// How long a flip takes.
-  static const flipDuration = 340.0;
+  /// How high the tile rises during that flip.
+  final double turnLift;
+
+  /// How long a flip takes: slow enough to see the face come up.
+  static const flipDuration = 420.0;
 
   /// Offsets from the tile's place at the start and at the end.
   final Offset from;
@@ -106,10 +110,11 @@ class TileMotion {
     to: to,
     height: height,
     turn: turn,
+    turnLift: turnLift,
   );
 
-  /// The same motion after a flip of [ms] (see [turn]).
-  TileMotion turnedFirst(double ms) => TileMotion(
+  /// The same motion after a flip of [ms] (see [turn]) that rises by [lift].
+  TileMotion turnedFirst(double ms, {double lift = 0}) => TileMotion(
     kind: kind,
     start: start,
     duration: duration + ms,
@@ -117,6 +122,7 @@ class TileMotion {
     to: to,
     height: height,
     turn: ms,
+    turnLift: lift,
   );
 
   /// When the tile shows its other side, or null without a flip.
@@ -145,7 +151,7 @@ class TileMotion {
     if (turn > 0) {
       if (time < start + turn) {
         final f = ((time - start) / min(turn, flipDuration)).clamp(0.0, 1.0);
-        return _flip(f, lift: 0);
+        return _flip(f, lift: turnLift);
       }
       return TileMotion(
         kind: kind,
@@ -218,8 +224,8 @@ class TileMotion {
     final rise = sin(pi * f);
     return TilePose(
       offset: from - Offset(0, lift * rise),
-      scale: 1 + 0.08 * rise,
-      elevation: rise * 0.5,
+      scale: 1 + 0.12 * rise,
+      elevation: rise * 0.8,
       flipAngle: eased < 0.5 ? eased * pi : (eased - 1) * pi,
     );
   }

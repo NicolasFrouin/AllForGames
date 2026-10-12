@@ -89,6 +89,8 @@
   "freecellTapMoves": "Coups au toucher",
   "freecellDragMoves": "Coups glissés",
   "freecellAutoFinished": "Fins automatiques",
+  "mahjongAutoFinished": "Fins automatiques",
+  "mahjongFinish": "Terminer",
   "freecellTimeToFirstMove": "Temps avant le premier coup",
   "freecellLongestThink": "Plus longue réflexion",
   "spiderTitle": "Spider",

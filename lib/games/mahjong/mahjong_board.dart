@@ -297,7 +297,10 @@ class _MahjongBoardState extends State<MahjongBoard>
   static const _flashDuration = 900.0;
 
   /// A face-down tile taken at once shows its face this long after its flip.
-  static const _faceShown = 220.0;
+  static const _faceShown = 320.0;
+
+  /// How high a tile rises while it flips, in tile heights.
+  static const _flipLift = 0.28;
 
   /// From the end of the winning match to the win dialog.
   static const _celebration = 1250.0;
@@ -607,7 +610,7 @@ class _MahjongBoardState extends State<MahjongBoard>
         const delay = TileMotion.flipDuration + _faceShown;
         added.updateAll(
           (id, motion) => turnedFirst.contains(id)
-              ? motion.turnedFirst(delay)
+              ? motion.turnedFirst(delay, lift: geometry.tileHeight * _flipLift)
               : motion.shifted(-delay),
         );
       }
@@ -618,7 +621,7 @@ class _MahjongBoardState extends State<MahjongBoard>
           kind: TileMotionKind.turn,
           start: 0,
           duration: TileMotion.flipDuration,
-          height: geometry.tileHeight * 0.1,
+          height: geometry.tileHeight * _flipLift,
         );
       }
     }

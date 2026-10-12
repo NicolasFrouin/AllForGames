@@ -2,6 +2,7 @@ import 'package:all_for_games/games/mahjong/mahjong_controller.dart';
 import 'package:all_for_games/games/mahjong/mahjong_difficulty.dart';
 import 'package:all_for_games/games/mahjong/mahjong_solver.dart';
 import 'package:all_for_games/games/mahjong/mahjong_state.dart';
+import 'package:all_for_games/games/mahjong/mahjong_tiles.dart';
 import 'package:all_for_games/saves/game_save_store.dart';
 import 'package:all_for_games/stats/game_record.dart';
 import 'package:all_for_games/stats/stats_store.dart';
@@ -508,5 +509,74 @@ void main() {
     game.resume();
     wait(2);
     expect(game.playTime, const Duration(seconds: 7));
+  });
+
+  group('auto-finish', () {
+    /// Seven pairs in a row, mirrored: only the ends are free, and they
+    /// match. The first and last tiles lie face down.
+    final pairsRow = MahjongState(
+      layout: row(14),
+      faces: [
+        for (var n = 1; n <= 7; n++) TileFace.of(TileSuit.dots, n).code,
+        for (var n = 7; n >= 1; n--) TileFace.of(TileSuit.dots, n).code,
+      ],
+      slots: [for (var i = 0; i < 14; i++) i],
+      hidden: {0, 13},
+    );
+
+    testWidgets('only with few tiles left and a known win', (tester) async {
+      final game = controller(state: pairsRow);
+      expect(game.tilesLeft, 14);
+      expect(game.canAutoFinish, isFalse, reason: 'more than 12 tiles');
+      take(game, 0);
+      take(game, 13);
+      expect(game.tilesLeft, MahjongController.autoFinishTiles);
+      expect(game.canAutoFinish, isTrue);
+
+      expect(controller(state: stuckBoard).canAutoFinish, isFalse);
+    });
+
+    testWidgets('plays one pair at a time to a win that counts', (
+      tester,
+    ) async {
+      final game = controller(state: pairsRow);
+      take(game, 0);
+      take(game, 13);
+      game.tap(1);
+
+      game.autoFinish();
+      expect(game.isAutoFinishing, isTrue);
+      expect(game.selected, isNull);
+      expect((game.canUndo, game.canHint), (false, false));
+      expect(game.tap(12), TileTap.ignored, reason: 'the player waits');
+
+      await tester.pump(MahjongController.autoFinishPace);
+      expect(game.tilesLeft, 10);
+      await tester.pump(MahjongController.autoFinishPace * 5);
+      expect(game.state.isWon, isTrue);
+      expect(game.isAutoFinishing, isFalse);
+      expect(game.canAutoFinish, isFalse);
+
+      await tester.pump();
+      final record = stats.records.single;
+      expect((record.outcome, record.moves), (GameOutcome.won, 7));
+      expect(record.details[MahjongStatKeys.autoFinished], 1);
+      expect(saves[gameId], isNull);
+    });
+
+    testWidgets('a new game stops it', (tester) async {
+      final game = controller(state: pairsRow);
+      take(game, 0);
+      take(game, 13);
+      game
+        ..autoFinish()
+        ..newGame(seed: 2);
+      expect(game.isAutoFinishing, isFalse);
+
+      final tiles = game.tilesLeft;
+      await tester.pump(MahjongController.autoFinishPace * 3);
+      expect(game.tilesLeft, tiles);
+      expect(game.moves, 0);
+    });
   });
 }

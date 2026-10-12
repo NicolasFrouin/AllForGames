@@ -357,6 +357,12 @@ class _MahjongScreenState extends State<MahjongScreen> {
                               settings.mahjongTraySide ==
                               MahjongTraySide.bottom,
                         ),
+                        _FinishButton(
+                          controller: controller,
+                          trayAtBottom:
+                              settings.mahjongTraySide ==
+                              MahjongTraySide.bottom,
+                        ),
                       ],
                     );
                   },
@@ -437,6 +443,53 @@ class _TrayFullDialog extends StatelessWidget {
 
 /// Offered as soon as no move is left that does not lose: in classic mode
 /// shuffle, or undo; in tray mode undo.
+/// Almost won: a button lets the game play its last pairs by itself.
+class _FinishButton extends StatelessWidget {
+  const _FinishButton({required this.controller, required this.trayAtBottom});
+
+  final MahjongController controller;
+
+  /// In tray mode, a tray at the bottom puts the button at the top.
+  final bool trayAtBottom;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final animate = !MediaQuery.disableAnimationsOf(context);
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (context, _) => Align(
+        alignment: trayAtBottom && controller.isTray
+            ? Alignment.topCenter
+            : Alignment.bottomCenter,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: AnimatedSwitcher(
+            duration: Duration(milliseconds: animate ? 320 : 0),
+            transitionBuilder: (child, animation) => ScaleTransition(
+              scale: CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOutBack,
+                reverseCurve: Curves.easeIn,
+              ),
+              child: child,
+            ),
+            child: controller.canAutoFinish
+                ? FloatingActionButton.extended(
+                    key: const ValueKey('auto-complete'),
+                    heroTag: null,
+                    onPressed: controller.autoFinish,
+                    icon: const Icon(Icons.auto_awesome),
+                    label: Text(l10n.mahjongFinish),
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _StuckBanner extends StatelessWidget {
   const _StuckBanner({required this.controller, required this.trayAtBottom});
 

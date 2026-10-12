@@ -53,11 +53,15 @@ abstract final class MahjongStatKeys {
   /// Discs mode: the discs freed.
   static const discsFreed = 'discsFreed';
 
+  /// 1 when the game played its last pairs by itself ([MahjongController.autoFinish]).
+  static const autoFinished = 'autoFinished';
+
   static final labels = <String, String Function(AppLocalizations)>{
     pairsMatched: (l10n) => l10n.mahjongPairsMatched,
     hints: (l10n) => l10n.mahjongHints,
     shuffles: (l10n) => l10n.mahjongShuffles,
     tilesLeft: (l10n) => l10n.mahjongTilesLeft,
+    autoFinished: (l10n) => l10n.mahjongAutoFinished,
     bestCombo: (l10n) => l10n.mahjongBestCombo,
     timeToFirstMatchMs: (l10n) => l10n.mahjongTimeToFirstMatch,
     longestThinkMs: (l10n) => l10n.mahjongLongestThink,
@@ -168,6 +172,13 @@ class MahjongController extends ChangeNotifier {
   /// Boards the hint solver may look at: a few tens of milliseconds.
   static const _solverBudget = 20000;
 
+  /// At most this many tiles left (board and tray), and a known win: the
+  /// game is almost won, [autoFinish] can play the end.
+  static const autoFinishTiles = 12;
+
+  /// Time before each pair (each pick in tray mode) of [autoFinish].
+  static const autoFinishPace = Duration(milliseconds: 450);
+
   final StatsStore _stats;
   final GameSaveStore _saves;
   final DateTime Function() _clock;
@@ -210,6 +221,7 @@ class MahjongController extends ChangeNotifier {
   int _hintSerial = 0;
   MahjongAction _lastAction = MahjongAction.none;
   int _actionSerial = 0;
+  Timer? _autoFinish;
 
   /// The board. In tray mode, the tiles of the tray are not on it.
   MahjongState get state => _state;
@@ -239,7 +251,18 @@ class MahjongController extends ChangeNotifier {
   /// Matches in a row, each within [comboWindow] of the one before.
   int get combo => _combo;
   Duration get playTime => _timer.elapsed;
-  bool get canUndo => !_finished && _history.isNotEmpty;
+  bool get canUndo => !_finished && _autoFinish == null && _history.isNotEmpty;
+
+  /// The end plays by itself ([autoFinish]): the player's taps wait.
+  bool get isAutoFinishing => _autoFinish != null;
+
+  /// Few tiles are left ([autoFinishTiles]) and the controller knows an
+  /// order that wins: [autoFinish] can play it.
+  bool get canAutoFinish =>
+      !_finished &&
+      _autoFinish == null &&
+      tilesLeft <= autoFinishTiles &&
+      (isTray ? _winningPick() : _winningPair()) != null;
 
   /// No move is left that does not lose: in classic mode, no match (the
   /// player can undo or shuffle); in tray mode, the tray is one tile from
@@ -247,7 +270,9 @@ class MahjongController extends ChangeNotifier {
   bool get isStuck =>
       !_finished && (isTray ? trayState.isStuck : _state.isStuck);
   bool get canHint =>
-      !_finished && (isTray ? !trayState.isStuck : _state.freePairs.isNotEmpty);
+      !_finished &&
+      _autoFinish == null &&
+      (isTray ? !trayState.isStuck : _state.freePairs.isNotEmpty);
 
   /// The record of the game once it is over (won, or lost in tray mode),
   /// null while it runs.
@@ -285,17 +310,23 @@ class MahjongController extends ChangeNotifier {
   /// one. A tap on the selected tile unselects it, a tap on a free tile that
   /// does not match selects that one instead. Tray mode: picks the tile.
   ///
-  /// A free face-down tile turns over first (the one turned over before
-  /// turns back, unless it is selected); the next tap takes it. A tile
-  /// turned over counts as taken too: a tap on its pair, face up or down,
-  /// takes both (in tray mode, while the tray has room for one more), and
-  /// turning over the pair of the selected tile, or of a tile of the tray,
-  /// takes it at once.
+  /// A free face-down tile turns over first; the next tap takes it. A tap on
+  /// any other tile, even a blocked one, turns it back, unless it takes it: a
+  /// tile turned over counts as taken too, so a tap on its pair, face up or
+  /// down, takes both (in tray mode, while the tray has room for one more),
+  /// and turning over the pair of the selected tile, or of a tile of the
+  /// tray, takes it at once.
   TileTap tap(int id) {
-    if (_finished || _state.positionOf(id) == null) return TileTap.ignored;
-    if (!_state.isFree(id)) return TileTap.blocked;
-    final faceDown = !isFaceUp(id);
+    if (_finished || _autoFinish != null || _state.positionOf(id) == null) {
+      return TileTap.ignored;
+    }
     final turned = _revealed;
+    if (turned != id) _revealed = null;
+    if (!_state.isFree(id)) {
+      if (turned != _revealed) notifyListeners();
+      return TileTap.blocked;
+    }
+    final faceDown = !isFaceUp(id);
     if (isTray) {
       final tray = trayState;
       if (tray.partnerOf(id) == null &&
@@ -410,6 +441,33 @@ class MahjongController extends ChangeNotifier {
     }
     notifyListeners();
     return cleared ? TileTap.matched : TileTap.picked;
+  }
+
+  /// Plays the end of an almost won game ([canAutoFinish]) by itself: the
+  /// pairs of the known winning order (the picks in tray mode), one every
+  /// [autoFinishPace]. It counts as a win, like the last pairs played by
+  /// hand.
+  void autoFinish() {
+    if (!canAutoFinish) return;
+    _bump(MahjongStatKeys.autoFinished);
+    _revealed = null;
+    _selected = null;
+    _autoFinishStep();
+    notifyListeners();
+  }
+
+  void _autoFinishStep() {
+    _autoFinish = Timer(autoFinishPace, () {
+      _autoFinish = null;
+      final pick = isTray ? _winningPick() : null;
+      final pair = isTray ? null : _winningPair();
+      if (pick != null) _pick([pick]);
+      if (pair != null) match(pair.$1, pair.$2);
+      // A win ends it; without a known win (never so far), the player goes
+      // on by hand.
+      if (!_finished && (pick != null || pair != null)) _autoFinishStep();
+      notifyListeners();
+    });
   }
 
   void undo() {
@@ -756,11 +814,20 @@ class MahjongController extends ChangeNotifier {
     _longestThink = Duration.zero;
     _result = null;
     _finished = false;
+    _autoFinish?.cancel();
+    _autoFinish = null;
     _selected = null;
     _revealed = null;
     _hint = const [];
     _lastAction = MahjongAction.deal;
     _actionSerial++;
+  }
+
+  @override
+  void dispose() {
+    _autoFinish?.cancel();
+    _autoFinish = null;
+    super.dispose();
   }
 
   void _remember() =>
@@ -895,6 +962,7 @@ class MahjongController extends ChangeNotifier {
         MahjongStatKeys.tilesHeld: _counters[MahjongStatKeys.tilesHeld] ?? 0,
       },
       if (isDiscs) MahjongStatKeys.discsFreed: _state.freeDiscs,
+      MahjongStatKeys.autoFinished: ?_counters[MahjongStatKeys.autoFinished],
     },
   );
 

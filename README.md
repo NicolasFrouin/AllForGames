@@ -7,8 +7,9 @@ Classic games in one app: pick a game on the hub, play, and follow detailed stat
 - **FreeCell**, with multi-card moves and automatic moves to the foundations
 - **Spider** with 1, 2 or 4 suits
 - **TriPeaks**: clear three peaks with cards one rank above or below the waste (King and Ace wrap around)
-- **Mahjong** solitaire (Pyramid and Turtle layouts), with hints, shuffle and undo, and a Tray mode: tapped tiles
-  go into 4 places where pairs clear, and a full tray loses
+- **Mahjong** solitaire: a new shape for each deal (or the Pyramid and Turtle layouts), hidden tiles, hints, shuffle,
+  undo and a Finish button for the last pairs; a Tray mode (tapped tiles go into 4 places where pairs clear, and a
+  full tray loses) and a Discs mode (free the discs under the tiles)
 - **Minesweeper** (Beginner, Intermediate, Expert), never a guess: the first tap opens an area and logic alone
   clears every board; flags, chords, hints and a Try again on the same board
 - Easy, Medium and Hard levels, and every deal can be won (proven by solvers)
@@ -16,7 +17,7 @@ Classic games in one app: pick a game on the hub, play, and follow detailed stat
   count it, unless you choose to abandon it
 - Statistics for every game: time, moves, undos, score, streaks, records and more, and an overview of all games
   (daily streaks, activity of the last 30 days, when you play, recent games)
-- 45 achievements across the games, each unlocking a skin: 30 card backs, 11 Mahjong tile styles and 7 Minesweeper
+- 48 achievements across the games, each unlocking a skin: 30 card backs, 14 Mahjong tile styles and 7 Minesweeper
   themes (one of each is free)
 - English and French
 - Fluid animations: dealing, flying and flipping cards, and a celebration for every win
