@@ -362,4 +362,29 @@ void main() {
       expect(record.details[MahjongStatKeys.mostHeld], 1);
     });
   });
+
+  group('belt', () {
+    test('a pick turns the belt; the record names the belt', () {
+      final game = MahjongController(
+        stats: stats,
+        saves: saves,
+        mode: MahjongMode.tray,
+        shape: MahjongShape.generated,
+        belt: true,
+        seed: 5,
+        clock: () => now,
+      );
+      final belt = game.state.layout.belt;
+      final rider = game.state.slots[belt[2]];
+      final pick = game.hintPick()!;
+      expect(pick, isNot(rider));
+      game.tap(pick);
+      game.tap(pick);
+      expect(game.state.positionOf(rider), belt[3]);
+      expect(game.hintPick(), isNotNull);
+
+      game.newGame(abandon: true);
+      expect(stats.records.single.variant, 'tray-belt-random');
+    });
+  });
 }

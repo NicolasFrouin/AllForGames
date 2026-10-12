@@ -118,6 +118,9 @@ class RenderMovingTile extends RenderProxyBox {
   /// The flip of the tile as painted now (0 at rest).
   double get flipAngle => _pose.flipAngle;
 
+  /// How far the tile is painted from its place (tests read it).
+  Offset get offset => _pose.offset;
+
   bool get _moved =>
       _pose.offset != Offset.zero || _pose.scale != 1 || _pose.flipAngle != 0;
 

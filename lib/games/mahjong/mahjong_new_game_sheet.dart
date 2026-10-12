@@ -5,15 +5,17 @@ import '../new_game_actions.dart';
 import 'mahjong_difficulty.dart';
 import 'mahjong_difficulty_texts.dart';
 
-/// Options of a new Mahjong game.
+/// Options of a new Mahjong game. [belt] applies to the classic and tray
+/// modes, not to the discs mode.
 typedef MahjongNewGame = ({
   MahjongMode mode,
   MahjongDifficulty difficulty,
   MahjongShape shape,
+  bool belt,
 });
 
-/// Lets the player choose the mode, the difficulty and the shape of a new game,
-/// starting from [initial]. With [inProgress] (a game with moves on screen),
+/// Lets the player choose the mode, the difficulty, the shape and the belt of
+/// a new game, starting from [initial]. With [inProgress] (a game with moves on screen),
 /// the player also chooses whether that game counts as abandoned.
 ///
 /// Returns the choice, or null when the player closes the sheet.
@@ -49,6 +51,7 @@ class _NewGameSheetState extends State<_NewGameSheet> {
       : MahjongMode.tray;
   late MahjongDifficulty _difficulty = widget.initial.difficulty;
   late MahjongShape _shape = widget.initial.shape;
+  late bool _belt = widget.initial.belt;
 
   @override
   Widget build(BuildContext context) {
@@ -181,6 +184,16 @@ class _NewGameSheetState extends State<_NewGameSheet> {
               color: colors.onSurfaceVariant,
             ),
           ),
+          if (_mode != MahjongMode.discs)
+            SwitchListTile(
+              key: const ValueKey('new-game-belt'),
+              contentPadding: EdgeInsets.zero,
+              secondary: const Icon(Icons.sync),
+              title: Text(l10n.mahjongBelt),
+              subtitle: Text(l10n.mahjongBeltHint),
+              value: _belt,
+              onChanged: (belt) => setState(() => _belt = belt),
+            ),
           const SizedBox(height: 4),
           note(Icons.verified_outlined, colors.primary, l10n.newGameWinnable),
           if (_difficulty.hiddenPercent > 0)
@@ -192,8 +205,12 @@ class _NewGameSheetState extends State<_NewGameSheet> {
             ),
           NewGameActions(
             inProgress: widget.inProgress,
-            options: () =>
-                (mode: _mode, difficulty: _difficulty, shape: _shape),
+            options: () => (
+              mode: _mode,
+              difficulty: _difficulty,
+              shape: _shape,
+              belt: _belt,
+            ),
           ),
         ],
       ),

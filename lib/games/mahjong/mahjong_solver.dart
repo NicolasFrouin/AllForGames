@@ -237,7 +237,8 @@ class _Solver {
 /// matched [a] and [b], into an order that clears [after], the board now.
 /// Null when it cannot.
 ///
-/// A pair of the order can go earlier: removing tiles never blocks others.
+/// A pair of the order can go earlier: removing tiles never blocks others
+/// (with a belt, only when the order still works).
 /// Otherwise the partners of [a] and [b] in the order now go together, at
 /// the first place where the order still works.
 List<TilePair>? mendSolution(
@@ -250,6 +251,13 @@ List<TilePair>? mendSolution(
   final i = solution.indexWhere((pair) => holds(pair, a));
   final j = solution.indexWhere((pair) => holds(pair, b));
   if (i < 0 || j < 0) return null;
+  if (after.layout.belt.isNotEmpty) {
+    // The belt turned at another time for the pairs before it: only the
+    // same order without this pair may still work.
+    if (i != j) return null;
+    final order = [...solution]..removeAt(i);
+    return after.isSolvedBy(order) ? order : null;
+  }
   if (i == j) return [...solution]..removeAt(i);
   int partner(TilePair pair, int id) => pair.$1 == id ? pair.$2 : pair.$1;
   final mended = (partner(solution[i], a), partner(solution[j], b));

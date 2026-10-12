@@ -60,7 +60,7 @@ lib/
   main.dart, app.dart        loads the stores, routes (go_router): /, /klondike?draw=3&seed=42,
                              /freecell?difficulty=hard&seed=42, /spider?difficulty=hard&seed=42,
                              /tripeaks?difficulty=hard&seed=42, /minesweeper?difficulty=hard&seed=42,
-                             /mahjong?mode=tray&difficulty=easy&shape=classic&seed=42, /stats,
+                             /mahjong?mode=tray&difficulty=easy&shape=classic&belt=true&seed=42, /stats,
                              /stats/:gameId,
                              /achievements?game=klondike, /skins?kind=tileStyle, /settings (without params, a
                              game route continues the saved game; the two pages open on their first tab)
@@ -106,7 +106,8 @@ lib/
   games/mahjong/             pure Dart: mahjong_tiles, mahjong_layout, mahjong_shapes (generated layouts),
                              mahjong_state (rules), mahjong_generator (solvable by construction), mahjong_solver
                              (hints), mahjong_tray (tray mode: rules, generator, solver), mahjong_discs
-                             (discs mode), mahjong_difficulty (levels, modes), mahjong_motion, mahjong_players
+                             (discs mode), mahjong_belt (conveyor belt: withBelt, its solvers),
+                             mahjong_difficulty (levels, modes), mahjong_motion, mahjong_players
                              (offline only); Flutter: mahjong_controller, mahjong_board,
                              mahjong_tile_view (vector tile art), mahjong_moving_tile (per-frame transforms),
                              mahjong_screen, mahjong_new_game_sheet, _texts
@@ -160,7 +161,8 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   `settings.tileStyle`: Mahjong tile style id, unknown = classic; `settings.minesweeperTheme`: theme id, unknown =
   classic; `settings.klondike.drawCount`: int 1/3, unknown = 1; `settings.mahjong.mode`: `classic`/`tray`/`discs`,
   unknown = tray; `settings.mahjong.traySide`: `top`/`bottom`/`left`/`right`, unknown = top; `settings.mahjong.shape`:
-  `generated`/`classic`, unknown = generated; `settings.<game>.difficulty`: `easy`/`medium`/`hard`, unknown = medium;
+  `generated`/`classic`, unknown = generated; `settings.mahjong.belt`: bool, absent = false;
+  `settings.<game>.difficulty`: `easy`/`medium`/`hard`, unknown = medium;
   `settings.minesweeper.flagHoldMs`: int, absent = 300, limited to 150..750; `settings.minesweeper.vibrate`: bool,
   absent = false; `settings.pinnedGames`: string list of game ids, the last pinned first), `achievements.<id>` per
   unlocked achievement (UTC ISO date), `update.dismissed` (the version the player answered Later to).
@@ -283,9 +285,20 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   deals the tray mode's board on it: a disc is free when no tile of its layer or above lies on it (`discCover`), and
   until then blocks the tiles under its round (the layout adds its cover to their `above`, so the rules, the deal and
   the hints follow it); drawn between the layers, it rises away when freed (100 points); all discs free wins, tiles
-  left or not (a full tray still loses); an undo covers it again. Records: variant = layout id (`random` for a
-  generated shape), `<mode>-<layoutId>` in the tray and discs modes (`mahjongVariant`); no shuffle with the tray
-  rules; the stats page lists the variants played.
+  left or not (a full tray still loses); an undo covers it again. The conveyor belt (`mahjong_belt.dart`, a switch of
+  the sheet for the classic and tray modes, not discs; `settings.mahjong.belt`): `withBelt` puts a loop of tiles on
+  the table layer of the deal's layout (after it is turned), as wide as the board, one row in from its top and
+  bottom (`MahjongLayout.belt`, positions in the order the tiles go; id `belt-<layoutId>`); tiles that lay on its
+  places go, stacks stay at most 3 layers above a tile beside them, at most 144 tiles, a multiple of 4. Every move
+  (a match, a pick) turns it one place (`MahjongLayout.turned`, in `MahjongState.match` and `TrayState.pick`),
+  clockwise or not from the seed (`beltClockwise`). The generators name tiles by the place they start on and turn
+  their occupancy too, so a deal's order still wins (without a belt the deals are the same as before); `isSolvedBy`
+  plays the order; `solveBelt`/`solveBeltTray` (a simpler search, `_beltSolverBudget`) give hints and Finish, and
+  `mendSolution` keeps the order only when the player follows it. The board draws its track with arrows
+  (`_BeltPainter`, `belt-track`) and slides its tiles after each move (`_beltMotions`); the status bar shows the
+  direction (`belt-direction`). The save holds the loop (`belt`) and the option (`beltOption`). Records: variant =
+  layout id (`random` for a generated shape), `<mode>-<layoutId>` in the tray and discs modes (`mahjongVariant`;
+  `belt-random`, `tray-belt-turtle`...); no shuffle with the tray rules; the stats page lists the variants played.
 - **Minesweeper**: levels Beginner 9x9/10, Intermediate 16x16/40, Expert 30x16/99 (`easy`/`medium`/`hard`; Expert
   is turned 16x30 on a tall screen, chosen at deal time and saved). Mines are placed at the first tap
   (`generateMines`, `DealRandom` from seed + tap): none touches it, and `MinesweeperSolver` clears the board by logic
@@ -322,7 +335,8 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   `card-back-<id>`, `tile-style-<id>`, `minesweeper-theme-<id>`, `unlocked-<id>` in the win dialog, `play-again`,
   `other-options` (the win dialog, Mahjong's full tray dialog and Minesweeper's loss banner); Mahjong:
   `tile-<id>`, `hint`, `shuffle`, `stuck-banner`, `tiles-value`, `pairs-value`, `mode-value` (tray mode),
-  `new-game-mode-<mode>`, `new-game-goal-<tiles|discs>`, `new-game-shape-<shape>`, `new-game-hidden-note`,
+  `new-game-mode-<mode>`, `new-game-goal-<tiles|discs>`, `new-game-shape-<shape>`, `new-game-belt`,
+  `new-game-hidden-note`, `belt-direction`, `belt-track`,
   `discs-value`, `tray-slot-<i>`, `tray-full`, `try-again`, `lost-new-game`; FreeCell: `freecell-<i>`,
   `cascade-<i>`, `foundation-<i>`, `auto-complete`; Spider: `stock`, `column-<i>`, `foundation-<i>`, `deals-left`,
   card ids like `spades-1-7`; TriPeaks: `stock`, `waste`, `run-value`, `stock-value`, `stuck-banner`, `stuck-undo`,

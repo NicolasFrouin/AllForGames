@@ -9,6 +9,7 @@ import '../../saves/game_save_store.dart';
 import '../../stats/game_record.dart';
 import '../../stats/play_timer.dart';
 import '../../stats/stats_store.dart';
+import 'mahjong_belt.dart';
 import 'mahjong_difficulty.dart';
 import 'mahjong_discs.dart';
 import 'mahjong_generator.dart';
@@ -114,6 +115,7 @@ class MahjongController extends ChangeNotifier {
     MahjongDifficulty difficulty = MahjongDifficulty.medium,
     MahjongMode mode = MahjongMode.classic,
     MahjongShape shape = MahjongShape.classic,
+    bool belt = false,
     bool? transposed,
     this.orient,
     int? seed,
@@ -124,6 +126,7 @@ class MahjongController extends ChangeNotifier {
       difficulty: difficulty,
       mode: mode,
       shape: shape,
+      belt: belt,
       transposed: transposed,
       seed: seed,
       initialState: initialState,
@@ -172,6 +175,10 @@ class MahjongController extends ChangeNotifier {
   /// Boards the hint solver may look at: a few tens of milliseconds.
   static const _solverBudget = 20000;
 
+  /// The same for a board with a belt: its simpler search is slower per
+  /// board.
+  static const _beltSolverBudget = 4000;
+
   /// At most this many tiles left (board and tray), and a known win: the
   /// game is almost won, [autoFinish] can play the end.
   static const autoFinishTiles = 12;
@@ -193,6 +200,7 @@ class MahjongController extends ChangeNotifier {
   late MahjongState _state;
   late MahjongMode _mode;
   late MahjongShape _shape;
+  late bool _belt;
   List<int> _tray = const [];
   late int _seed;
   late MahjongDifficulty _difficulty;
@@ -227,6 +235,11 @@ class MahjongController extends ChangeNotifier {
   MahjongState get state => _state;
   MahjongMode get mode => _mode;
   MahjongShape get shape => _shape;
+
+  /// Whether new deals (of the classic and tray modes) get a conveyor belt:
+  /// the deal on screen has one when its layout does ([MahjongLayout.belt]).
+  bool get belt => _belt;
+  bool get hasBelt => _state.layout.belt.isNotEmpty;
 
   /// Tray rules: the tray mode and the discs mode.
   bool get isTray => _mode.usesTray;
@@ -564,13 +577,14 @@ class MahjongController extends ChangeNotifier {
   /// as abandoned if the player made at least one move and did not finish it;
   /// else it leaves no record.
   ///
-  /// [difficulty], [mode] and [shape] default to the current ones;
+  /// [difficulty], [mode], [shape] and [belt] default to the current ones;
   /// [transposed] (rows and columns swapped, for tall screens) to what
   /// [orient] says, else to the current orientation.
   void newGame({
     MahjongDifficulty? difficulty,
     MahjongMode? mode,
     MahjongShape? shape,
+    bool? belt,
     bool? transposed,
     int? seed,
     MahjongState? initialState,
@@ -583,6 +597,7 @@ class MahjongController extends ChangeNotifier {
       difficulty: difficulty ?? _difficulty,
       mode: mode ?? _mode,
       shape: shape ?? _shape,
+      belt: belt ?? _belt,
       transposed:
           transposed ?? (orient == null ? _state.layout.transposed : null),
       seed: seed,
@@ -611,6 +626,8 @@ class MahjongController extends ChangeNotifier {
     'discs': [
       for (final disc in _state.discs) ...[disc.x, disc.y, disc.z],
     ],
+    'belt': _state.layout.belt,
+    'beltOption': _belt,
     'tray': _tray,
     'solution': isTray ? _picks : _encodePairs(_solution),
     'history': [
@@ -648,10 +665,20 @@ class MahjongController extends ChangeNotifier {
       if (xyz.isEmpty || xyz.length % 3 != 0) {
         throw const FormatException('Bad Mahjong layout positions');
       }
-      layout = MahjongLayout(layoutId, [
-        for (var i = 0; i < xyz.length; i += 3)
-          TilePosition(xyz[i], xyz[i + 1], xyz[i + 2]),
-      ], transposed: transposed);
+      final belt = ints(json['belt'] ?? const <int>[]);
+      if (belt.any((p) => p < 0 || p >= xyz.length ~/ 3) ||
+          belt.toSet().length != belt.length) {
+        throw const FormatException('Bad Mahjong belt');
+      }
+      layout = MahjongLayout(
+        layoutId,
+        [
+          for (var i = 0; i < xyz.length; i += 3)
+            TilePosition(xyz[i], xyz[i + 1], xyz[i + 2]),
+        ],
+        transposed: transposed,
+        belt: belt,
+      );
     } else {
       layout =
           layoutById(layoutId, transposed: transposed) ??
@@ -688,6 +715,7 @@ class MahjongController extends ChangeNotifier {
       json['shape'] as String? ??
           (layoutId == generatedLayoutId ? 'generated' : 'classic'),
     );
+    _belt = json['beltOption'] as bool? ?? layout.belt.isNotEmpty;
     final (slots, tray) = board(json['slots'], json['tray']);
     final hidden = {...ints(json['hidden'] ?? const <int>[])};
     if (hidden.any((id) => id < 0 || id >= faces.length)) {
@@ -751,6 +779,7 @@ class MahjongController extends ChangeNotifier {
     required MahjongDifficulty difficulty,
     required MahjongMode mode,
     required MahjongShape shape,
+    required bool belt,
     required bool? transposed,
     int? seed,
     MahjongState? initialState,
@@ -759,6 +788,7 @@ class MahjongController extends ChangeNotifier {
     _difficulty = difficulty;
     _mode = mode;
     _shape = shape;
+    _belt = belt;
     _tray = const [];
     _solution = null;
     _picks = null;
@@ -766,12 +796,19 @@ class MahjongController extends ChangeNotifier {
     if (transposed ?? orient?.call(layout, mode) ?? false) {
       layout = layout.toTransposed();
     }
+    // Across the board as it shows: after it is turned.
+    if (belt && mode != MahjongMode.discs) {
+      layout = withBelt(
+        layout,
+        clockwise: DealRandom(_seed ^ 0x62656C74).nextInt(2) == 0,
+      );
+    }
     if (initialState != null) {
       _state = initialState;
       if (isTray) {
-        _picks = solveTray(trayState, budget: _solverBudget);
+        _picks = _solveTray();
       } else {
-        _solution = solveMahjong(initialState, budget: _solverBudget);
+        _solution = _solvePairs();
       }
     } else if (isTray) {
       // The discs block the tiles under them: the deal is built with them,
@@ -871,11 +908,20 @@ class MahjongController extends ChangeNotifier {
   /// when the order is unknown (after a match it could not mend).
   TilePair? _winningPair() {
     if (_solution == null && !listEquals(_unsolvedSlots, _state.slots)) {
-      _solution = solveMahjong(_state, budget: _solverBudget);
+      _solution = _solvePairs();
       if (_solution == null) _unsolvedSlots = _state.slots;
     }
     return _solution?.firstOrNull;
   }
+
+  /// The tiles of a belt move: their own search.
+  List<TilePair>? _solvePairs() => hasBelt
+      ? solveBelt(_state, budget: _beltSolverBudget)
+      : solveMahjong(_state, budget: _solverBudget);
+
+  List<int>? _solveTray() => hasBelt
+      ? solveBeltTray(trayState, budget: _beltSolverBudget)
+      : solveTray(trayState, budget: _solverBudget);
 
   TilePair _mostFreeingPair() {
     final pairs = _state.freePairs;
@@ -900,7 +946,7 @@ class MahjongController extends ChangeNotifier {
   /// waits in the tray, so the board alone keys a failed search.
   int? _winningPick() {
     if (_picks == null && !listEquals(_unsolvedSlots, _state.slots)) {
-      _picks = solveTray(trayState, budget: _solverBudget);
+      _picks = _solveTray();
       if (_picks == null) _unsolvedSlots = _state.slots;
     }
     return _picks?.firstOrNull;

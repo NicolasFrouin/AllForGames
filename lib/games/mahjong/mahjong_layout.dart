@@ -30,13 +30,15 @@ class TilePosition {
 /// A tile is free when no tile lies on it, and the tiles on its left or the
 /// tiles on its right are all gone. In the discs mode, a disc not yet free
 /// blocks the tiles under its round too: until the tiles that lie on it are
-/// gone, they count as lying on those tiles.
+/// gone, they count as lying on those tiles. With a conveyor [belt], the
+/// tiles on it move one place along it after each move ([turned]).
 class MahjongLayout {
   MahjongLayout(
     this.id,
     this.positions, {
     this.transposed = false,
     this.discs = const [],
+    this.belt = const [],
   }) : above = _above(positions, discs),
        left = _neighbors(positions, (p, q) => _beside(p, q, -2)),
        right = _neighbors(positions, (p, q) => _beside(p, q, 2));
@@ -52,6 +54,34 @@ class MahjongLayout {
   /// The discs of the discs mode: each lies on the tile under the place it
   /// is given, under the tile of that place.
   final List<TilePosition> discs;
+
+  /// The positions of the conveyor belt, in the order its tiles go round:
+  /// the tile on `belt[i]` moves to `belt[i + 1]`, the last one to the first.
+  /// Nothing lies on them.
+  final List<int> belt;
+
+  /// Whether the belt turns clockwise on screen.
+  late final bool beltClockwise = () {
+    // The sign of the area of the loop (y grows downwards).
+    var area = 0;
+    for (final (i, p) in belt.indexed) {
+      final a = positions[p];
+      final b = positions[belt[(i + 1) % belt.length]];
+      area += a.x * b.y - b.x * a.y;
+    }
+    return area > 0;
+  }();
+
+  /// [slots] (one item per position) after a move: the items on the belt one
+  /// place further along it. The same list without a belt.
+  List<T> turned<T>(List<T> slots) {
+    if (belt.isEmpty) return slots;
+    final next = [...slots];
+    for (final (i, p) in belt.indexed) {
+      next[belt[(i + 1) % belt.length]] = slots[p];
+    }
+    return next;
+  }
 
   /// For each disc, the positions whose tiles lie on it ([discCover]).
   late final List<List<int>> discCovers = [
@@ -97,11 +127,17 @@ class MahjongLayout {
     [for (final p in positions) TilePosition(p.y, p.x, p.z)],
     transposed: !transposed,
     discs: [for (final d in discs) TilePosition(d.y, d.x, d.z)],
+    belt: belt,
   );
 
   /// The same board with [discs] lying in it.
-  MahjongLayout withDiscs(List<TilePosition> discs) =>
-      MahjongLayout(id, positions, transposed: transposed, discs: discs);
+  MahjongLayout withDiscs(List<TilePosition> discs) => MahjongLayout(
+    id,
+    positions,
+    transposed: transposed,
+    discs: discs,
+    belt: belt,
+  );
 
   /// The tiles that lie on each position: the tiles above it, and those
   /// that lie on a disc whose round covers it.

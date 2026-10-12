@@ -160,6 +160,35 @@ void mahjongFlows() {
     expect(record.details[MahjongStatKeys.mostHeld], 1);
   });
 
+  testFlow('Mahjong: a tray deal on a conveyor belt is won by its order; '
+      'Finish plays the end', (tester) async {
+    await _startApp(
+      tester,
+      location: '/mahjong?mode=tray&seed=4&difficulty=easy&belt=true',
+    );
+    expect(find.byKey(const ValueKey('belt-direction')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('hint')));
+    await tester.pumpAndSettle();
+    // The tiles move after each pick: they are tapped where they are now.
+    final ids = ((await _savedGame())['solution']! as List<Object?>)
+        .cast<int>();
+    final finish = find.byKey(const ValueKey('auto-complete'));
+    for (final id in ids) {
+      if (finish.evaluate().isNotEmpty) break;
+      await tester.tap(find.byKey(ValueKey('tile-$id')));
+      await tester.pumpAndSettle();
+    }
+    await tester.tap(finish);
+    final won = find.text('You won!');
+    for (var i = 0; i < 100 && won.evaluate().isEmpty; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(won, findsOneWidget);
+    final record = (await StatsStore.load()).records.single;
+    expect((record.won, record.variant), (true, 'tray-belt-random'));
+    expect(record.details[MahjongStatKeys.autoFinished], 1);
+  });
+
   testFlow('Mahjong tray mode: a full tray loses; Try again deals it again', (
     tester,
   ) async {

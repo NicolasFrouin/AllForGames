@@ -104,6 +104,9 @@ MahjongDeal shuffleTiles(MahjongState state, DealRandom random) {
 /// The positions where `occupied` is true, two by two, so that each pair is
 /// free when the pairs before it are gone. Picks pairs at random and starts
 /// over when only one free position is left; null after [attempts] tries.
+///
+/// The belt turns after each pair: a pair names the positions its tiles
+/// started on.
 List<(int, int)>? removalOrder(
   MahjongLayout layout,
   List<bool> occupied,
@@ -113,7 +116,9 @@ List<(int, int)>? removalOrder(
   final count = occupied.where((o) => o).length;
   if (count.isOdd) return null;
   for (var attempt = 0; attempt < attempts; attempt++) {
-    final left = [...occupied];
+    var left = [...occupied];
+    // Where the tile on each position started.
+    var start = [for (var p = 0; p < left.length; p++) p];
     final order = <(int, int)>[];
     while (order.length * 2 < count) {
       final free = [
@@ -125,7 +130,9 @@ List<(int, int)>? removalOrder(
       final b = free[random.nextInt(free.length)];
       left[a] = false;
       left[b] = false;
-      order.add((a, b));
+      order.add((start[a], start[b]));
+      left = layout.turned(left);
+      start = layout.turned(start);
     }
     if (order.length * 2 == count) return order;
   }
@@ -201,19 +208,22 @@ List<int> _pairFaces(
   return faces;
 }
 
-/// For each position, the first step of [order] at which it is free (step
-/// `k`: before pair `k` is removed).
+/// For each position, the first step of [order] at which the tile that
+/// starts there is free (step `k`: before pair `k` is removed).
 List<int> _freeSteps(MahjongLayout layout, List<(int, int)> order) {
-  final occupied = List.filled(layout.length, true);
+  var occupied = List.filled(layout.length, true);
+  var start = [for (var p = 0; p < layout.length; p++) p];
   final freeAt = List.filled(layout.length, order.length);
   for (final (k, (a, b)) in order.indexed) {
     for (var p = 0; p < layout.length; p++) {
-      if (occupied[p] && freeAt[p] > k && layout.isFree(p, occupied)) {
-        freeAt[p] = k;
+      if (occupied[p] && freeAt[start[p]] > k && layout.isFree(p, occupied)) {
+        freeAt[start[p]] = k;
       }
     }
-    occupied[a] = false;
-    occupied[b] = false;
+    occupied[start.indexOf(a)] = false;
+    occupied[start.indexOf(b)] = false;
+    occupied = layout.turned(occupied);
+    start = layout.turned(start);
   }
   return freeAt;
 }

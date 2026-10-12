@@ -31,6 +31,7 @@ class MahjongScreen extends StatefulWidget {
     this.mode,
     this.difficulty,
     this.shape,
+    this.belt,
     this.seed,
     this.initialState,
     this.clock,
@@ -38,12 +39,13 @@ class MahjongScreen extends StatefulWidget {
 
   final AppStores stores;
 
-  /// [mode], [difficulty], [shape], [seed] and [initialState] ask for a new
-  /// deal. Without any of them, the saved game continues. A new deal takes
-  /// the mode, the difficulty and the shape of the settings when it has none.
+  /// [mode], [difficulty], [shape], [belt], [seed] and [initialState] ask
+  /// for a new deal. Without any of them, the saved game continues. A new
+  /// deal takes the options of the settings it has not got.
   final MahjongMode? mode;
   final MahjongDifficulty? difficulty;
   final MahjongShape? shape;
+  final bool? belt;
   final int? seed;
 
   /// Starts from this board instead of a new deal (used by tests).
@@ -92,6 +94,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
         widget.mode != null ||
         widget.difficulty != null ||
         widget.shape != null ||
+        widget.belt != null ||
         widget.seed != null ||
         widget.initialState != null;
     if (saved != null && !newDeal) return saved;
@@ -99,11 +102,13 @@ class _MahjongScreenState extends State<MahjongScreen> {
     final mode = widget.mode ?? settings.mahjongMode;
     final difficulty = widget.difficulty ?? settings.mahjongDifficulty;
     final shape = widget.shape ?? settings.mahjongShape;
+    final belt = widget.belt ?? settings.mahjongBelt;
     if (saved != null) {
       return saved..newGame(
         difficulty: difficulty,
         mode: mode,
         shape: shape,
+        belt: belt,
         seed: widget.seed,
         initialState: widget.initialState,
       );
@@ -114,6 +119,7 @@ class _MahjongScreenState extends State<MahjongScreen> {
       difficulty: difficulty,
       mode: mode,
       shape: shape,
+      belt: belt,
       orient: _fitsTransposed,
       seed: widget.seed,
       initialState: widget.initialState,
@@ -261,18 +267,21 @@ class _MahjongScreenState extends State<MahjongScreen> {
         mode: settings.mahjongMode,
         difficulty: settings.mahjongDifficulty,
         shape: settings.mahjongShape,
+        belt: settings.mahjongBelt,
       ),
       inProgress: _controller.moves > 0 && _controller.result == null,
     );
     if (choice == null || !mounted) return;
-    final (options: (:mode, :difficulty, :shape), :abandon) = choice;
+    final (options: (:mode, :difficulty, :shape, :belt), :abandon) = choice;
     unawaited(settings.setMahjongMode(mode));
     unawaited(settings.setMahjongDifficulty(difficulty));
     unawaited(settings.setMahjongShape(shape));
+    unawaited(settings.setMahjongBelt(belt));
     _controller.newGame(
       difficulty: difficulty,
       mode: mode,
       shape: shape,
+      belt: belt,
       abandon: abandon,
     );
   }
@@ -677,6 +686,20 @@ class _StatusBarState extends State<_StatusBar> {
                 id: 'difficulty',
                 icon: Icons.speed,
                 value: controller.difficulty.label(l10n),
+              ),
+            if (controller.hasBelt)
+              Tooltip(
+                message: controller.state.layout.beltClockwise
+                    ? l10n.mahjongBeltClockwise
+                    : l10n.mahjongBeltCounterClockwise,
+                child: Icon(
+                  controller.state.layout.beltClockwise
+                      ? Icons.rotate_right
+                      : Icons.rotate_left,
+                  key: const ValueKey('belt-direction'),
+                  color: Colors.white70,
+                  size: 20,
+                ),
               ),
           ],
         ),

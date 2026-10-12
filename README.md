@@ -9,7 +9,8 @@ Classic games in one app: pick a game on the hub, play, and follow detailed stat
 - **TriPeaks**: clear three peaks with cards one rank above or below the waste (King and Ace wrap around)
 - **Mahjong** solitaire: a new shape for each deal (or the Pyramid and Turtle layouts), hidden tiles, hints, shuffle,
   undo and a Finish button for the last pairs; a Tray mode (tapped tiles go into 4 places where pairs clear, and a
-  full tray loses) and a Discs mode (free the discs under the tiles)
+  full tray loses) and a Discs mode (free the discs under the tiles); a conveyor belt option turns a loop of tiles
+  one place after each move
 - **Minesweeper** (Beginner, Intermediate, Expert), never a guess: the first tap opens an area and logic alone
   clears every board; flags, chords, hints and a Try again on the same board
 - Easy, Medium and Hard levels, and every deal can be won (proven by solvers)

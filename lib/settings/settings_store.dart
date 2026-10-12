@@ -35,6 +35,7 @@ class SettingsStore extends ChangeNotifier {
     this._mahjongTraySide,
     this._pinnedGames,
     this._mahjongShape,
+    this._mahjongBelt,
   );
 
   static const localeKey = 'settings.locale';
@@ -47,6 +48,7 @@ class SettingsStore extends ChangeNotifier {
   static const mahjongModeKey = 'settings.mahjong.mode';
   static const mahjongTraySideKey = 'settings.mahjong.traySide';
   static const mahjongShapeKey = 'settings.mahjong.shape';
+  static const mahjongBeltKey = 'settings.mahjong.belt';
   static const freecellDifficultyKey = 'settings.freecell.difficulty';
   static const spiderDifficultyKey = 'settings.spider.difficulty';
   static const tripeaksDifficultyKey = 'settings.tripeaks.difficulty';
@@ -82,6 +84,7 @@ class SettingsStore extends ChangeNotifier {
   MahjongTraySide _mahjongTraySide;
   List<String> _pinnedGames;
   MahjongShape _mahjongShape;
+  bool _mahjongBelt;
 
   static Future<SettingsStore> load([SharedPreferencesAsync? prefs]) async {
     prefs ??= SharedPreferencesAsync();
@@ -102,6 +105,7 @@ class SettingsStore extends ChangeNotifier {
     var mahjongTraySide = MahjongTraySide.top;
     var pinnedGames = <String>[];
     var mahjongShape = MahjongShape.generated;
+    var mahjongBelt = false;
     try {
       locale = _supportedLocale(await prefs.getString(localeKey));
       cardBackId = _knownCardBack(await prefs.getString(cardBackKey));
@@ -158,6 +162,7 @@ class SettingsStore extends ChangeNotifier {
             mahjongShapeKey,
           )] ??
           MahjongShape.generated;
+      mahjongBelt = await prefs.getBool(mahjongBeltKey) ?? false;
     } on Object catch (error) {
       // Storage can be blocked (for example site data off in the browser).
       // The app still works, it only keeps the settings of this session.
@@ -182,6 +187,7 @@ class SettingsStore extends ChangeNotifier {
       mahjongTraySide,
       pinnedGames,
       mahjongShape,
+      mahjongBelt,
     );
   }
 
@@ -214,6 +220,10 @@ class SettingsStore extends ChangeNotifier {
   /// Shape of the last new Mahjong game the player dealt (a generated one,
   /// or the classic layout of the level), for the next one.
   MahjongShape get mahjongShape => _mahjongShape;
+
+  /// Whether new Mahjong deals of the classic and tray modes get a conveyor
+  /// belt.
+  bool get mahjongBelt => _mahjongBelt;
 
   /// Where the tray of Mahjong's tray mode is, next to the board.
   MahjongTraySide get mahjongTraySide => _mahjongTraySide;
@@ -329,6 +339,15 @@ class SettingsStore extends ChangeNotifier {
     await _guard(
       'save the Mahjong shape',
       () => _prefs.setString(mahjongShapeKey, shape.name),
+    );
+    notifyListeners();
+  }
+
+  Future<void> setMahjongBelt(bool belt) async {
+    _mahjongBelt = belt;
+    await _guard(
+      'save the Mahjong belt',
+      () => _prefs.setBool(mahjongBeltKey, belt),
     );
     notifyListeners();
   }

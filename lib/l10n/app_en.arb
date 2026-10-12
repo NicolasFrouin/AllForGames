@@ -1966,6 +1966,32 @@
       }
     }
   },
+  "mahjongBeltVariant": "Belt · {layout}",
+  "@mahjongBeltVariant": {
+    "description": "Mahjong variant of the statistics: a layout with a conveyor belt.",
+    "placeholders": {
+      "layout": {
+        "type": "String",
+        "example": "Random"
+      }
+    }
+  },
+  "mahjongBelt": "Conveyor belt",
+  "@mahjongBelt": {
+    "description": "Switch of the Mahjong new game sheet (classic and tray modes): the deal gets a conveyor belt."
+  },
+  "mahjongBeltHint": "A loop of tiles across the board turns one place after each move.",
+  "@mahjongBeltHint": {
+    "description": "Under the conveyor belt switch: how the belt plays. A move is a match in classic mode and a pick in tray mode."
+  },
+  "mahjongBeltClockwise": "The belt turns clockwise",
+  "@mahjongBeltClockwise": {
+    "description": "Tooltip of the belt icon of the Mahjong status bar."
+  },
+  "mahjongBeltCounterClockwise": "The belt turns counterclockwise",
+  "@mahjongBeltCounterClockwise": {
+    "description": "Tooltip of the belt icon of the Mahjong status bar."
+  },
   "mahjongTrayFullTitle": "The tray is full",
   "@mahjongTrayFullTitle": {
     "description": "Mahjong tray mode: title of the dialog when the 4 places of the tray hold no pair: the game is lost."

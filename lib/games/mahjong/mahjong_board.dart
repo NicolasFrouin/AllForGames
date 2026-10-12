@@ -294,6 +294,10 @@ class _MahjongBoardState extends State<MahjongBoard>
   static const _flightDuration = 520.0;
   static const _trayFlight = 420.0;
   static const _slideDuration = 240.0;
+
+  /// The belt turns once the move has started: its tiles slide one place.
+  static const _beltDelay = 140.0;
+  static const _beltDuration = 340.0;
   static const _flashDuration = 900.0;
 
   /// A face-down tile taken at once shows its face this long after its flip.
@@ -463,6 +467,20 @@ class _MahjongBoardState extends State<MahjongBoard>
                       lost: _controller.isLost,
                       flashStart: _flashStart,
                     ),
+                  if (state.layout.belt.isNotEmpty)
+                    Positioned.fill(
+                      child: RepaintBoundary(
+                        child: CustomPaint(
+                          key: const ValueKey('belt-track'),
+                          painter: _BeltPainter(
+                            cells: [
+                              for (final p in state.layout.belt)
+                                _footprint(state.layout.positions[p], geometry),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   // Changes of the paint order rebuild this layer only, with
                   // the same tile widgets.
                   Positioned.fill(
@@ -577,9 +595,13 @@ class _MahjongBoardState extends State<MahjongBoard>
         _celebratedAt = null;
         added.addAll(_dropMotions(state, geometry));
       case MahjongAction.match:
-        added.addAll(_vanishMotions(tiles));
+        added
+          ..addAll(_vanishMotions(tiles))
+          ..addAll(_beltMotions(tiles));
       case MahjongAction.pick:
-        added.addAll(_pickMotions(tiles, geometry));
+        added
+          ..addAll(_pickMotions(tiles, geometry))
+          ..addAll(_beltMotions(tiles));
       case MahjongAction.undo || MahjongAction.shuffle:
         added.addAll(_returnMotions(previous, geometry));
       case MahjongAction.none || null:
@@ -806,7 +828,12 @@ class _MahjongBoardState extends State<MahjongBoard>
     }
     for (final target in _targets.values) {
       final before = previous[target.id];
-      if (before == null || before.rect == target.rect) continue;
+      // A tile that moves on the board rides the belt.
+      if (before == null ||
+          before.rect == target.rect ||
+          !before.inTray && !target.inTray) {
+        continue;
+      }
       final from =
           before.rect.topLeft + poseOf(target.id) - target.rect.topLeft;
       added[target.id] = before.inTray
@@ -825,6 +852,33 @@ class _MahjongBoardState extends State<MahjongBoard>
             );
     }
     return added;
+  }
+
+  /// After a move, the tiles of the belt slide one place along it.
+  Map<int, TileMotion> _beltMotions(Map<int, _Target> previous) => {
+    for (final target in _targets.values)
+      if (previous[target.id] case final before?
+          when !before.inTray && !target.inTray && before.rect != target.rect)
+        target.id: TileMotion(
+          kind: TileMotionKind.slide,
+          start: _beltDelay,
+          duration: _beltDuration,
+          from:
+              before.rect.topLeft +
+              (_motions[target.id]?.poseAt(_now).offset ?? Offset.zero) -
+              target.rect.topLeft,
+        ),
+  };
+
+  /// The ground a tile at [p] covers: its face and its thickness.
+  Rect _footprint(TilePosition p, MahjongBoardGeometry geometry) {
+    final face = geometry.faceRect(p);
+    return Rect.fromLTWH(
+      face.left,
+      face.top,
+      face.width + geometry.depth,
+      face.height + geometry.depth,
+    );
   }
 
   /// After an undo or a shuffle: tiles fly to their new places, and
@@ -1252,6 +1306,64 @@ class _TrayPainter extends CustomPainter {
 
 /// A jade disc with a hole in its middle (a bi), lying flat: its shadow, its
 /// thickness, then its top with a carved ring and grains.
+/// The conveyor belt under its tiles: a band through its [cells], in the
+/// order the tiles go, with an arrow in each cell toward the next one (seen
+/// where a tile is gone).
+class _BeltPainter extends CustomPainter {
+  const _BeltPainter({required this.cells});
+
+  final List<Rect> cells;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (cells.isEmpty) return;
+    final unit = cells.first.shortestSide;
+    final band = Paint()..color = const Color(0x40000000);
+    final edge = Paint()
+      ..color = const Color(0x24FFFFFF)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    for (final cell in cells) {
+      final rrect = RRect.fromRectAndRadius(
+        cell.inflate(unit * 0.06),
+        Radius.circular(unit * 0.16),
+      );
+      canvas
+        ..drawRRect(rrect, band)
+        ..drawRRect(rrect, edge);
+    }
+    final arrow = Paint()
+      ..color = const Color(0x66FFFFFF)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = max(1.5, unit * 0.05)
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    for (final (i, cell) in cells.indexed) {
+      final to = cells[(i + 1) % cells.length].center - cell.center;
+      final direction = to / to.distance;
+      final across = Offset(-direction.dy, direction.dx);
+      final tip = cell.center + direction * unit * 0.14;
+      final back = tip - direction * unit * 0.22;
+      canvas.drawPath(
+        Path()
+          ..moveTo(
+            back.dx + across.dx * unit * 0.2,
+            back.dy + across.dy * unit * 0.2,
+          )
+          ..lineTo(tip.dx, tip.dy)
+          ..lineTo(
+            back.dx - across.dx * unit * 0.2,
+            back.dy - across.dy * unit * 0.2,
+          ),
+        arrow,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_BeltPainter old) => !listEquals(old.cells, cells);
+}
+
 class _DiscPainter extends CustomPainter {
   const _DiscPainter({required this.depth, required this.margin});
 

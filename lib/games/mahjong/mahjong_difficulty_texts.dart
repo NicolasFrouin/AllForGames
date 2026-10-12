@@ -1,4 +1,5 @@
 import '../../l10n/app_localizations.dart';
+import 'mahjong_belt.dart';
 import 'mahjong_controller.dart';
 import 'mahjong_difficulty.dart';
 import 'mahjong_shapes.dart';
@@ -68,7 +69,7 @@ final mahjongLayoutNames = <String, String Function(AppLocalizations)>{
 };
 
 /// Names of the variants of the records: each layout in classic mode, then
-/// in tray mode.
+/// in tray mode, then with a belt in the classic and tray modes.
 final mahjongVariantNames = <String, String Function(AppLocalizations)>{
   for (final mode in MahjongMode.values)
     for (final MapEntry(key: layoutId, value: name)
@@ -77,5 +78,14 @@ final mahjongVariantNames = <String, String Function(AppLocalizations)>{
         MahjongMode.classic => name,
         MahjongMode.tray => (l10n) => l10n.mahjongTrayVariant(name(l10n)),
         MahjongMode.discs => (l10n) => l10n.mahjongDiscsVariant(name(l10n)),
+      },
+  for (final mode in [MahjongMode.classic, MahjongMode.tray])
+    for (final MapEntry(key: layoutId, value: name)
+        in mahjongLayoutNames.entries)
+      mahjongVariant(mode, beltLayoutId(layoutId)): switch (mode) {
+        MahjongMode.tray => (l10n) => l10n.mahjongTrayVariant(
+          l10n.mahjongBeltVariant(name(l10n)),
+        ),
+        _ => (l10n) => l10n.mahjongBeltVariant(name(l10n)),
       },
 };

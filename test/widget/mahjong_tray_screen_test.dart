@@ -3,6 +3,7 @@ import 'package:all_for_games/app_stores.dart';
 import 'package:all_for_games/games/game_catalog.dart';
 import 'package:all_for_games/games/mahjong/mahjong_controller.dart';
 import 'package:all_for_games/games/mahjong/mahjong_difficulty.dart';
+import 'package:all_for_games/games/mahjong/mahjong_layout.dart';
 import 'package:all_for_games/games/mahjong/mahjong_moving_tile.dart';
 import 'package:all_for_games/games/mahjong/mahjong_screen.dart';
 import 'package:all_for_games/games/mahjong/mahjong_state.dart';
@@ -493,5 +494,83 @@ void main() {
     expect(byKey('variant-tray-turtle'), findsNothing);
     expect(valueIn('stat-played'), '1');
     expect(valueIn('stat-${MahjongStatKeys.mostHeld}'), '4');
+  });
+
+  group('belt', () {
+    testWidgets('the new game sheet deals a belt and keeps the choice; the '
+        'discs goal has none', (tester) async {
+      final stores = await pumpTray(tester);
+      expect(byKey('belt-direction'), findsNothing);
+      expect(byKey('belt-track'), findsNothing);
+
+      await tester.tap(byKey('new-game'));
+      await tester.pumpAndSettle();
+      final belt = byKey('new-game-belt');
+      expect(tester.widget<SwitchListTile>(belt).value, isFalse);
+      await tester.ensureVisible(belt);
+      await tester.tap(belt);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(byKey('new-game-deal'));
+      await tester.tap(byKey('new-game-deal'));
+      await tester.pumpAndSettle();
+
+      expect(byKey('belt-direction'), findsOneWidget);
+      expect(byKey('belt-track'), findsOneWidget);
+      expect(stores.settings.mahjongBelt, isTrue);
+      expect(savedData(stores)['belt'], isNotEmpty);
+
+      await tester.tap(byKey('new-game'));
+      await tester.pumpAndSettle();
+      expect(tester.widget<SwitchListTile>(belt).value, isTrue);
+      await tester.tap(byKey('new-game-goal-discs'));
+      await tester.pumpAndSettle();
+      expect(belt, findsNothing);
+    });
+
+    testWidgets('after a pick, the tiles of the belt slide one place', (
+      tester,
+    ) async {
+      // A loop of six: 0 1 2 on top, 5 4 3 under them, turning clockwise.
+      final loop = MahjongLayout(
+        'loop',
+        const [
+          TilePosition(0, 0, 0),
+          TilePosition(2, 0, 0),
+          TilePosition(4, 0, 0),
+          TilePosition(4, 2, 0),
+          TilePosition(2, 2, 0),
+          TilePosition(0, 2, 0),
+        ],
+        belt: const [0, 1, 2, 3, 4, 5],
+      );
+      await pumpTray(
+        tester,
+        state: MahjongState(
+          layout: loop,
+          faces: [dots1, dots2, dots3, dots3, dots2, dots1],
+          slots: [0, 1, 2, 3, 4, 5],
+        ),
+      );
+      final upperLeft = tester.getTopLeft(tile(0));
+      final lowerLeft = tester.getTopLeft(tile(5));
+
+      await tester.tap(tile(0));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 60));
+      // Tile 5 rides up to the place of tile 0; it starts where it was.
+      expect(tester.getTopLeft(tile(5)), lowerLeft, reason: 'not moving yet');
+      final offset = paintedTile(tester, 5).offset;
+      expect(offset.dx, 0);
+      expect(offset.dy, closeTo((lowerLeft - upperLeft).dy, 0.01));
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(
+        tester.getTopLeft(tile(5)).dy,
+        inExclusiveRange(upperLeft.dy, lowerLeft.dy),
+      );
+
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(tile(5)), upperLeft);
+      expect(tester.getTopLeft(tile(4)), lowerLeft);
+    });
   });
 }

@@ -341,6 +341,15 @@ void main() {
     expect((await SettingsStore.load()).mahjongShape, MahjongShape.classic);
   });
 
+  test('a new Mahjong deal has no belt until the player turns it on', () async {
+    final store = await createStore();
+    expect(store.mahjongBelt, isFalse);
+
+    await store.setMahjongBelt(true);
+
+    expect((await SettingsStore.load()).mahjongBelt, isTrue);
+  });
+
   test('listeners are told after the write, not during the call', () async {
     final store = await createStore();
     var notified = 0;

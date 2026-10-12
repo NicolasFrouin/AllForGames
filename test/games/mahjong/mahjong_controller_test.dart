@@ -579,4 +579,56 @@ void main() {
       expect(game.moves, 0);
     });
   });
+
+  group('belt', () {
+    MahjongController belted({MahjongMode mode = MahjongMode.classic}) =>
+        MahjongController(
+          stats: stats,
+          saves: saves,
+          mode: mode,
+          shape: MahjongShape.generated,
+          belt: true,
+          seed: 3,
+          clock: () => now,
+        );
+
+    test('a deal gets a belt; a match turns it; the record names it', () {
+      final game = belted();
+      final layout = game.state.layout;
+      expect((game.belt, game.hasBelt, layout.id), (true, true, 'belt-random'));
+
+      final rider = game.state.slots[layout.belt.first];
+      final (a, b) = game.state.freePairs.firstWhere(
+        (pair) => pair.$1 != rider && pair.$2 != rider,
+      );
+      expect(game.match(a, b), isTrue);
+      expect(game.state.positionOf(rider), layout.belt[1]);
+      expect(game.hint(), isNotNull);
+
+      expect(abandon(game).variant, 'belt-random');
+      expect(game.hasBelt, isTrue, reason: 'the next deal keeps it');
+      game.newGame(belt: false);
+      expect((game.belt, game.hasBelt), (false, false));
+    });
+
+    test('the save keeps the belt and its direction', () async {
+      final game = belted();
+      final (a, b) = game.state.freePairs.first;
+      game.match(a, b);
+      await flush();
+
+      final again = restore(await storedSave(gameId));
+      expect(again.state.layout.belt, game.state.layout.belt);
+      expect(again.state.layout.beltClockwise, game.state.layout.beltClockwise);
+      expect(again.state.slots, game.state.slots);
+      expect(again.belt, isTrue);
+    });
+
+    test('the discs mode keeps the option but deals no belt', () {
+      final game = belted(mode: MahjongMode.discs);
+      expect((game.belt, game.hasBelt), (true, false));
+      game.newGame(mode: MahjongMode.classic);
+      expect(game.hasBelt, isTrue);
+    });
+  });
 }

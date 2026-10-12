@@ -44,14 +44,18 @@ class TrayState {
   bool canPick(int id) => !isLost && board.isFree(id);
 
   /// The board without [id], which goes into the tray or clears its
-  /// partner there. Null when [id] cannot be picked.
+  /// partner there; the belt then turns one place. Null when [id] cannot be
+  /// picked.
   TrayState? pick(int id) {
     if (!canPick(id)) return null;
     final partner = partnerOf(id);
     return TrayState(
-      board.withSlots([
-        for (final tile in board.slots) tile == id ? MahjongState.empty : tile,
-      ]),
+      board.withSlots(
+        board.layout.turned([
+          for (final tile in board.slots)
+            tile == id ? MahjongState.empty : tile,
+        ]),
+      ),
       partner == null
           ? [...tray, id]
           : [
@@ -76,6 +80,15 @@ class TrayState {
   /// tile is free when its turn comes, and the tray never fills.
   bool isSolvedBy(List<int> order) {
     if (order.length != board.tileCount) return false;
+    if (board.layout.belt.isNotEmpty) {
+      // Tiles move: play the order.
+      TrayState? state = this;
+      for (final id in order) {
+        state = state!.pick(id);
+        if (state == null) return false;
+      }
+      return state!.isWon;
+    }
     final occupied = [for (final id in board.slots) id != MahjongState.empty];
     final waiting = {for (final id in tray) board.faces[id]};
     if (waiting.length >= capacity) return false;
@@ -121,11 +134,14 @@ TrayDeal generateTrayDeal(
 }) {
   final random = DealRandom(seed);
   final count = layout.length;
-  final occupied = List.filled(count, true);
-  // For each position, the first step at which it is free (before that
-  // step's pick), and the step it is picked.
+  // Tiles are named by the position they start on: the belt moves them.
+  var occupied = List.filled(count, true);
+  var start = [for (var p = 0; p < count; p++) p];
+  // For each tile, the first step at which it is free (before that step's
+  // pick), the step it is picked and the place it is picked from.
   final freeSince = List.filled(count, -1);
   final pickedAt = List.filled(count, -1);
+  final pickedFrom = List.filled(count, -1);
   final faces = List.filled(count, 0);
   final order = <int>[];
 
@@ -222,8 +238,9 @@ TrayDeal generateTrayDeal(
     final free = <int>[];
     for (var p = 0; p < count; p++) {
       if (!occupied[p] || !layout.isFree(p, occupied)) continue;
-      free.add(p);
-      if (freeSince[p] < 0) freeSince[p] = step;
+      final tile = start[p];
+      free.add(tile);
+      if (freeSince[tile] < 0) freeSince[tile] = step;
     }
     // Every face started needs its second pair: once only those are left,
     // a waiting tile takes the face of a cleared pair.
@@ -286,7 +303,11 @@ TrayDeal generateTrayDeal(
           [for (final p in free) (face, p)],
           seen: !blind,
           cost: (p) =>
-              pattern.cost(layout, first, p, under: under[first].contains(p)) +
+              pattern.cost(
+                layout.positions[pickedFrom[first]],
+                layout.positions[start.indexOf(p)],
+                under: under[first].contains(p),
+              ) +
               (freeSince[p] == since + 1 ? 1 : 0),
           stacks: pattern == _PairPattern.under,
         ),
@@ -301,8 +322,11 @@ TrayDeal generateTrayDeal(
     faces[picked] = face;
     (tilesOf[face] ??= []).add(picked);
     pickedAt[picked] = step;
-    occupied[picked] = false;
+    pickedFrom[picked] = start.indexOf(picked);
+    occupied[pickedFrom[picked]] = false;
     order.add(picked);
+    occupied = layout.turned(occupied);
+    start = layout.turned(start);
   }
   // A tile id is the position of the tile in the deal.
   return (
@@ -333,12 +357,11 @@ enum _PairPattern {
   /// Any place.
   anywhere;
 
-  /// From 0 (the place fits the pattern best) to 2.
-  int cost(MahjongLayout layout, int first, int place, {required bool under}) {
+  /// From 0 (the place fits the pattern best) to 2, for a partner at [b]
+  /// when the first tile was picked at [a].
+  int cost(TilePosition a, TilePosition b, {required bool under}) {
     if (this == _PairPattern.under) return under ? 0 : 2;
     if (under) return 2;
-    final a = layout.positions[first];
-    final b = layout.positions[place];
     // In tiles.
     final distance = sqrt(pow(a.x - b.x, 2) + pow(a.y - b.y, 2)) / 2;
     return switch (this) {

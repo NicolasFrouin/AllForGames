@@ -74,9 +74,12 @@ class MahjongState {
       a != b && isFree(a) && isFree(b) && faces[a] == faces[b];
 
   /// The board without [a] and [b], or null when they cannot be matched.
+  /// The belt then turns one place.
   MahjongState? match(int a, int b) {
     if (!canMatch(a, b)) return null;
-    return withSlots([for (final id in slots) id == a || id == b ? empty : id]);
+    return withSlots(
+      layout.turned([for (final id in slots) id == a || id == b ? empty : id]),
+    );
   }
 
   /// This board with the tiles on other positions (a shuffle, an undo).
@@ -113,6 +116,15 @@ class MahjongState {
   /// board, each pair being free and matching when its turn comes.
   bool isSolvedBy(List<TilePair> order) {
     if (order.length * 2 != tileCount) return false;
+    if (layout.belt.isNotEmpty) {
+      // Tiles move: play the order.
+      MahjongState? board = this;
+      for (final (a, b) in order) {
+        board = board!.match(a, b);
+        if (board == null) return false;
+      }
+      return true;
+    }
     final occupied = [..._occupied];
     for (final (a, b) in order) {
       final pa = _positions[a];
