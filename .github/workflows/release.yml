@@ -1,7 +1,9 @@
 name: Release
 
-# A tag v1.2.3 publishes a GitHub Release with the Android APK, the app bundle and the web build.
-# Run by hand (Actions > Release > Run workflow), the same files become artifacts of the run.
+# A tag v1.2.3 publishes a GitHub Release with the Android APK, the app bundle and the web build,
+# and puts the web app on GitHub Pages (https://nicolasfrouin.github.io/AllForGames/: the iPhone
+# app, offline after one visit). Run by hand (Actions > Release > Run workflow), the same files
+# become artifacts of the run, and the web app goes to GitHub Pages too.
 on:
   push:
     tags: ['v*']
@@ -138,11 +140,27 @@ jobs:
       # a release build write the Android plugin registrant without the dev-only plugins
       # (integration_test), which do not compile in release.
       # build/ stays on the runner: build/web starts empty, so no stale file goes in the zip.
+      # Offline, the app must load nothing from a CDN (--no-web-resources-cdn: CanvasKit and the
+      # Roboto font come with it); sw.js then gets the list of files to keep.
       - name: Web build
         run: |
           rm -rf build/web
-          flutter build web --release --wasm --build-name "$BUILD_NAME" --build-number "$BUILD_NUMBER"
+          flutter build web --release --wasm --no-web-resources-cdn \
+            --build-name "$BUILD_NAME" --build-number "$BUILD_NUMBER"
+          dart run tool/make_service_worker.dart build/web
           (cd build/web && zip -qr "$DIST/all-for-games-$BUILD_NAME-web.zip" .)
+      # The same build under /AllForGames/, the path of the repository's GitHub Pages: only the
+      # base of index.html changes (the other files use relative paths).
+      - name: GitHub Pages files
+        run: |
+          pages=$RUNNER_TEMP/pages
+          rm -rf "$pages" && cp -r build/web "$pages"
+          sed -i 's|<base href="/">|<base href="/AllForGames/">|' "$pages/index.html"
+          grep -q '<base href="/AllForGames/">' "$pages/index.html"
+          echo "PAGES=$pages" >>"$GITHUB_ENV"
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: ${{ env.PAGES }}
       # One APK for every ABI (arm64, armv7, x86_64) to install directly, and the app bundle for
       # the Play Store.
       - name: Android builds
@@ -212,3 +230,20 @@ jobs:
         run: |
           rm -f android/key.properties "$RUNNER_TEMP/upload-keystore.jks"
           if [[ -x android/gradlew ]]; then (cd android && ./gradlew --stop -q) || true; fi
+
+  # Publishes the web build of the job above (the artifact github-pages). The github-pages
+  # environment of the repository accepts main and the v* tags.
+  pages:
+    name: GitHub Pages
+    needs: release
+    runs-on: [self-hosted, Linux, X64]
+    timeout-minutes: 15
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v5

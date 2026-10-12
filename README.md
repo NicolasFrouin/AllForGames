@@ -36,7 +36,8 @@ flutter test                 # unit and widget tests
 scripts/e2e_web.sh           # end-to-end tests in headless Chrome
 ```
 
-Release web build: `flutter build web --release --wasm` (output in `build/web`).
+Release web build: `flutter build web --release --wasm --no-web-resources-cdn`, then
+`dart run tool/make_service_worker.dart` (output in `build/web`, playable offline).
 
 App icon: SVG sources in `assets/icon/`; `scripts/make_icons.sh` regenerates the icons of every platform from them
 (needs `brew install librsvg imagemagick`).
@@ -51,10 +52,28 @@ git tag v0.1.0 && git push origin v0.1.0
 
 The Release workflow (`.github/workflows/release.yml`, on the self-hosted runner) builds the Android APK, the
 Android App Bundle and the web build, then publishes them on a GitHub Release (the repository's Releases page):
-`all-for-games-<version>.apk`, `.aab` and `-web.zip`. The tag gives the version (`v1.2.3` → 1.2.3), the run
+`all-for-games-<version>.apk`, `.aab` and `-web.zip`; the web app also goes to GitHub Pages
+(<https://nicolasfrouin.github.io/AllForGames/>). The tag gives the version (`v1.2.3` → 1.2.3), the run
 number the build number (Android `versionCode`). Versions below 1.0 or with a suffix (`v1.0.0-beta.1`) are
 prereleases. To build without a release: Actions > Release > Run workflow (pubspec version; the files are
-artifacts of the run, kept 14 days).
+artifacts of the run, kept 14 days, and the web app goes to GitHub Pages).
+
+### Install the web app on an iPhone (no Apple account, plays offline)
+
+1. In **Safari**, open <https://nicolasfrouin.github.io/AllForGames/>.
+2. Tap **Share**, then **Add to Home Screen**, then **Add** (on iOS 26: **Open as Web App** stays on).
+3. Open the app from its icon once with a network, and wait about a minute on Wi-Fi: it keeps its files (about
+   20 MB) for offline play.
+
+Then it starts without a network (airplane mode too). A new release reaches it the next time it is opened with a
+network: it downloads in the background and takes over when the app is left and opened again. Statistics, saves
+and settings stay on the iPhone, in the home screen app (separate from Safari and from the Android app); removing
+the icon removes them. The web app works the same way on Android and computers (Chrome: Install app).
+
+The offline files: `web/sw.js` (a service worker: one cache per build, filled by `tool/make_service_worker.dart`
+with the files of the build and a name from their contents), registered by `web/index.html` (not on `localhost`);
+`web/flutter_bootstrap.js` keeps Flutter's own (deprecated) service worker away; `--no-web-resources-cdn` puts
+CanvasKit and the Roboto font in the build.
 
 ### Install the APK on an Android phone
 
@@ -84,8 +103,9 @@ the app first (its saved games and statistics go with it).
   Store need the paid Apple Developer Program (`flutter build ipa`).
 - **macOS, Windows, Linux**: build on that system (no cross-compiling): `flutter build macos`,
   `flutter build windows`, `flutter build linux`.
-- **Web**: `flutter build web --release --wasm`, then put `build/web` on any static host (at the site root; for a
-  sub-folder, add `--base-href /folder/`).
+- **Web**: `flutter build web --release --wasm --no-web-resources-cdn`, then
+  `dart run tool/make_service_worker.dart`, then put `build/web` on any static host with HTTPS (at the site root;
+  for a sub-folder, add `--base-href /folder/`).
 
 ### Android signing key
 

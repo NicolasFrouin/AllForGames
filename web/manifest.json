@@ -1,7 +1,9 @@
 {
     "name": "All For Games",
     "short_name": "All For Games",
-    "start_url": ".",
+    "id": "./",
+    "start_url": "./",
+    "scope": "./",
     "display": "standalone",
     "background_color": "#0A1F1A",
     "theme_color": "#0E3B2C",

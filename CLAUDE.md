@@ -28,7 +28,8 @@ dart run tool/generate_tripeaks_deals.dart    # regenerates tripeaks_deals.dart 
 dart run tool/mahjong_difficulty.dart [deals] # win rates of simulated players per Mahjong level and shape
 dart run tool/minesweeper_generation.dart [n] # Minesweeper generator time per level (node runs its JS build too)
 dart run tool/generate_sudoku_puzzles.dart    # regenerates sudoku_puzzles.dart (about 5 seconds; --stats N)
-flutter build web --release --wasm            # release web build in build/web
+flutter build web --release --wasm --no-web-resources-cdn  # release web build in build/web, then:
+dart run tool/make_service_worker.dart        # fills build/web/sw.js (offline file list, cache name)
 scripts/make_icons.sh                         # app icons of every platform from assets/icon/*.svg (rsvg-convert, magick)
 flutter build apk                             # release APK (android/key.properties signs it, else the debug key)
 git tag v1.2.3 && git push origin v1.2.3      # release workflow: GitHub Release with APK, AAB and web zip
@@ -43,7 +44,10 @@ software). Docs-only changes (`**/*.md`, `.ai/**`) and tag pushes skip CI. The r
 and the web zip, on the same runner (Java 17 and the Android SDK stay on its disk too); it signs with the upload key
 when the `ANDROID_KEY*` secrets are set (see README), else with the debug key. Its Android builds must not take
 `--no-pub`: only a pub run rewrites the plugin registrant without the dev-only plugins (`integration_test` does not
-compile in release).
+compile in release). The release workflow also publishes the web build on GitHub Pages
+(<https://nicolasfrouin.github.io/AllForGames/>: `index.html` with the base `/AllForGames/`; its `pages` job deploys
+to the `github-pages` environment, which accepts `main` and the `v*` tags): the iPhone app (Safari, Add to Home
+Screen).
 
 **CI runs only on the self-hosted runner** (Coolify, Linux x64): every job uses `runs-on: [self-hosted, Linux, X64]`.
 Never use GitHub-hosted runners (`ubuntu-latest`, ...). The runner is a persistent container (4 CPUs although `nproc`
@@ -332,6 +336,15 @@ tool/                        generate_klondike_deals.dart (solves and grades dea
   keypad. Score = 10 per cell filled right × level number. Layout: the grid as large as it fits; under it on a tall
   screen (3 rows of 3 digit keys when they fit, else one row of 9), beside it on a wide one. Keyboard: digits,
   Backspace/Delete/0, arrows, N (notes), Ctrl/Cmd + Z, Y, Shift + Z.
+- **Web app offline** (the iPhone app): `web/sw.js` keeps every file the app loads in one cache per build
+  (`tool/make_service_worker.dart` writes the file list and a cache name from their contents after `flutter build
+  web`; both engines: `main.dart.js` + CanvasKit for Safari/Firefox, `main.dart.wasm` + skwasm for Chrome); a new
+  build installs beside the old one and takes over when the page hides (`index.html` posts `skipWaiting`, then
+  reloads; games save on hide). `index.html` registers it except on `localhost` (`flutter run`, e2e).
+  `web/flutter_bootstrap.js` passes no `serviceWorkerSettings` (Flutter's deprecated worker would replace sw.js).
+  Builds take `--no-web-resources-cdn` (CanvasKit and Roboto in the build). A character Roboto lacks makes the
+  engine download a Noto font: offline it shows as a box, so texts avoid them (`format.dart` turns U+202F into
+  U+00A0; draw symbols as icons); sw.js keeps the fonts it downloaded online.
 - **In-app update** (Android only, `Platform.isAndroid`: never in tests, web or desktop): the check reads
   `https://api.github.com/repos/NicolasFrouin/AllForGames/releases` (the repository is public: no key in the app),
   skips drafts and tags with a suffix, and offers the highest version above the installed `versionName` (the tag
