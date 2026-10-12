@@ -56,6 +56,10 @@ class TrayLevel {
 /// free in the discs mode. `tool/mahjong_difficulty.dart` checks them with
 /// simulated players.
 ///
+/// The generated shapes of Medium and Hard are 7 tiles wide and taller than
+/// wide: a phone held upright shows them as they are, with tiles about a
+/// quarter bigger than a wider base turned on its side.
+///
 /// Pure Dart: the rules, the generator and the tool use it without Flutter.
 enum MahjongDifficulty {
   easy(
@@ -80,7 +84,7 @@ enum MahjongDifficulty {
       maxTiles: 120,
       minLayers: 4,
       maxLayers: 6,
-      columns: 13,
+      columns: 7,
       rows: 9,
     ),
     trapPercent: 15,
@@ -100,8 +104,8 @@ enum MahjongDifficulty {
       maxTiles: 144,
       minLayers: 6,
       maxLayers: 8,
-      columns: 15,
-      rows: 9,
+      columns: 7,
+      rows: 11,
     ),
     trapPercent: 50,
     tray: TrayLevel(

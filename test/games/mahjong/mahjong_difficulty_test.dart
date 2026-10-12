@@ -75,8 +75,8 @@ void main() {
   });
 
   test('on generated shapes too, harder levels are won less often', () {
-    // About 84%, 54% and 16% (greedy), and in tray mode 83%, 32% and 0%
-    // (casual) over 200 deals (tool/mahjong_difficulty.dart).
+    // About 83%, 55% and 12% (greedy), and in tray mode 81%, 48% and 9%
+    // (casual) over 500 deals (tool/mahjong_difficulty.dart).
     const shape = MahjongShape.generated;
     final classic = [
       for (final difficulty in MahjongDifficulty.values)

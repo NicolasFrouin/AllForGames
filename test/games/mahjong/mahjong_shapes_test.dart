@@ -11,8 +11,8 @@ import 'package:flutter_test/flutter_test.dart';
 /// the same shape.
 const seed1HardShape = [
   128, //
-  20, 8, 6, 10, 8, 6, 0, 8, 6, 20, 8, 5, //
-  12, 8, 5, 10, 8, 5, 8, 8, 5, 0, 8, 5,
+  12, 10, 6, 10, 10, 6, 2, 10, 6, 0, 10, 6, //
+  12, 10, 5, 10, 10, 5, 8, 10, 5, 6, 10, 5,
 ];
 
 List<int> hardShapeOfSeed1() {
