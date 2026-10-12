@@ -33,9 +33,8 @@ void main() {
   });
 
   for (final width in [30.0, 80.0]) {
-    testWidgets('every style draws every face at ${width.round()} px wide', (
-      tester,
-    ) async {
+    testWidgets('every style draws every face and its back at '
+        '${width.round()} px wide', (tester) async {
       tester.view.physicalSize = const Size(4000, 3000);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
@@ -56,6 +55,15 @@ void main() {
                     selected: code == 0,
                     dimmed: code.isOdd,
                   ),
+                for (final dimmed in [false, true])
+                  MahjongTileView(
+                    face: const TileFace(0),
+                    faceSize: faceSize,
+                    depth: width * 0.13,
+                    style: style,
+                    dimmed: dimmed,
+                    faceDown: true,
+                  ),
               ],
             ],
           ),
@@ -64,7 +72,7 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(
         find.byType(MahjongTileView),
-        findsNWidgets(tileStyles.length * (TileFace.count + 1)),
+        findsNWidgets(tileStyles.length * (TileFace.count + 3)),
       );
     });
   }

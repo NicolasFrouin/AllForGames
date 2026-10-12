@@ -1524,6 +1524,30 @@
   "@achievementMahjongTrayWins10Description": {
     "description": "How to unlock the Mahjong achievement for 10 games won in tray mode."
   },
+  "achievementMahjongDiscsWinTitle": "Treasure hunter",
+  "@achievementMahjongDiscsWinTitle": {
+    "description": "Title of the Mahjong achievement for the first game won in discs mode."
+  },
+  "achievementMahjongDiscsWinDescription": "Free every disc in a game of Mahjong.",
+  "@achievementMahjongDiscsWinDescription": {
+    "description": "How to unlock the Mahjong achievement for the first game won in discs mode (every disc freed)."
+  },
+  "achievementMahjongDiscs25Title": "Archaeologist",
+  "@achievementMahjongDiscs25Title": {
+    "description": "Title of the Mahjong achievement for 25 discs freed, over every game of the discs mode."
+  },
+  "achievementMahjongDiscs25Description": "Free 25 discs in Discs mode.",
+  "@achievementMahjongDiscs25Description": {
+    "description": "How to unlock the Mahjong achievement for 25 discs freed, over every game of the discs mode, won or not."
+  },
+  "achievementMahjongGeneratedHardWinTitle": "Uncharted",
+  "@achievementMahjongGeneratedHardWinTitle": {
+    "description": "Title of the Mahjong achievement for a Hard random (generated) shape cleared without a hint."
+  },
+  "achievementMahjongGeneratedHardWinDescription": "Clear the tiles of a Hard Random shape without a hint.",
+  "@achievementMahjongGeneratedHardWinDescription": {
+    "description": "How to unlock the Mahjong achievement for a Hard random (generated) shape cleared without a hint, in the classic or tray mode. Random is the name of the shape choice in the new game sheet."
+  },
   "tileStylePorcelain": "Porcelain",
   "@tileStylePorcelain": {
     "description": "Name of a Mahjong tile style, shown on the skins page and as a reward."
@@ -1539,6 +1563,18 @@
   "tileStyleSakura": "Sakura",
   "@tileStyleSakura": {
     "description": "Name of a Mahjong tile style, shown on the skins page and as a reward."
+  },
+  "tileStyleBakelite": "Bakelite",
+  "@tileStyleBakelite": {
+    "description": "Name of a Mahjong tile style (molded tiles of a vintage set), shown on the skins page and as a reward."
+  },
+  "tileStyleLacquer": "Lacquer",
+  "@tileStyleLacquer": {
+    "description": "Name of a Mahjong tile style (red lacquer and gold), shown on the skins page and as a reward."
+  },
+  "tileStyleCloisonne": "Cloisonné",
+  "@tileStyleCloisonne": {
+    "description": "Name of a Mahjong tile style (enamel in gold wire), shown on the skins page and as a reward."
   },
   "achievementAllEveryGameTitle": "Collector",
   "@achievementAllEveryGameTitle": {

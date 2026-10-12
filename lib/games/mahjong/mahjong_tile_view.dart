@@ -201,6 +201,7 @@ class _TilePainter extends CustomPainter {
           colors: selected ? style.selectedFaceColors : style.faceColors,
         ).createShader(faceRect),
     );
+    if (style.domed) _paintDome(canvas, faceRRect);
     if (style.rimColor case final rim?) {
       canvas.drawRRect(
         faceRRect.deflate(max(1.5, w * 0.055)),
@@ -209,6 +210,9 @@ class _TilePainter extends CustomPainter {
           ..strokeWidth = max(0.8, w * 0.025)
           ..color = rim,
       );
+    }
+    if (style.ornamentColor case final gold?) {
+      _paintFrets(canvas, faceRect, gold);
     }
     canvas.drawRRect(
       faceRRect.deflate(0.5),
@@ -235,44 +239,176 @@ class _TilePainter extends CustomPainter {
   }
 
   /// The back of a hidden tile, in the colors of the tile's back: a frame
-  /// and a diamond.
+  /// and a diamond, or a gilded frame around a trellis and a coin.
   void _paintBack(Canvas canvas, RRect face, Color back, Color backTop) {
     final w = faceSize.width;
     final rect = face.outerRect;
+    final top = Color.lerp(backTop, Colors.white, 0.12)!;
     canvas.drawRRect(
       face,
       Paint()
         ..shader = LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color.lerp(backTop, Colors.white, 0.12)!, back],
+          colors: [top, back],
         ).createShader(rect),
     );
+    if (style.domed) _paintDome(canvas, face);
     final light = Color.lerp(backTop, Colors.white, 0.45)!;
+    final gold = style.ornamentColor;
+    final panel = face.deflate(w * 0.12);
+    if (gold != null) {
+      _paintTrellis(canvas, panel, gold, Color.lerp(top, back, 0.5)!);
+    }
     canvas.drawRRect(
-      face.deflate(w * 0.12),
+      panel,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = max(0.8, w * 0.035)
-        ..color = light,
+        ..color = gold ?? light,
     );
-    final c = rect.center;
-    final r = w * 0.16;
-    canvas.drawPath(
-      Path()
-        ..moveTo(c.dx, c.dy - r * 1.3)
-        ..lineTo(c.dx + r, c.dy)
-        ..lineTo(c.dx, c.dy + r * 1.3)
-        ..lineTo(c.dx - r, c.dy)
-        ..close(),
-      Paint()..color = light.withValues(alpha: 0.75),
-    );
+    if (gold == null) {
+      final c = rect.center;
+      final r = w * 0.16;
+      canvas.drawPath(
+        Path()
+          ..moveTo(c.dx, c.dy - r * 1.3)
+          ..lineTo(c.dx + r, c.dy)
+          ..lineTo(c.dx, c.dy + r * 1.3)
+          ..lineTo(c.dx - r, c.dy)
+          ..close(),
+        Paint()..color = light.withValues(alpha: 0.75),
+      );
+    }
     canvas.drawRRect(
       face.deflate(0.5),
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = max(0.8, w * 0.02)
         ..color = Color.lerp(back, Colors.black, 0.3)!,
+    );
+  }
+
+  /// The relief of a molded [face]: lit at the top-left, darker toward the
+  /// bottom-right edge, with a bevel inside the edge. The bevel stays
+  /// outside the art.
+  void _paintDome(Canvas canvas, RRect face) {
+    final w = faceSize.width;
+    final rect = face.outerRect;
+    canvas.drawRRect(
+      face,
+      Paint()
+        ..shader = const RadialGradient(
+          center: Alignment(-0.4, -0.5),
+          radius: 1.1,
+          colors: [Color(0x40FFFFFF), Color(0x00FFFFFF), Color(0x29000000)],
+          stops: [0, 0.5, 1],
+        ).createShader(rect),
+    );
+    canvas.drawRRect(
+      face.deflate(w * 0.05),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = w * 0.09
+        ..shader = const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xD9FFFFFF),
+            Color(0x00FFFFFF),
+            Color(0x00000000),
+            Color(0x4D000000),
+          ],
+          stops: [0, 0.45, 0.55, 1],
+        ).createShader(rect),
+    );
+  }
+
+  /// A key fret in each corner of the face at [rect]: two nested brackets
+  /// and a stud, small enough to stay clear of the art.
+  void _paintFrets(Canvas canvas, Rect rect, Color gold) {
+    final w = faceSize.width;
+    final brackets = Path();
+    final studs = Path();
+    for (final (sx, sy) in const [
+      (1.0, 1.0),
+      (-1.0, 1.0),
+      (1.0, -1.0),
+      (-1.0, -1.0),
+    ]) {
+      final corner = Offset(
+        sx > 0 ? rect.left : rect.right,
+        sy > 0 ? rect.top : rect.bottom,
+      );
+      Offset at(double x, double y) => corner + Offset(sx * x, sy * y) * w;
+      for (final (inset, end) in const [(0.075, 0.23), (0.115, 0.18)]) {
+        final start = at(inset, end);
+        final bend = at(inset, inset);
+        final stop = at(end, inset);
+        brackets
+          ..moveTo(start.dx, start.dy)
+          ..lineTo(bend.dx, bend.dy)
+          ..lineTo(stop.dx, stop.dy);
+      }
+      final stud = at(0.155, 0.155);
+      final r = w * 0.02;
+      studs
+        ..moveTo(stud.dx, stud.dy - r)
+        ..lineTo(stud.dx + r, stud.dy)
+        ..lineTo(stud.dx, stud.dy + r)
+        ..lineTo(stud.dx - r, stud.dy)
+        ..close();
+    }
+    canvas.drawPath(
+      brackets,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(0.7, w * 0.022)
+        ..strokeCap = StrokeCap.square
+        ..color = gold,
+    );
+    canvas.drawPath(studs, Paint()..color = gold);
+  }
+
+  /// A gilded trellis over the [panel] of a back, and a coin with a square
+  /// hole in its middle; [ground] is the back's color there.
+  void _paintTrellis(Canvas canvas, RRect panel, Color gold, Color ground) {
+    final w = faceSize.width;
+    final rect = panel.outerRect;
+    final step = w * 0.17;
+    final lines = Path();
+    for (var d = step / 2; d < rect.width + rect.height; d += step) {
+      lines
+        ..moveTo(rect.left + d, rect.top)
+        ..lineTo(rect.left + d - rect.height, rect.bottom)
+        ..moveTo(rect.right - d, rect.top)
+        ..lineTo(rect.right - d + rect.height, rect.bottom);
+    }
+    canvas.save();
+    canvas.clipRRect(panel);
+    canvas.drawPath(
+      lines,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(0.6, w * 0.018)
+        ..color = gold.withValues(alpha: 0.5),
+    );
+    canvas.restore();
+
+    final center = rect.center;
+    final radius = w * 0.17;
+    canvas.drawCircle(center, radius, Paint()..color = gold);
+    canvas.drawCircle(
+      center,
+      radius * 0.8,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(0.5, w * 0.015)
+        ..color = Color.lerp(gold, ground, 0.45)!,
+    );
+    canvas.drawRect(
+      Rect.fromCircle(center: center, radius: radius * 0.34),
+      Paint()..color = ground,
     );
   }
 

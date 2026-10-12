@@ -104,7 +104,7 @@ void main() {
     final stores = await seededStores([
       // A fast Klondike win without undo: 3 of 8.
       record(endedMinute: 1),
-      // A Mahjong win on the Turtle, with hints: 2 of 10.
+      // A Mahjong win on the Turtle, with hints: 2 of 13.
       record(
         gameId: 'mahjong',
         variant: 'turtle',
@@ -129,7 +129,7 @@ void main() {
       'freecell': ('FreeCell', '0/6', '0 / 6 unlocked'),
       'spider': ('Spider', '0/6', '0 / 6 unlocked'),
       'tripeaks': ('TriPeaks', '0/6', '0 / 6 unlocked'),
-      'mahjong': ('Mahjong', '2/10', '2 / 10 unlocked'),
+      'mahjong': ('Mahjong', '2/13', '2 / 13 unlocked'),
       'minesweeper': ('Minesweeper', '0/6', '0 / 6 unlocked'),
       'all': ('All games', '0/3', '0 / 3 unlocked'),
     };

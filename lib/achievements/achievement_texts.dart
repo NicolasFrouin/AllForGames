@@ -41,6 +41,9 @@ String achievementTitle(String id, AppLocalizations l10n) => switch (id) {
   'mahjong.trayHardWin' => l10n.achievementMahjongTrayHardWinTitle,
   'mahjong.trayNoUndoWin' => l10n.achievementMahjongTrayNoUndoWinTitle,
   'mahjong.trayWins10' => l10n.achievementMahjongTrayWins10Title,
+  'mahjong.discsWin' => l10n.achievementMahjongDiscsWinTitle,
+  'mahjong.discs25' => l10n.achievementMahjongDiscs25Title,
+  'mahjong.generatedHardWin' => l10n.achievementMahjongGeneratedHardWinTitle,
   'minesweeper.firstWin' => l10n.achievementMinesweeperFirstWinTitle,
   'minesweeper.intermediateWin' =>
     l10n.achievementMinesweeperIntermediateWinTitle,
@@ -91,6 +94,10 @@ String achievementDescription(String id, AppLocalizations l10n) => switch (id) {
   'mahjong.trayHardWin' => l10n.achievementMahjongTrayHardWinDescription,
   'mahjong.trayNoUndoWin' => l10n.achievementMahjongTrayNoUndoWinDescription,
   'mahjong.trayWins10' => l10n.achievementMahjongTrayWins10Description,
+  'mahjong.discsWin' => l10n.achievementMahjongDiscsWinDescription,
+  'mahjong.discs25' => l10n.achievementMahjongDiscs25Description,
+  'mahjong.generatedHardWin' =>
+    l10n.achievementMahjongGeneratedHardWinDescription,
   'minesweeper.firstWin' => l10n.achievementMinesweeperFirstWinDescription,
   'minesweeper.intermediateWin' =>
     l10n.achievementMinesweeperIntermediateWinDescription,
@@ -150,6 +157,9 @@ String tileStyleName(String id, AppLocalizations l10n) => switch (id) {
   'midnight' => l10n.tileStyleMidnight,
   'marble' => l10n.tileStyleMarble,
   'sakura' => l10n.tileStyleSakura,
+  'bakelite' => l10n.tileStyleBakelite,
+  'lacquer' => l10n.tileStyleLacquer,
+  'cloisonne' => l10n.tileStyleCloisonne,
   _ => id,
 };
 

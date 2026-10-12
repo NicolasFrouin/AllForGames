@@ -66,6 +66,8 @@ class TileStyle {
     required this.bodyColors,
     required this.backColors,
     this.rimColor,
+    this.ornamentColor,
+    this.domed = false,
     this.selectedFaceColors = const [Color(0xFFFFF4C9), Color(0xFFFFD970)],
     this.selectedEdgeColor = const Color(0xFFE0A100),
     this.dimColor = const Color(0x1A1B2440),
@@ -88,6 +90,14 @@ class TileStyle {
 
   /// A line inside the edge of the face, if any.
   final Color? rimColor;
+
+  /// Gilding, if any: a key fret in each corner of the face, and on the
+  /// back a trellis around a coin instead of the diamond.
+  final Color? ornamentColor;
+
+  /// A molded face and back: lit along their top-left edge, shaded along
+  /// their bottom-right one.
+  final bool domed;
 
   /// The face and edge of the tile the player picked.
   final List<Color> selectedFaceColors;
@@ -317,6 +327,76 @@ const tileStyles = [
       sunRays: Color(0xFFE65100),
     ),
     unlockedBy: 'mahjong.trayWins10',
+  ),
+  // A molded set of the 1930s: a cream face on butterscotch.
+  TileStyle(
+    id: 'bakelite',
+    faceColors: [Color(0xFFFFF9E8), Color(0xFFF3E0B4)],
+    edgeColor: Color(0xFFC9A160),
+    bodyColors: [Color(0xFFDC9532), Color(0xFFF0BD66)],
+    backColors: [Color(0xFF9C4C08), Color(0xFFCF7A1E)],
+    domed: true,
+    ink: TileInk(
+      red: Color(0xFFC62828),
+      green: Color(0xFF1E7B3C),
+      blue: Color(0xFF1A4A94),
+      black: Color(0xFF2E1C0E),
+      hollow: Color(0xFFFFF9E8),
+      petal: Color(0xFFEE5D8C),
+      petalEdge: Color(0xFFA8174A),
+      heart: Color(0xFFFFC21A),
+      twig: Color(0xFF6B4630),
+      sun: Color(0xFFFFA000),
+      sunRays: Color(0xFFE65100),
+    ),
+    unlockedBy: 'mahjong.discsWin',
+  ),
+  // Red lacquer and gold leaf.
+  TileStyle(
+    id: 'lacquer',
+    faceColors: [Color(0xFFFFFBF0), Color(0xFFF1E4C4)],
+    edgeColor: Color(0xFFB8975A),
+    bodyColors: [Color(0xFFC9B48A), Color(0xFFE3D3AE)],
+    backColors: [Color(0xFF6E120C), Color(0xFFA82418)],
+    ornamentColor: Color(0xFFC99A2E),
+    ink: TileInk(
+      red: Color(0xFFB3201A),
+      green: Color(0xFF1D6E3A),
+      blue: Color(0xFF1C3F8C),
+      black: Color(0xFF2A1610),
+      hollow: Color(0xFFFFFBF0),
+      petal: Color(0xFFEA5A87),
+      petalEdge: Color(0xFFA3123F),
+      heart: Color(0xFFF2B21B),
+      twig: Color(0xFF5A3420),
+      sun: Color(0xFFF2A900),
+      sunRays: Color(0xFFC0391B),
+    ),
+    unlockedBy: 'mahjong.discs25',
+  ),
+  // Turquoise enamel in gold wire, on gilded copper.
+  TileStyle(
+    id: 'cloisonne',
+    faceColors: [Color(0xFFEAF8F6), Color(0xFFBCE5DF)],
+    edgeColor: Color(0xFFB08A2A),
+    bodyColors: [Color(0xFFA97C22), Color(0xFFD4AA4C)],
+    backColors: [Color(0xFF3A1550), Color(0xFF64307F)],
+    ornamentColor: Color(0xFFC09A34),
+    domed: true,
+    ink: TileInk(
+      red: Color(0xFFC2261E),
+      green: Color(0xFF13703F),
+      blue: Color(0xFF133E8F),
+      black: Color(0xFF0F2B3A),
+      hollow: Color(0xFFEAF8F6),
+      petal: Color(0xFFE8467E),
+      petalEdge: Color(0xFF9C1048),
+      heart: Color(0xFFF4B400),
+      twig: Color(0xFF5D3A2A),
+      sun: Color(0xFFFFB300),
+      sunRays: Color(0xFFD84315),
+    ),
+    unlockedBy: 'mahjong.generatedHardWin',
   ),
 ];
 

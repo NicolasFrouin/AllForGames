@@ -9,6 +9,7 @@ import '../games/klondike/klondike_difficulty.dart';
 import '../games/mahjong/mahjong_controller.dart';
 import '../games/mahjong/mahjong_difficulty.dart';
 import '../games/mahjong/mahjong_layout.dart';
+import '../games/mahjong/mahjong_shapes.dart';
 import '../games/minesweeper/minesweeper_controller.dart';
 import '../games/minesweeper/minesweeper_difficulty.dart';
 import '../games/spider/spider_controller.dart';
@@ -313,6 +314,27 @@ const achievements = [
     progress: _mahjongTrayWinCount,
   ),
   Achievement(
+    id: 'mahjong.discsWin',
+    gameId: MahjongController.gameId,
+    icon: Icons.album,
+    goal: 1,
+    progress: _mahjongDiscsWinCount,
+  ),
+  Achievement(
+    id: 'mahjong.discs25',
+    gameId: MahjongController.gameId,
+    icon: Icons.toll,
+    goal: 25,
+    progress: _mahjongDiscsFreed,
+  ),
+  Achievement(
+    id: 'mahjong.generatedHardWin',
+    gameId: MahjongController.gameId,
+    icon: Icons.explore,
+    goal: 1,
+    progress: _mahjongGeneratedHardWins,
+  ),
+  Achievement(
     id: 'minesweeper.firstWin',
     gameId: MinesweeperController.gameId,
     icon: Icons.outlined_flag,
@@ -558,6 +580,39 @@ int _mahjongTrayCleanWins(List<GameRecord> records) =>
                   record.difficulty == MahjongDifficulty.hard.name) &&
               record.undos == 0 &&
               (record.details[MahjongStatKeys.hints] ?? 0) == 0,
+        )
+        .length;
+
+Iterable<GameRecord> _mahjongDiscsGames(List<GameRecord> records) =>
+    records.where(
+      (record) =>
+          record.gameId == MahjongController.gameId &&
+          mahjongModeAndLayout(record.variant).$1 == MahjongMode.discs,
+    );
+
+int _mahjongDiscsWinCount(List<GameRecord> records) =>
+    _mahjongDiscsGames(records).where((record) => record.won).length;
+
+/// The discs freed in every discs game, won or not.
+int _mahjongDiscsFreed(List<GameRecord> records) => _mahjongDiscsGames(records)
+    .fold(
+      0,
+      (total, record) =>
+          total + (record.details[MahjongStatKeys.discsFreed] ?? 0),
+    );
+
+/// Generated shapes cleared on Hard without a hint, in the classic or the
+/// tray mode (the discs mode does not clear the board).
+int _mahjongGeneratedHardWins(List<GameRecord> records) =>
+    _winsOf(records, MahjongController.gameId)
+        .where(
+          (record) =>
+              record.difficulty == MahjongDifficulty.hard.name &&
+              (record.details[MahjongStatKeys.hints] ?? 0) == 0 &&
+              switch (mahjongModeAndLayout(record.variant)) {
+                (MahjongMode.discs, _) => false,
+                (_, final layoutId) => layoutId == generatedLayoutId,
+              },
         )
         .length;
 

@@ -533,6 +533,93 @@ void main() {
         );
       });
     });
+
+    group('in discs mode', () {
+      /// A discs game on a random shape, by default a Medium win (3 discs).
+      GameRecord discs({
+        GameOutcome outcome = GameOutcome.won,
+        int freed = 3,
+        String layoutId = 'random',
+      }) => game(
+        gameId: 'mahjong',
+        variant: 'discs-$layoutId',
+        outcome: outcome,
+        difficulty: 'medium',
+        details: {'hints': 1, 'discsFreed': freed},
+      );
+
+      test('discsWin needs a won Discs game', () {
+        final records = [
+          discs(outcome: GameOutcome.lost, freed: 2),
+          discs(outcome: GameOutcome.abandoned, freed: 1),
+          perfect('mahjong'),
+          game(gameId: 'mahjong', variant: 'tray-random'),
+        ];
+        expect(progress('mahjong.discsWin', records), 0);
+        expect(progress('mahjong.discsWin', [...records, discs()]), 1);
+        final turtle = discs(layoutId: 'turtle');
+        expect(progress('mahjong.discsWin', [...records, turtle]), 1);
+      });
+
+      test('discs25 adds the discs freed in every Discs game, won or not, '
+          'capped at 25', () {
+        final records = [
+          for (var i = 0; i < 6; i++) discs(),
+          discs(outcome: GameOutcome.lost, freed: 2),
+          discs(outcome: GameOutcome.abandoned, freed: 1),
+          // A detail of another game or mode does not count.
+          game(variant: 'draw1', details: const {'discsFreed': 9}),
+          game(
+            gameId: 'mahjong',
+            variant: 'tray-random',
+            details: const {'discsFreed': 9},
+          ),
+        ];
+        expect(progress('mahjong.discs25', []), 0);
+        expect(progress('mahjong.discs25', records), 21);
+        expect(progress('mahjong.discs25', [...records, discs(freed: 4)]), 25);
+        expect(progress('mahjong.discs25', [...records, discs(), discs()]), 25);
+        // A record without the counter frees none.
+        final old = game(gameId: 'mahjong', variant: 'discs-random');
+        expect(progress('mahjong.discs25', [...records, old]), 21);
+      });
+    });
+
+    test('generatedHardWin needs a Random shape cleared on Hard without a '
+        'hint, in the classic or tray mode', () {
+      GameRecord hard(
+        String variant, {
+        int hints = 0,
+        String difficulty = 'hard',
+        GameOutcome outcome = GameOutcome.won,
+      }) => game(
+        gameId: 'mahjong',
+        variant: variant,
+        outcome: outcome,
+        difficulty: difficulty,
+        details: {'hints': hints},
+      );
+      final records = [
+        hard('random', hints: 1),
+        hard('random', difficulty: 'medium'),
+        hard('random', outcome: GameOutcome.abandoned),
+        hard('tray-random', outcome: GameOutcome.lost),
+        // The discs mode does not clear the board.
+        hard('discs-random'),
+        // The classic shape of Hard.
+        hard('turtle'),
+        hard('tray-turtle'),
+      ];
+      expect(progress('mahjong.generatedHardWin', records), 0);
+      expect(
+        progress('mahjong.generatedHardWin', [...records, hard('random')]),
+        1,
+      );
+      expect(
+        progress('mahjong.generatedHardWin', [...records, hard('tray-random')]),
+        1,
+      );
+    });
   });
 
   group('Minesweeper', () {
