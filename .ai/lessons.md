@@ -19,3 +19,5 @@ Project conventions live in `CLAUDE.md`. Add here only lessons learned that appl
 - A screen opened without a seed deals at random: a test that checks a deal-specific fact (a layout, a tile's
   state, an orientation) fails now and then. Give it a seed or a fixed layout, and loop the test file a few
   times after a change to the deal generators.
+- Controllers that play on `Timer`s (auto-win, Finish): in `testWidgets`, `Future.delayed` never completes (fake
+  time) and `pumpAndSettle` does not wait for timers; pump the pace in a loop until the expected state shows.
